@@ -25,6 +25,7 @@ const commands = [
   npmRunner(["run", "test:ide-host-smoke"]),
   npmRunner(["run", "test:node-sdk"]),
   npmRunner(["run", "test:local-health"]),
+  npmRunner(["run", "test:codex-collector"]),
   npmRunner(["run", "test:provider-health"]),
   npmRunner(["run", "test:quota-delight"]),
   npmRunner(["run", "test:delight-contract"]),

@@ -98,9 +98,9 @@
     },
     "dependencyAudit": {
       "status": "passed",
-      "recordedAt": "2026-05-24T00:00:00+08:00",
+      "recordedAt": "2026-05-25T10:23:50.456Z",
       "command": "npm audit --audit-level=high",
-      "notes": "found 0 vulnerabilities"
+      "notes": "2026-05-25 Windows source-beta audit completed with zero high-severity vulnerabilities."
     }
   }
 }

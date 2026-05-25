@@ -85,9 +85,9 @@ npm run release:evidence-report -- --write
 
 - Key: `dependencyAudit`
 - Status: `passed`
-- Recorded at: 2026-05-24T00:00:00+08:00
+- Recorded at: 2026-05-25T10:23:50.456Z
 - Command: `npm audit --audit-level=high`
-- Notes: found 0 vulnerabilities
+- Notes: 2026-05-25 Windows source-beta audit completed with zero high-severity vulnerabilities.
 
 ## Evidence Still Needed Before Public Binary Release
 

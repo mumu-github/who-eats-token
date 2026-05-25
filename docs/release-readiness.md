@@ -9,6 +9,7 @@ npm run test:release-readiness
 npm run manual:preflight -- --platform all
 npm run signing:readiness -- --platform all
 npm run release:gaps
+npm run release:gaps -- --target source-beta --require-source-beta
 npm run release:summary
 npm run release:check -- --list --json
 npm run performance:summary
@@ -95,6 +96,20 @@ TokenTracker is the closest learning target. Release planning should borrow its 
 | Open-source release hygiene | `npm run test:packaging`, `npm run test:adapter-packages`, `npm run verify:adapter-artifacts` | Signing/notarization checklist in `docs/release.md` |
 
 ## Current Hard Gates
+
+For a source beta, use the source-only gate first:
+
+```powershell
+npm ci
+npm run release:check
+npm run secret:scan
+npm run license:check
+npm audit --audit-level=high
+npm run release:gaps -- --target source-beta --require-source-beta
+npm run release:summary -- --require-source-beta
+```
+
+This gate is allowed to pass while public binary release blockers remain open. It does not waive signing, notarization, macOS runtime, or manual adapter evidence for a later binary release.
 
 Before publishing a public release, maintainers should run:
 

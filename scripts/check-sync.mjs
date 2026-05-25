@@ -26,10 +26,18 @@ if (!rateLimits) {
     console.log(`${label.padEnd(14)} ${value}`);
   }
 
-  if (rateLimits.limitId !== "codex") {
+  if (isCodexModelQuotaBucket(rateLimits.limitId)) {
+    console.warn("Warning: selected rate limit is a model-specific Codex quota bucket, not the aggregate Codex UI quota bucket.");
+    process.exitCode = 2;
+  } else if (rateLimits.limitId !== "codex") {
     console.warn("Warning: selected rate limit is not the Codex UI quota bucket.");
     process.exitCode = 2;
   }
+}
+
+function isCodexModelQuotaBucket(limitId) {
+  const value = String(limitId || "").toLowerCase();
+  return value.startsWith("codex_");
 }
 
 function remaining(window) {

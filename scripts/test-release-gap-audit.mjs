@@ -5,7 +5,10 @@ import { spawnSync } from "node:child_process";
 const report = runAudit(["--json"], 0);
 const auditSource = fs.readFileSync("scripts/release-gap-audit.mjs", "utf8");
 
+assert.equal(report.target, "public-binary");
+assert.equal(report.sourceBetaReady, true, "Source beta gates should pass even while public binary evidence is incomplete.");
 assert.equal(report.publicReleaseReady, false, "Known public-release gaps should remain explicit until manual evidence is recorded.");
+assert.equal(report.sourceBeta.blocking, 0);
 assert.ok(report.summary.total >= 10, "Audit should cover the main release dimensions.");
 assert.ok(report.summary.blocking > 0, "Audit should expose remaining manual/external gaps.");
 assert.ok(!/status\s*===\s*["']host-smoke-recorded["']/.test(auditSource), "Host smoke must not replace manual browser validation.");
@@ -34,8 +37,15 @@ assert.equal(find("npm-audit").status, "manual-recorded");
 const required = runAudit(["--json", "--require-public-release"], 1);
 assert.equal(required.publicReleaseReady, false);
 
+const sourceBeta = runAudit(["--json", "--target", "source-beta", "--require-source-beta"], 0);
+assert.equal(sourceBeta.target, "source-beta");
+assert.equal(sourceBeta.ok, true);
+assert.equal(sourceBeta.sourceBetaReady, true);
+assert.equal(sourceBeta.publicReleaseReady, false);
+
 const text = runText([]);
 assert.match(text, /Who Eats Token Release Gap Audit/);
+assert.match(text, /Source beta ready: yes/);
 assert.match(text, /Public release ready: no/);
 assert.match(text, /macos-packaged-runtime/);
 

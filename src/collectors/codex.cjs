@@ -105,6 +105,14 @@ function stabilizeRateLimits({ rateLimits, sourceSession, now }) {
     reason: ageMs > STALE_RATE_LIMIT_MS ? "Rate limit data is older than two minutes." : null,
     ageMs: Number.isFinite(ageMs) ? Math.max(0, ageMs) : null
   };
+  const trust = isCodexModelQuotaBucket(rateLimits?.limit_id)
+    ? {
+        status: "suspect",
+        label: "模型桶",
+        reason: "Using a model-specific Codex quota bucket because the aggregate Codex UI quota bucket was not found.",
+        ageMs: baseTrust.ageMs
+      }
+    : baseTrust;
 
   if (!rateLimits) {
     if (lastTrustedRateLimits) {
@@ -153,7 +161,7 @@ function stabilizeRateLimits({ rateLimits, sourceSession, now }) {
   return {
     rateLimits,
     sourceSession,
-    trust: baseTrust
+    trust
   };
 }
 
@@ -429,11 +437,23 @@ function scoreRateLimits(rateLimits) {
   if (!rateLimits) return 0;
   const nowSeconds = Date.now() / 1000;
   let score = 0;
-  if (rateLimits.limit_id === "codex") score += 10;
+  if (isExactCodexQuotaBucket(rateLimits.limit_id)) score += 20;
+  else if (isCodexModelQuotaBucket(rateLimits.limit_id)) score += 5;
+  if (rateLimits.limit_name) score += 1;
   if (rateLimits.plan_type) score += 1;
   if (isExpectedWindow(rateLimits.primary, 300, nowSeconds)) score += 2;
   if (isExpectedWindow(rateLimits.secondary, 10080, nowSeconds)) score += 2;
   return score;
+}
+
+function isExactCodexQuotaBucket(limitId) {
+  const value = String(limitId || "").toLowerCase();
+  return value === "codex";
+}
+
+function isCodexModelQuotaBucket(limitId) {
+  const value = String(limitId || "").toLowerCase();
+  return value.startsWith("codex_");
 }
 
 function isExpectedWindow(window, minutes, nowSeconds) {

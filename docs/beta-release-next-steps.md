@@ -15,11 +15,13 @@ npm run test:release-check
 npm run secret:scan
 npm run license:check
 npm audit --audit-level=high
+npm run release:gaps -- --target source-beta --require-source-beta
+npm run release:summary -- --require-source-beta
 npm run release:evidence-quality -- --require-clean
 npm run release:summary -- --json
 ```
 
-`release:summary` is expected to report `publicReleaseReady: false` until the manual and signing blockers below are recorded. That does not block a source beta.
+`release:gaps -- --target source-beta --require-source-beta` and `release:summary -- --require-source-beta` should pass before pushing the source beta. `release:summary` is still expected to report `publicReleaseReady: false` until the manual and signing blockers below are recorded. That does not block a source beta.
 
 Before recording runtime evidence, make sure `npm run lag:triage -- --json` does not report `partial-snapshot`. If it does, restart the desktop app and confirm `npm run diagnostics -- --json` includes `stability.system`.
 

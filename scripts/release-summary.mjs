@@ -12,17 +12,22 @@ const nextActions = runJsonCommand("validation:next", ["scripts/validation-next.
 const secretScan = runJsonCommand("secret:scan", ["scripts/secret-scan.mjs", "--json"]);
 const licenseCheck = runJsonCommand("license:check", ["scripts/license-check.mjs", "--json"]);
 const guards = buildGuards(secretScan, licenseCheck);
+const sourceBetaOk = Boolean(releaseGaps.data?.sourceBetaReady) && guards.ready;
+const publicReleaseOk = Boolean(releaseGaps.data?.publicReleaseReady) && guards.ready;
 const blocking = Array.isArray(releaseGaps.data?.checks)
   ? releaseGaps.data.checks.filter((check) => !isReady(check.status))
   : [];
 const report = {
-  ok: Boolean(releaseGaps.data?.publicReleaseReady) && guards.ready,
+  ok: args.requireSourceBeta ? sourceBetaOk : publicReleaseOk,
+  target: args.requireSourceBeta ? "source-beta" : "public-binary",
+  sourceBetaOk,
   generatedAt: new Date().toISOString(),
   package: {
     name: packageJson.name,
     version: packageJson.version
   },
   publicReleaseReady: Boolean(releaseGaps.data?.publicReleaseReady),
+  sourceBetaReady: Boolean(releaseGaps.data?.sourceBetaReady),
   guardReady: guards.ready,
   guards,
   releaseGaps: {
@@ -57,6 +62,7 @@ const report = {
     "npm run release:summary",
     "npm run release:summary -- --json",
     "npm run release:check -- --list --json",
+    "npm run release:gaps -- --target source-beta --require-source-beta",
     "npm run release:gaps -- --require-public-release",
     "npm run validation:next",
     "npm run validation:template -- --target browser",
@@ -74,7 +80,9 @@ if (args.json) {
   printReport(report);
 }
 
-if (args.requirePublicRelease && !report.ok) {
+if (args.requireSourceBeta && !report.sourceBetaOk) {
+  process.exitCode = 1;
+} else if (args.requirePublicRelease && !report.ok) {
   process.exitCode = 1;
 }
 
@@ -129,6 +137,7 @@ function printReport(report) {
   console.log("# Who Eats Token Release Summary");
   console.log("");
   console.log(`Version: ${report.package.name}@${report.package.version}`);
+  console.log(`Source beta ready: ${report.sourceBetaReady ? "yes" : "no"}`);
   console.log(`Public release ready: ${report.publicReleaseReady ? "yes" : "no"}`);
   console.log(`Source guards: ${report.guardReady ? "OK" : "needs attention"}`);
   console.log(`- secret: ${report.guards.secret.ok ? "OK" : "TODO"} (${report.guards.secret.findingCount} findings)`);
@@ -180,6 +189,7 @@ function readJson(relativePath) {
 function parseArgs(argv) {
   return {
     json: argv.includes("--json"),
-    requirePublicRelease: argv.includes("--require-public-release")
+    requirePublicRelease: argv.includes("--require-public-release"),
+    requireSourceBeta: argv.includes("--require-source-beta")
   };
 }

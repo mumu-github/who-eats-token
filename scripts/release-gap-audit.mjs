@@ -6,11 +6,22 @@ const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const args = parseArgs(process.argv.slice(2));
 const checks = buildChecks();
 const blocking = checks.filter((check) => !isReady(check.status));
+const sourceBetaBlocking = checks.filter((check) => isSourceBetaGate(check.id) && !isReady(check.status));
+const sourceBetaReady = sourceBetaBlocking.length === 0;
+const publicReleaseReady = blocking.length === 0;
+const targetBlocking = args.target === "source-beta" ? sourceBetaBlocking : blocking;
 const report = {
-  ok: blocking.length === 0,
-  publicReleaseReady: blocking.length === 0,
+  ok: targetBlocking.length === 0,
+  target: args.target,
+  sourceBetaReady,
+  publicReleaseReady,
   checkedAt: new Date().toISOString(),
   summary: summarize(checks),
+  sourceBeta: {
+    ready: sourceBetaReady,
+    blocking: sourceBetaBlocking.length,
+    gateIds: sourceBetaGateIds()
+  },
   checks
 };
 
@@ -20,7 +31,9 @@ if (args.json) {
   printReport(report);
 }
 
-if (args.requirePublicRelease && blocking.length > 0) {
+if (args.requireSourceBeta && !sourceBetaReady) {
+  process.exitCode = 1;
+} else if (args.requirePublicRelease && !publicReleaseReady) {
   process.exitCode = 1;
 }
 
@@ -194,8 +207,11 @@ function summarize(checks) {
 function printReport(report) {
   console.log("# Who Eats Token Release Gap Audit");
   console.log("");
+  console.log(`Target: ${report.target}`);
+  console.log(`Source beta ready: ${report.sourceBetaReady ? "yes" : "no"}`);
   console.log(`Public release ready: ${report.publicReleaseReady ? "yes" : "no"}`);
   console.log(`Blocking gaps: ${report.summary.blocking}/${report.summary.total}`);
+  if (!report.sourceBetaReady) console.log(`Source beta blocking gaps: ${report.sourceBeta.blocking}/${report.sourceBeta.gateIds.length}`);
   console.log("");
 
   for (const check of report.checks) {
@@ -208,6 +224,25 @@ function printReport(report) {
 
 function isReady(status) {
   return status === "automated" || status === "manual-recorded";
+}
+
+function sourceBetaGateIds() {
+  return [
+    "project-form",
+    "windows-ci",
+    "macos-ci",
+    "multi-tool-adapters",
+    "low-memory-gates",
+    "privacy-security",
+    "license-compliance",
+    "artifact-integrity",
+    "npm-audit",
+    "docs-quality"
+  ];
+}
+
+function isSourceBetaGate(id) {
+  return sourceBetaGateIds().includes(id);
 }
 
 function hasScript(packageJson, script) {
@@ -245,8 +280,26 @@ function readJsonIfExists(relativePath) {
 }
 
 function parseArgs(argv) {
+  const target = normalizeTarget(readArg(argv, "--target") || "public-binary");
   return {
+    target,
     json: argv.includes("--json"),
-    requirePublicRelease: argv.includes("--require-public-release")
+    requirePublicRelease: argv.includes("--require-public-release"),
+    requireSourceBeta: argv.includes("--require-source-beta")
   };
+}
+
+function readArg(argv, name) {
+  for (let index = 0; index < argv.length; index += 1) {
+    const value = argv[index];
+    if (value === name) return argv[index + 1] || "";
+    if (value.startsWith(`${name}=`)) return value.slice(name.length + 1);
+  }
+  return "";
+}
+
+function normalizeTarget(value) {
+  const text = String(value || "").trim().toLowerCase();
+  if (["source", "source-beta", "beta"].includes(text)) return "source-beta";
+  return "public-binary";
 }

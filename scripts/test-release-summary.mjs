@@ -10,6 +10,8 @@ assert.ok(packageJson.scripts?.["test:release-summary"], "Missing test:release-s
 const report = runSummary(["--json"], 0);
 
 assert.equal(report.package.name, "who-eats-token");
+assert.equal(report.sourceBetaReady, true, "Source beta should be ready when source gates and guards are clean.");
+assert.equal(report.sourceBetaOk, true);
 assert.equal(report.publicReleaseReady, false, "Manual/external evidence is still required before public release.");
 assert.equal(report.guardReady, true, "Secret and license guards should be clean.");
 assert.equal(report.guards.secret.findingCount, 0);
@@ -29,6 +31,7 @@ assert.ok(report.commands.includes("npm run release:check -- --list --json"));
 
 const text = runText([]);
 assert.match(text, /Who Eats Token Release Summary/);
+assert.match(text, /Source beta ready: yes/);
 assert.match(text, /Public release ready: no/);
 assert.match(text, /Source guards: OK/);
 assert.match(text, /Blocking gaps: 3\/15/);
@@ -37,6 +40,11 @@ assert.match(text, /macos-packaged-runtime/);
 const required = runSummary(["--json", "--require-public-release"], 1);
 assert.equal(required.ok, false);
 assert.equal(required.publicReleaseReady, false);
+
+const sourceRequired = runSummary(["--json", "--require-source-beta"], 0);
+assert.equal(sourceRequired.ok, true);
+assert.equal(sourceRequired.target, "source-beta");
+assert.equal(sourceRequired.sourceBetaOk, true);
 
 console.log("Release summary checks passed.");
 

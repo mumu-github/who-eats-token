@@ -49,7 +49,9 @@ npm run release:evidence -- --list
 npm run release:evidence-quality -- --require-clean
 npm run release:evidence-report -- --check
 npm run release:gaps
+npm run release:gaps -- --target source-beta --require-source-beta
 npm run release:summary
+npm run release:summary -- --require-source-beta
 npm run release:check -- --list
 npm run release:check -- --list --json
 npm run signing:readiness -- --platform all
@@ -145,11 +147,20 @@ npm run validation:template -- --target ide --json
 npm run validation:template -- --target macos
 ```
 
+`release:gaps` has two release targets. The default target is `public-binary`, which keeps macOS runtime validation and signing/notarization as hard blockers. `source-beta` checks only the source-level gates needed to publish the repository as an open beta:
+
+```powershell
+npm run release:gaps -- --target source-beta
+npm run release:gaps -- --target source-beta --require-source-beta
+npm run release:gaps -- --require-public-release
+```
+
 `release:summary` is the short maintainer dashboard. It aggregates `release:gaps`, `validation:next`, `secret:scan`, and `license:check` without running the longer packaged or browser/IDE smoke tests:
 
 ```powershell
 npm run release:summary
 npm run release:summary -- --json
+npm run release:summary -- --require-source-beta
 npm run release:summary -- --require-public-release
 ```
 
