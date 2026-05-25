@@ -117,14 +117,20 @@ function smokeHost({ name, executable, vsixPath }) {
 }
 
 function runHost(executable, commandArgs) {
-  const result = spawnSync(executable, commandArgs, {
+  const isCmdShim = process.platform === "win32" && /\.(cmd|bat)$/i.test(executable);
+  const result = spawnSync(
+    isCmdShim ? (process.env.ComSpec || "cmd.exe") : executable,
+    isCmdShim ? ["/d", "/c", quoteCmdCommand(["call", executable, ...commandArgs])] : commandArgs,
+    {
     cwd: root,
     encoding: "utf8",
     timeout: args.timeoutMs,
     windowsHide: true,
-    shell: process.platform === "win32" && /\.(cmd|bat)$/i.test(executable),
+    windowsVerbatimArguments: isCmdShim,
+    shell: false,
     stdio: ["ignore", "pipe", "pipe"]
-  });
+    }
+  );
 
   return {
     status: result.status,
@@ -132,6 +138,16 @@ function runHost(executable, commandArgs) {
     stdout: result.stdout || "",
     stderr: result.stderr || ""
   };
+}
+
+function quoteCmdCommand(parts) {
+  return parts.map(quoteCmdArg).join(" ");
+}
+
+function quoteCmdArg(value) {
+  const text = String(value);
+  if (!/[ \t&()^|<>"]/u.test(text)) return text;
+  return `"${text.replaceAll("\"", "\"\"")}"`;
 }
 
 function findLatestVsix() {

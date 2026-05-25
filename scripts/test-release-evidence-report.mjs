@@ -16,7 +16,9 @@ assert.equal(json.releaseCandidate, "0.1.0-local");
 assert.ok(json.recorded.some((entry) => entry.key === "windowsPackagedRuntime.soak"));
 assert.ok(json.recorded.some((entry) => entry.key === "browserAdapter.hostSmoke" && entry.check.status === "host-smoke-only"));
 assert.ok(json.unresolved.some((entry) => entry.key === "macosPackagedRuntime.smoke"));
-assert.ok(json.unresolved.some((entry) => entry.key === "browserAdapter.manualLoad"));
+assert.ok(json.recorded.some((entry) => entry.key === "browserAdapter.manualLoad"));
+assert.ok(json.recorded.some((entry) => entry.key === "browserAdapter.manualConnection"));
+assert.ok(!json.unresolved.some((entry) => entry.key === "browserAdapter.hostSmoke"));
 assert.ok(json.unresolved.some((entry) => entry.key === "signing.windowsAuthenticode"));
 
 const text = runText([]);
@@ -24,6 +26,7 @@ assert.match(text, /Release Evidence Log/);
 assert.match(text, /This file is generated from `docs\/release-evidence\.json`/);
 assert.match(text, /Windows packaged 10-minute soak/);
 assert.match(text, /Chrome manual load and Edge manual load/);
+assert.match(text, /Browser extension Options \/health connection/);
 assert.match(text, /macOS packaged smoke/);
 assert.match(text, /host-smoke-only/);
 

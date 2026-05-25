@@ -22,6 +22,9 @@ assertIncludes(source, "--require");
 assertIncludes(source, "args.require");
 assertIncludes(source, "requiredFailure");
 assertIncludes(source, "cleanupDir");
+assertIncludes(source, "quoteCmdCommand");
+assertIncludes(source, "shell: false");
+assertIncludes(source, "windowsVerbatimArguments");
 
 console.log("IDE host smoke script checks passed.");
 

@@ -96,10 +96,21 @@ async function smokeHost({ name, executable, headed }) {
 
     const targets = await readDevToolsTargets(remotePort);
     const preferenceEvidence = readExtensionPreferenceEvidence(userDataDir);
-    const devToolsEvidence = targets.some((target) =>
-      /chrome-extension:\/\//.test(target.url || "") &&
-      /service-worker\.js|options\.html/.test(target.url || "")
-    );
+    const extensionTarget = findExtensionTarget(targets);
+    const devToolsEvidence = Boolean(extensionTarget);
+    const extensionId = extensionIdFromTarget(extensionTarget);
+
+    let optionsHealth = null;
+    if (args.testOptionsHealth) {
+      assert.ok(extensionId, `${name} extension id was not discoverable for Options /health test.`);
+      optionsHealth = await testOptionsHealth({
+        port: remotePort,
+        extensionId,
+        endpoint: args.endpoint,
+        tokenInfo: readLocalTokenInfo()
+      });
+      assert.ok(optionsHealth.ok, `${name} Options /health failed: ${optionsHealth.statusLine || optionsHealth.error || "unknown"}`);
+    }
 
     assert.ok(
       preferenceEvidence.found || devToolsEvidence,
@@ -112,6 +123,8 @@ async function smokeHost({ name, executable, headed }) {
       executable,
       remotePort,
       extensionLoaded: true,
+      extensionId,
+      optionsHealth,
       evidence: {
         preferences: preferenceEvidence,
         devToolsTargetCount: targets.length,
@@ -144,6 +157,18 @@ async function smokeHost({ name, executable, headed }) {
     await stopChild(child);
     cleanupDir(userDataDir);
   }
+}
+
+function findExtensionTarget(targets) {
+  return targets.find((target) =>
+      /chrome-extension:\/\//.test(target.url || "") &&
+      /service-worker\.js|options\.html/.test(target.url || "")
+    );
+}
+
+function extensionIdFromTarget(target) {
+  const match = String(target?.url || "").match(/chrome-extension:\/\/([^/]+)/);
+  return match ? match[1] : null;
 }
 
 function isChromeCommandLineExtensionDisabled({ name, browserVersion, error }) {
@@ -235,13 +260,151 @@ function readDevToolsTargets(port) {
   return requestJson(port, "/json/list");
 }
 
-function requestJson(port, route) {
+async function testOptionsHealth({ port, extensionId, endpoint, tokenInfo }) {
+  assert.ok(tokenInfo.token, "Missing local API token for Options /health test.");
+  const optionsUrl = `chrome-extension://${extensionId}/options.html`;
+  const target = await openDevToolsTarget(port, optionsUrl);
+  const value = await evaluateDevTools(target.webSocketDebuggerUrl, buildOptionsHealthExpression({
+    endpoint,
+    token: tokenInfo.token
+  }));
+  return {
+    ok: Boolean(value?.ok),
+    status: value?.status ?? null,
+    statusLine: String(value?.statusLine || ""),
+    providerCount: value?.providerCount ?? null,
+    attention: value?.attention ?? null,
+    tokenSource: tokenInfo.source
+  };
+}
+
+async function openDevToolsTarget(port, url) {
+  const route = `/json/new?${encodeURIComponent(url)}`;
+  try {
+    return await requestJson(port, route, "PUT");
+  } catch {
+    return requestJson(port, route, "GET");
+  }
+}
+
+function buildOptionsHealthExpression({ endpoint, token }) {
+  return `
+    (async () => {
+      const endpoint = ${JSON.stringify(endpoint)};
+      const token = ${JSON.stringify(token)};
+      await new Promise((resolve) => chrome.storage.local.set({ enabled: true, endpoint, token }, resolve));
+      const result = await new Promise((resolve) => {
+        chrome.runtime.sendMessage({ type: "WHO_EATS_TOKEN_PING" }, (response) => {
+          resolve({
+            response,
+            runtimeError: chrome.runtime.lastError ? chrome.runtime.lastError.message : null
+          });
+        });
+      });
+      const response = result.response || {};
+      const summary = response.body && response.body.providerHealth ? response.body.providerHealth.summary || {} : {};
+      const statusLine = response.ok
+        ? "Connected: " + (summary.total ?? 0) + " providers, " + (summary.attention ?? 0) + " need attention"
+        : "Connection failed: " + (result.runtimeError || response.error || response.status || "unknown");
+      const statusNode = document.querySelector("#status");
+      if (statusNode) statusNode.textContent = statusLine;
+      return {
+        ok: Boolean(response.ok),
+        status: response.status || null,
+        statusLine,
+        providerCount: summary.total ?? null,
+        attention: summary.attention ?? null
+      };
+    })()
+  `;
+}
+
+function evaluateDevTools(webSocketDebuggerUrl, expression) {
+  return new Promise((resolve, reject) => {
+    const ws = new WebSocket(webSocketDebuggerUrl);
+    const timeout = setTimeout(() => {
+      try {
+        ws.close();
+      } catch {}
+      reject(new Error("Timed out waiting for Options /health evaluation."));
+    }, 10_000);
+
+    ws.addEventListener("open", () => {
+      ws.send(JSON.stringify({
+        id: 1,
+        method: "Runtime.evaluate",
+        params: {
+          expression,
+          awaitPromise: true,
+          returnByValue: true
+        }
+      }));
+    });
+
+    ws.addEventListener("message", (event) => {
+      const payload = JSON.parse(String(event.data));
+      if (payload.id !== 1) return;
+      clearTimeout(timeout);
+      try {
+        ws.close();
+      } catch {}
+      if (payload.error) {
+        reject(new Error(payload.error.message || "DevTools evaluation failed."));
+        return;
+      }
+      if (payload.result?.exceptionDetails) {
+        reject(new Error(payload.result.exceptionDetails.text || "Options /health evaluation threw."));
+        return;
+      }
+      resolve(payload.result?.result?.value || null);
+    });
+
+    ws.addEventListener("error", () => {
+      clearTimeout(timeout);
+      reject(new Error("Could not connect to DevTools target."));
+    });
+  });
+}
+
+function readLocalTokenInfo() {
+  const fromEnv = String(process.env.WHO_EATS_TOKEN_API_TOKEN || "").trim();
+  if (fromEnv) return { token: fromEnv, source: "WHO_EATS_TOKEN_API_TOKEN" };
+  const tokenPath = defaultTokenPath();
+  const token = readTokenFile(tokenPath);
+  return {
+    token,
+    source: token ? "userData api-token.txt" : "missing"
+  };
+}
+
+function defaultTokenPath() {
+  if (process.platform === "win32") {
+    const base = process.env.APPDATA || path.join(os.homedir(), "AppData", "Roaming");
+    return path.join(base, "who-eats-token", "api-token.txt");
+  }
+  if (process.platform === "darwin") {
+    return path.join(os.homedir(), "Library", "Application Support", "who-eats-token", "api-token.txt");
+  }
+  const base = process.env.XDG_CONFIG_HOME || path.join(os.homedir(), ".config");
+  return path.join(base, "who-eats-token", "api-token.txt");
+}
+
+function readTokenFile(tokenPath) {
+  try {
+    const token = fs.readFileSync(tokenPath, "utf8").trim();
+    return token.length >= 32 ? token : "";
+  } catch {
+    return "";
+  }
+}
+
+function requestJson(port, route, method = "GET") {
   return new Promise((resolve, reject) => {
     const request = http.request({
       hostname: "127.0.0.1",
       port,
       path: route,
-      method: "GET",
+      method,
       timeout: 2000
     }, (response) => {
       const chunks = [];
@@ -357,7 +520,8 @@ function printReport(report) {
   console.log(`Headed: ${report.headed ? "yes" : "no"}`);
   for (const result of report.results) {
     if (result.ok) {
-      console.log(`- OK ${result.name}: extension loaded via ${result.executable}`);
+      const health = result.optionsHealth?.ok ? ", Options /health OK" : "";
+      console.log(`- OK ${result.name}: extension loaded via ${result.executable}${health}`);
     } else if (result.skipped) {
       console.log(`- SKIP ${result.name}: ${result.skipped}`);
     } else {
@@ -369,10 +533,12 @@ function printReport(report) {
 function parseArgs(argv) {
   const parsed = {
     browser: "all",
+    endpoint: "http://127.0.0.1:17667",
     headed: argv.includes("--headed"),
     keepProfiles: argv.includes("--keep-profiles"),
     json: argv.includes("--json"),
-    require: argv.includes("--require")
+    require: argv.includes("--require"),
+    testOptionsHealth: argv.includes("--test-options-health")
   };
   for (let index = 0; index < argv.length; index += 1) {
     const value = argv[index];
@@ -381,6 +547,11 @@ function parseArgs(argv) {
       index += 1;
     } else if (value.startsWith("--browser=")) {
       parsed.browser = normalizeBrowser(value.slice("--browser=".length));
+    } else if (value === "--endpoint") {
+      parsed.endpoint = normalizeEndpoint(argv[index + 1]);
+      index += 1;
+    } else if (value.startsWith("--endpoint=")) {
+      parsed.endpoint = normalizeEndpoint(value.slice("--endpoint=".length));
     }
   }
   return parsed;
@@ -390,6 +561,12 @@ function normalizeBrowser(value) {
   const text = String(value || "").toLowerCase();
   if (["chrome", "edge", "all"].includes(text)) return text;
   return "all";
+}
+
+function normalizeEndpoint(value) {
+  const text = String(value || "").trim().replace(/\/+$/, "");
+  if (/^https?:\/\/(127\.0\.0\.1|localhost):17667$/i.test(text)) return text;
+  return "http://127.0.0.1:17667";
 }
 
 function slug(value) {

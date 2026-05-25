@@ -12,16 +12,12 @@ assert.ok(packageJson.scripts?.["test:validation-template"], "Missing test:valid
 
 const browser = runJson(["--target", "browser"]);
 assert.equal(browser.target, "browser");
-assert.equal(browser.openActionCount, 2);
-assert.equal(browser.sections.length, 1);
-assert.equal(browser.sections[0].target, "browser");
-assert.ok(browser.sections[0].checklist.some((item) => item.includes("Chrome loads")));
-assert.ok(findAction(browser, "browserAdapter.manualLoad").recordCommand.includes("--status passed"));
-assert.ok(findAction(browser, "browserAdapter.manualConnection").requiredNotes.some((note) => note.includes("/health")));
+assert.equal(browser.openActionCount, 0);
+assert.equal(browser.sections.length, 0);
 
 const ide = runJson(["--target=ide"]);
 assert.equal(ide.target, "ide");
-assert.ok(findAction(ide, "ideAdapter.hostSmoke").recordCommand.includes("--status host-smoke-only"));
+assert.equal(ide.openActionCount, 1);
 assert.ok(findAction(ide, "ideAdapter.manualConnection").requiredNotes.some((note) => note.includes("copy snapshot")));
 
 const macos = runJson(["--target", "macos"]);
@@ -41,8 +37,7 @@ assert.equal(audit.sections.length, 0);
 
 const text = runText(["--target", "browser"]);
 assert.match(text, /Validation Evidence Template/);
-assert.match(text, /browserAdapter\.manualLoad/);
-assert.match(text, /Record when done/);
+assert.match(text, /No remaining validation actions/);
 assert.match(text, /Do not paste API keys/);
 
 console.log("Validation template checks passed.");

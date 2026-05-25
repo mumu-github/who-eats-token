@@ -27,11 +27,11 @@ Before recording runtime evidence, make sure `npm run lag:triage -- --json` does
 
 These items do not block the source beta, but they still block a polished public binary/adapters release. Current Windows validation status:
 
-- Browser adapter: `npm run package:browser-extension` succeeds and Edge host smoke loads the extension. Official Chrome 137+ may ignore command-line extension loading, so Chrome still needs either manual unpacked loading or validation with Chrome for Testing/Chromium.
-- IDE adapter: `npm run package:vscode-extension` succeeds and the VSIX is generated, but this validation machine does not currently have VS Code or Cursor installed. Install those hosts, then run `npm run smoke:ide-hosts -- --require`.
+- Browser adapter: recorded. Chrome for Testing 149.0.7827.22 and Edge 148.0.3967.83 loaded the unpacked extension, and Options `/health` returned HTTP 200 in both hosts without recording the local token.
+- IDE adapter: VS Code 1.121.0 and Cursor 3.5.33 installed the generated VSIX and listed `who-eats-token.who-eats-token-vscode-adapter`. The remaining IDE item is the visible status bar `/health`, refresh command, and copy snapshot behavior in both hosts.
 - Windows signing: `npm run signing:readiness -- --platform windows --require` is blocked until `WIN_CSC_LINK` or `CSC_LINK`, plus `WIN_CSC_KEY_PASSWORD` or `CSC_KEY_PASSWORD`, are present in the release environment.
 
-Do not mark `browserAdapter.manualLoad`, `browserAdapter.manualConnection`, `ideAdapter.manualLoad`, `ideAdapter.manualConnection`, or `signing.windowsAuthenticode` as passed until those exact host/certificate checks have really been completed.
+Do not mark `ideAdapter.manualConnection` or `signing.windowsAuthenticode` as passed until those exact host/certificate checks have really been completed.
 
 ## macOS Real-Machine Validation
 

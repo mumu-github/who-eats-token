@@ -16,14 +16,14 @@ assert.equal(report.guards.secret.findingCount, 0);
 assert.equal(report.guards.license.findingCount, 0);
 assert.ok(report.guards.license.packageCount > 0);
 assert.equal(report.releaseGaps.summary.total, 15);
-assert.equal(report.releaseGaps.summary.blocking, 4);
+assert.equal(report.releaseGaps.summary.blocking, 3);
 assertBlocking("macos-packaged-runtime");
-assertBlocking("browser-manual");
 assertBlocking("ide-manual");
 assertBlocking("signing");
-for (const target of ["browser", "ide", "macos", "signing"]) {
+for (const target of ["ide", "macos", "signing"]) {
   assert.ok(report.nextActions.actions.some((action) => action.target === target), `Missing next action target: ${target}`);
 }
+assert.ok(!report.nextActions.actions.some((action) => action.target === "browser"), "Browser adapter validation should be complete.");
 assert.ok(report.commands.includes("npm run release:summary -- --json"));
 assert.ok(report.commands.includes("npm run release:check -- --list --json"));
 
@@ -31,7 +31,7 @@ const text = runText([]);
 assert.match(text, /Who Eats Token Release Summary/);
 assert.match(text, /Public release ready: no/);
 assert.match(text, /Source guards: OK/);
-assert.match(text, /Blocking gaps: 4\/15/);
+assert.match(text, /Blocking gaps: 3\/15/);
 assert.match(text, /macos-packaged-runtime/);
 
 const required = runSummary(["--json", "--require-public-release"], 1);

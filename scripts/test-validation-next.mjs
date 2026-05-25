@@ -13,23 +13,19 @@ assert.ok(packageJson.scripts?.["test:validation-next"], "Missing test:validatio
 const all = runJson([]);
 assert.equal(all.ok, false);
 assert.ok(all.summary.total > 0);
-assert.ok(all.actions.some((action) => action.key === "browserAdapter.manualLoad"));
-assert.ok(all.actions.some((action) => action.key === "ideAdapter.hostSmoke"));
+assert.ok(!all.actions.some((action) => action.target === "browser"), "browser evidence should be complete.");
+assert.ok(all.actions.some((action) => action.key === "ideAdapter.manualConnection"));
 assert.ok(all.actions.some((action) => action.key === "macosPackagedRuntime.smoke"));
 assert.ok(!all.actions.some((action) => action.key === "browserAdapter.hostSmoke"), "host-smoke-only browser evidence should not appear as a remaining action.");
 
 const browser = runJson(["--target", "browser"]);
 assert.equal(browser.target, "browser");
-assert.deepEqual(browser.actions.map((action) => action.key), [
-  "browserAdapter.manualConnection",
-  "browserAdapter.manualLoad"
-].sort());
-assert.ok(browser.actions.every((action) => action.recordCommand.includes("npm run release:evidence")));
+assert.equal(browser.ok, true);
+assert.deepEqual(browser.actions, []);
 
 const ide = runJson(["--target=ide"]);
 assert.equal(ide.target, "ide");
-assert.ok(ide.actions.some((action) => action.key === "ideAdapter.hostSmoke"));
-assert.ok(ide.actions.some((action) => action.recordCommand.includes("--status host-smoke-only")));
+assert.deepEqual(ide.actions.map((action) => action.key), ["ideAdapter.manualConnection"]);
 
 const audit = runJson(["--target", "audit"]);
 assert.equal(audit.ok, true);
@@ -37,7 +33,7 @@ assert.equal(audit.summary.total, 0);
 
 const text = runText(["--target", "browser"]);
 assert.match(text, /Next Release Validation Actions/);
-assert.match(text, /browserAdapter\.manualLoad/);
+assert.match(text, /No remaining validation actions/);
 assert.doesNotMatch(text, /browserAdapter\.hostSmoke/);
 
 console.log("Validation next-action checks passed.");

@@ -50,7 +50,7 @@ function buildReport(payload) {
       .filter((entry) => isRecorded(entry.check))
       .sort(compareEntries),
     unresolved: entries
-      .filter((entry) => !isFullPass(entry.check))
+      .filter((entry) => !isFullPass(entry.check) && !isSupersededHostSmoke(entry, payload))
       .sort(compareEntries)
   };
 }
@@ -135,6 +135,22 @@ function isRecorded(check) {
 
 function isFullPass(check) {
   return check.status === "passed";
+}
+
+function isSupersededHostSmoke(entry, payload) {
+  if (entry.key === "browserAdapter.hostSmoke") {
+    return hasPassed(payload, ["browserAdapter", "manualLoad"]) &&
+      hasPassed(payload, ["browserAdapter", "manualConnection"]);
+  }
+  if (entry.key === "ideAdapter.hostSmoke") {
+    return hasPassed(payload, ["ideAdapter", "manualLoad"]) &&
+      hasPassed(payload, ["ideAdapter", "manualConnection"]);
+  }
+  return false;
+}
+
+function hasPassed(payload, pathParts) {
+  return pathParts.reduce((value, key) => value?.[key], payload.evidence)?.status === "passed";
 }
 
 function compareEntries(left, right) {

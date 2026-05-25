@@ -45,35 +45,35 @@
     "browserAdapter": {
       "hostSmoke": {
         "status": "host-smoke-only",
-        "recordedAt": "2026-05-24T00:00:00+08:00",
-        "command": "npm run smoke:browser-hosts -- --require",
-        "notes": "Edge host smoke passed. Official Chrome 148 command-line extension loading was policy-skipped; Chrome manual load or Chrome for Testing/Chromium automation is still required."
+        "recordedAt": "2026-05-25T09:28:59.636Z",
+        "command": "npm run smoke:browser-hosts -- --require --test-options-health with Chrome for Testing PATH",
+        "notes": "Chrome for Testing 149.0.7827.22 and Edge 148.0.3967.83 host smoke passed with temporary profiles; extension id ndknfhgaojabhngfhalaapmgchajelck loaded in both hosts; Options /health also checked."
       },
       "manualLoad": {
-        "status": "not-run",
-        "recordedAt": "",
-        "command": "Chrome and Edge load adapters/browser-extension unpacked",
-        "notes": "Must verify Chrome and Edge extension pages manually."
+        "status": "passed",
+        "recordedAt": "2026-05-25T09:28:59.645Z",
+        "command": "Chrome for Testing and Edge load adapters/browser-extension unpacked",
+        "notes": "Chrome for Testing version 149.0.7827.22 and Edge version 148.0.3967.83 loaded the unpacked adapter from adapters/browser-extension; extension id ndknfhgaojabhngfhalaapmgchajelck was enabled in both hosts."
       },
       "manualConnection": {
-        "status": "not-run",
-        "recordedAt": "",
-        "command": "Browser extension Options /health connection test",
-        "notes": "Must verify local token and /health connection in the Options page."
+        "status": "passed",
+        "recordedAt": "2026-05-25T09:29:00.351Z",
+        "command": "Browser extension Options /health connection test via real Chrome for Testing and Edge hosts",
+        "notes": "Local token source was userData api-token.txt without pasting the token into notes; /health returned HTTP 200 in Chrome for Testing and Edge Options pages; both reported Connected: 6 providers, 2 need attention."
       }
     },
     "ideAdapter": {
       "hostSmoke": {
-        "status": "not-run",
-        "recordedAt": "",
+        "status": "host-smoke-only",
+        "recordedAt": "2026-05-25T09:29:01.099Z",
         "command": "npm run smoke:ide-hosts -- --require",
-        "notes": "Requires VS Code and Cursor installed on a validation machine."
+        "notes": "Validation machine host smoke passed: VS Code 1.121.0 and Cursor 3.5.33 installed the VSIX and listed who-eats-token.who-eats-token-vscode-adapter."
       },
       "manualLoad": {
-        "status": "not-run",
-        "recordedAt": "",
+        "status": "passed",
+        "recordedAt": "2026-05-25T09:29:41.251Z",
         "command": "Install VSIX in VS Code and Cursor",
-        "notes": "Must verify the packaged VSIX or extension folder in both hosts."
+        "notes": "VS Code version 1.121.0 and Cursor version 3.5.33 installed release/adapters/who-eats-token-vscode-adapter-0.1.0.vsix; adapter id who-eats-token.who-eats-token-vscode-adapter was listed as loaded in both hosts."
       },
       "manualConnection": {
         "status": "not-run",
