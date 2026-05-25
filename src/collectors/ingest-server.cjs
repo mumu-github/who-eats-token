@@ -298,10 +298,24 @@ function compactProvider(provider) {
     lowestRemainingPercent: provider.lowestRemainingPercent,
     freshness: provider.freshness || "unknown",
     dataAgeMs: provider.dataAgeMs,
+    trust: compactTrust(provider.trust),
     todayTokens: provider.todayTokens || 0,
     recentTokens: provider.recentTokens || 0,
     todayCostUsd: provider.todayCostUsd || 0,
     delight: compactDelight(provider.delight)
+  };
+}
+
+function compactTrust(trust) {
+  if (!trust || typeof trust !== "object") return null;
+  return {
+    level: trust.level || null,
+    label: trust.label || null,
+    sourceLabel: trust.sourceLabel || null,
+    updatedAt: trust.updatedAt || null,
+    ageMs: Number.isFinite(Number(trust.ageMs)) ? Number(trust.ageMs) : null,
+    freshness: trust.freshness || "unknown",
+    explain: trust.explain || null
   };
 }
 

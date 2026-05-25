@@ -13,6 +13,7 @@ const els = {
   usageStrip: document.getElementById("usageStrip"),
   usageName: document.getElementById("usageName"),
   usageStatus: document.getElementById("usageStatus"),
+  trustBadge: document.getElementById("trustBadge"),
   todayLabel: document.getElementById("todayLabel"),
   todayTokens: document.getElementById("todayTokens"),
   recentLabel: document.getElementById("recentLabel"),
@@ -60,6 +61,7 @@ function renderUsageStrip(snapshot, provider, display) {
 
   els.usageName.textContent = provider?.name || "等待数据";
   els.usageStatus.textContent = delight?.shortLabel || display?.statusLabel || (provider ? getUsageStatus(provider) : "同步中");
+  renderTrustBadge(els.trustBadge, getTrustInfo(snapshot, provider));
   if (els.todayLabel) els.todayLabel.textContent = display?.usageLabels?.today || "今";
   if (els.recentLabel) els.recentLabel.textContent = display?.usageLabels?.recent || "1h";
   els.todayTokens.textContent = formatNullableTokens(display?.usageValues?.today ?? provider?.todayTokens ?? totals.todayTokens);
@@ -72,6 +74,13 @@ function renderUsageStrip(snapshot, provider, display) {
   els.usageStrip.title = provider
     ? `${delight?.label ? `${delight.label} · ` : ""}${display?.title || `${provider.name} · ${getSyncLabel(provider)} · 今日 ${formatTokens(provider.todayTokens)} · 近 1h ${formatTokens(provider.recentTokens)}`}`
     : `今日 ${formatTokens(totals.todayTokens)} · 近 1h ${formatTokens(totals.recentTokens)}`;
+}
+
+function renderTrustBadge(element, trust) {
+  if (!element) return;
+  element.textContent = trust?.label || "等待";
+  element.dataset.trust = trust?.level || "missing";
+  element.title = formatTrustTitle(trust);
 }
 
 function renderSystemStrip(system) {
@@ -87,6 +96,10 @@ function renderSystemStrip(system) {
   els.systemStrip.dataset.cpu = getSystemLevel(cpuPercent, 70, 88);
   els.systemStrip.dataset.memory = getSystemLevel(memoryPercent, 78, 90);
   els.systemStrip.dataset.available = getAvailableMemoryLevel(availablePercent);
+  const ecoMode = getSystemLevel(cpuPercent, 70, 88) !== "healthy" ||
+    getSystemLevel(memoryPercent, 78, 90) !== "healthy" ||
+    getAvailableMemoryLevel(availablePercent) !== "healthy";
+  document.body.dataset.ecoMode = ecoMode ? "on" : "off";
   els.systemStrip.title = [
     `CPU ${formatSystemPercent(cpuPercent)}`,
     `内存 ${formatSystemPercent(memoryPercent)}${system?.memory ? ` · ${formatBytes(system.memory.usedBytes)} / ${formatBytes(system.memory.totalBytes)}` : ""}`,
@@ -354,6 +367,41 @@ function getProviderHealth(snapshot, provider) {
   return healthProviders.find((entry) => entry.id === provider.id) || null;
 }
 
+function getTrustInfo(snapshot, provider) {
+  const health = getProviderHealth(snapshot, provider);
+  if (health?.trust) return health.trust;
+  if (!provider) return null;
+  const syncStatus = provider.latest?.rateLimitsTrust?.status || "missing";
+  if (syncStatus === "live") {
+    return {
+      level: "exact-local",
+      label: "本地精确",
+      sourceLabel: provider.source || provider.id,
+      updatedAt: provider.latest?.timestamp || provider.collectedAt || null,
+      explain: "来自本地明确事件汇总。"
+    };
+  }
+  return {
+    level: syncStatus,
+    label: provider.latest?.rateLimitsTrust?.label || "等待",
+    sourceLabel: provider.source || provider.id,
+    updatedAt: provider.latest?.timestamp || provider.collectedAt || null,
+    explain: provider.latest?.rateLimitsTrust?.reason || "等待 provider 数据。"
+  };
+}
+
+function formatTrustTitle(trust) {
+  if (!trust) return "等待数据可信度";
+  const age = formatAge(trust.ageMs);
+  return [
+    `数据可信度：${trust.label}`,
+    `来源：${trust.sourceLabel || "--"}`,
+    age ? `更新：${age}` : null,
+    `级别：${trust.level || "--"}`,
+    trust.explain || null
+  ].filter(Boolean).join("\n");
+}
+
 function getTightestProvider(providers) {
   const candidates = providers.filter((provider) => (
     provider.latest?.rateLimits?.primary || provider.latest?.tokenPlan
@@ -538,6 +586,16 @@ function formatResetCountdown(value) {
   if (hours <= 0) return `${mins}m`;
   if (hours < 10) return `${hours}h${String(mins).padStart(2, "0")}m`;
   return `${hours}h`;
+}
+
+function formatAge(ageMs) {
+  if (ageMs === null || ageMs === undefined) return "";
+  const seconds = Math.round(Number(ageMs) / 1000);
+  if (!Number.isFinite(seconds)) return "";
+  if (seconds < 60) return `${seconds} 秒前`;
+  const minutes = Math.round(seconds / 60);
+  if (minutes < 60) return `${minutes} 分钟前`;
+  return `${Math.round(minutes / 60)} 小时前`;
 }
 
 function formatTokens(value) {

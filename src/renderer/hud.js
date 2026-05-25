@@ -9,7 +9,10 @@ const els = {
   hudChart: document.getElementById("hudChart"),
   hudFiveCaption: document.getElementById("hudFiveCaption"),
   hudWeekCaption: document.getElementById("hudWeekCaption"),
-  hudPill: document.getElementById("hudPill"),
+  hudPlan: document.getElementById("hudPlan"),
+  hudTrust: document.getElementById("hudTrust"),
+  hudMascot: document.getElementById("hudMascot"),
+  hudPredict: document.getElementById("hudPredict"),
   hudMeta: document.getElementById("hudMeta")
 };
 
@@ -29,7 +32,9 @@ function renderHud(payload) {
   document.body.dataset.motion = delight?.motion || "none";
   renderHudMetrics(provider);
   renderHudChart(provider);
-  renderHudPill(provider);
+  renderHudPills(provider);
+  renderHudMascot(provider);
+  els.hudPredict.textContent = getPredictLabel(provider);
   els.hudMeta.textContent = getHudMeta(provider);
 }
 
@@ -125,32 +130,65 @@ function renderHudChart(provider) {
       : getWorstLevel(provider?.fiveHourRemaining, provider?.weekRemaining);
 }
 
-function renderHudPill(provider) {
+function renderHudPills(provider) {
   const level = provider?.displayMode === "token-plan"
     ? getRemainingLevel(provider?.tokenPlanRemaining)
     : provider?.displayMode === "context"
       ? getRemainingLevel(provider?.contextRemaining)
       : getWorstLevel(provider?.fiveHourRemaining, provider?.weekRemaining);
-  els.hudPill.dataset.level = level;
-  els.hudPill.dataset.sync = provider?.syncStatus || "missing";
-  els.hudPill.dataset.trend = provider?.trendStatus || "unknown";
-  els.hudPill.dataset.forecast = provider?.capacityTrend?.forecast?.status || "unknown";
-  els.hudPill.dataset.delightMood = provider?.delight?.mood || "watching";
-  els.hudPill.dataset.delightTone = provider?.delight?.tone || "muted";
-  els.hudPill.dataset.motion = provider?.delight?.motion || "none";
-  if (level === "danger") {
-    els.hudPill.textContent = provider?.delight?.shortLabel || "告警";
-  } else if (level === "caution") {
-    els.hudPill.textContent = provider?.delight?.shortLabel || "偏紧";
-  } else if (provider?.displayMode === "token-plan") {
-    els.hudPill.textContent = provider?.delight?.shortLabel || "Token Plan";
-  } else if (provider?.displayMode === "context") {
-    els.hudPill.textContent = provider?.delight?.shortLabel || "上下文";
-  } else if (provider?.syncStatus && provider.syncStatus !== "live") {
-    els.hudPill.textContent = provider?.delight?.shortLabel || provider.syncLabel || "等待";
-  } else {
-    els.hudPill.textContent = provider?.delight?.shortLabel || provider?.trendLabel || "观察";
+  const trust = getTrustInfo(provider);
+  setPillState(els.hudPlan, provider, level);
+  setPillState(els.hudTrust, provider, level);
+  els.hudPlan.textContent = getPlanLabel(provider);
+  els.hudTrust.textContent = trust.label;
+  els.hudTrust.dataset.trust = trust.level;
+  els.hudTrust.title = formatTrustTitle(trust);
+}
+
+function setPillState(element, provider, level) {
+  element.dataset.level = level;
+  element.dataset.sync = provider?.syncStatus || "missing";
+  element.dataset.trend = provider?.trendStatus || "unknown";
+  element.dataset.forecast = provider?.capacityTrend?.forecast?.status || "unknown";
+  element.dataset.delightMood = provider?.delight?.mood || "watching";
+  element.dataset.delightTone = provider?.delight?.tone || "muted";
+  element.dataset.motion = provider?.delight?.motion || "none";
+}
+
+function getPlanLabel(provider) {
+  if (provider?.displayMode === "token-plan") return provider.tokenPlanPlanName || "Token Plan";
+  if (provider?.displayMode === "context") return "上下文";
+  if (provider?.displayMode === "usage") return "用量";
+  if (provider?.syncStatus && provider.syncStatus !== "live") return provider.syncLabel || "等待";
+  return provider?.delight?.shortLabel || provider?.trendLabel || "余量";
+}
+
+function renderHudMascot(provider) {
+  if (!els.hudMascot) return;
+  const remaining = provider?.displayMode === "token-plan"
+    ? provider?.tokenPlanRemaining
+    : provider?.displayMode === "context"
+      ? provider?.contextRemaining
+      : Math.min(provider?.fiveHourRemaining ?? 100, provider?.weekRemaining ?? 100);
+  els.hudMascot.dataset.level = getRemainingLevel(remaining);
+  els.hudMascot.dataset.delightMood = provider?.delight?.mood || "watching";
+}
+
+function getPredictLabel(provider) {
+  if (!provider) return "等待接入";
+  if (provider.syncStatus && provider.syncStatus !== "live") return provider.syncLabel || "等待同步";
+  if (provider.displayMode === "token-plan") {
+    const remainingCredits = Number(provider.tokenPlanRemainingCredits || 0);
+    const recentCredits = Number(provider.tokenPlanRecentCredits || 0) || Number(provider.recentTokens || 0);
+    const rounds = estimateRounds(remainingCredits, recentCredits);
+    return rounds ? `还能跑约 ${rounds} 轮` : "轻量对话更稳";
   }
+  const remaining = provider.displayMode === "context"
+    ? provider.contextRemaining
+    : Math.min(provider.fiveHourRemaining ?? 100, provider.weekRemaining ?? 100);
+  if (remaining < 20) return "建议等重置更稳";
+  if (remaining < 45) return "还能轻量推进";
+  return provider.capacityTrend?.forecast?.label || "可以继续工作";
 }
 
 function getForecastLabel(provider) {
@@ -160,7 +198,6 @@ function getForecastLabel(provider) {
 
 function getHudMeta(provider) {
   if (!provider) return "等待接入";
-  const delightPrefix = provider.delight?.label ? `${provider.delight.label} · ` : "";
   if (provider.displayMode === "token-plan") {
     const source = provider.tokenPlanSource === "xiaomi-platform"
       ? "平台实时"
@@ -168,16 +205,68 @@ function getHudMeta(provider) {
         ? "截图校准"
         : "本地估算";
     const validUntil = formatDate(provider.tokenPlanValidUntil);
-    return `${delightPrefix}${formatCredits(provider.tokenPlanUsedCredits)} / ${formatCredits(provider.tokenPlanTotalCredits)} Credits · ${source}${validUntil}`;
+    const age = provider.trust?.ageMs !== null && provider.trust?.ageMs !== undefined
+      ? ` · 更新 ${formatAge(provider.trust.ageMs)}`
+      : "";
+    return `${formatCredits(provider.tokenPlanUsedCredits)} / ${formatCredits(provider.tokenPlanTotalCredits)} · ${source}${age}${validUntil}`;
   }
   if (provider.displayMode === "context") {
     const source = provider.contextSource === "message-estimate" ? "估算" : "本地同步";
-    return `${delightPrefix}已用 ${formatTokens(provider.contextUsedTokens)} / ${formatTokens(provider.contextLimitTokens)} · ${source}`;
+    return `已用 ${formatTokens(provider.contextUsedTokens)} / ${formatTokens(provider.contextLimitTokens)} · ${source}`;
   }
   if (provider.displayMode === "usage") {
-    return `${delightPrefix}近1h ${formatTokens(provider.recentTokens)} · 今日 ${formatTokens(provider.todayTokens)} · 等待限额`;
+    return `近1h ${formatTokens(provider.recentTokens)} · 今日 ${formatTokens(provider.todayTokens)} · 等待限额`;
   }
-  return `${delightPrefix}${formatTokens(provider.recentTokens)} / 1h · ${getForecastLabel(provider)}${formatReset(provider.fiveHourResetsAt)}`;
+  return `${formatTokens(provider.recentTokens)} / 1h · ${getForecastLabel(provider)}${formatReset(provider.fiveHourResetsAt)}`;
+}
+
+function getTrustInfo(provider) {
+  const trust = provider?.trust || provider?.health?.trust;
+  if (trust) return trust;
+  if (provider?.displayMode === "token-plan" && provider.tokenPlanSource && provider.tokenPlanSource !== "local-estimate") {
+    return {
+      level: "exact-provider",
+      label: "精确",
+      sourceLabel: provider.tokenPlanSource,
+      explain: "来自 provider plan usage API。"
+    };
+  }
+  if (provider?.syncStatus === "live") {
+    return {
+      level: provider.displayMode === "token-plan" && provider.tokenPlanSource && provider.tokenPlanSource !== "local-estimate"
+        ? "exact-provider"
+        : "exact-local",
+      label: provider.displayMode === "token-plan" ? "精确" : "本地精确",
+      sourceLabel: provider.tokenPlanSource || provider.id,
+      explain: "来自本地或 provider 明确用量信号。"
+    };
+  }
+  return {
+    level: provider?.syncStatus || "missing",
+    label: provider?.syncLabel || "等待",
+    sourceLabel: provider?.id || "unknown",
+    explain: "等待 provider 数据。"
+  };
+}
+
+function formatTrustTitle(trust) {
+  return [
+    `数据可信度：${trust.label}`,
+    `来源：${trust.sourceLabel || "--"}`,
+    trust.ageMs !== null && trust.ageMs !== undefined ? `更新：${formatAge(trust.ageMs)}` : null,
+    `级别：${trust.level || "--"}`,
+    trust.explain || null
+  ].filter(Boolean).join("\n");
+}
+
+function estimateRounds(remaining, recent) {
+  if (!remaining || !recent) return "";
+  const base = Math.max(1, recent);
+  const estimate = Math.floor(remaining / base);
+  if (estimate <= 0) return "";
+  if (estimate <= 2) return "1-2";
+  if (estimate <= 5) return "3-5";
+  return "5+";
 }
 
 function getContextTodayFill(provider) {
@@ -247,6 +336,15 @@ function formatReset(value) {
   })}`;
 }
 
+function formatAge(ageMs) {
+  const seconds = Math.round(Number(ageMs) / 1000);
+  if (!Number.isFinite(seconds)) return "--";
+  if (seconds < 60) return `${seconds} 秒前`;
+  const minutes = Math.round(seconds / 60);
+  if (minutes < 60) return `${minutes} 分钟前`;
+  return `${Math.round(minutes / 60)} 小时前`;
+}
+
 function formatDate(value) {
   if (!value) return "";
   const date = new Date(value);
@@ -254,5 +352,5 @@ function formatDate(value) {
   return ` · ${date.toLocaleDateString("zh-CN", {
     month: "numeric",
     day: "numeric"
-  })}`;
+  })} 到期`;
 }

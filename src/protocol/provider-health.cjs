@@ -56,6 +56,7 @@ function summarizeProvider(registered, provider, snapshot) {
     ? Math.max(0, collectedMs - latestMs)
     : null;
   const statusInfo = getHealthStatus({ registered, provider, enabled, remainingValues });
+  const trust = getTrustInfo({ registered, provider, statusInfo, dataAgeMs, latestTimestamp });
 
   const entry = {
     id: provider?.id || registered?.id || "unknown",
@@ -82,11 +83,98 @@ function summarizeProvider(registered, provider, snapshot) {
     freshness: getFreshness(dataAgeMs),
     todayTokens: provider?.todayTokens || 0,
     recentTokens: provider?.recentTokens || 0,
-    todayCostUsd: provider?.todayCostUsd || 0
+    todayCostUsd: provider?.todayCostUsd || 0,
+    trust
   };
   return {
     ...entry,
     delight: getQuotaDelight(entry)
+  };
+}
+
+function getTrustInfo({ registered, provider, statusInfo, dataAgeMs, latestTimestamp }) {
+  const displayMode = getDisplayMode(provider);
+  const tokenPlanSource = provider?.latest?.tokenPlan?.source || null;
+  const sourceLabel = provider?.source || registered?.source || "unknown";
+  const freshness = getFreshness(dataAgeMs);
+  const syncStatus = provider?.latest?.rateLimitsTrust?.status || null;
+  const syncReason = provider?.latest?.rateLimitsTrust?.reason || null;
+
+  if (!provider) {
+    return {
+      level: registered?.source === "planned" ? "planned" : "missing",
+      label: registered?.source === "planned" ? "预留" : "等待",
+      sourceLabel,
+      updatedAt: latestTimestamp || null,
+      ageMs: dataAgeMs,
+      freshness,
+      explain: statusInfo.reason
+    };
+  }
+
+  if (statusInfo.status === "auth-expired") {
+    return {
+      level: "auth-expired",
+      label: "要登录",
+      sourceLabel,
+      updatedAt: latestTimestamp || null,
+      ageMs: dataAgeMs,
+      freshness,
+      explain: statusInfo.reason || "Provider credential needs to be refreshed."
+    };
+  }
+
+  if (statusInfo.status === "delayed" || statusInfo.status === "suspect" || freshness === "stale") {
+    return {
+      level: "delayed",
+      label: freshness === "stale" ? "过期" : "延迟",
+      sourceLabel,
+      updatedAt: latestTimestamp || null,
+      ageMs: dataAgeMs,
+      freshness,
+      explain: syncReason || statusInfo.reason || "Provider data is reliable but not fresh enough for an exact live claim."
+    };
+  }
+
+  if (statusInfo.status === "estimated" || syncStatus === "estimated" || provider.confidence === "estimated") {
+    return {
+      level: "estimated",
+      label: "估算",
+      sourceLabel,
+      updatedAt: latestTimestamp || null,
+      ageMs: dataAgeMs,
+      freshness,
+      explain: syncReason || statusInfo.reason || "Provider data is estimated from local usage or model context."
+    };
+  }
+
+  if (statusInfo.status === "disabled") {
+    return {
+      level: "disabled",
+      label: "已关闭",
+      sourceLabel,
+      updatedAt: latestTimestamp || null,
+      ageMs: dataAgeMs,
+      freshness,
+      explain: statusInfo.reason
+    };
+  }
+
+  const isProviderPlan = displayMode === "token-plan" && tokenPlanSource && tokenPlanSource !== "local-estimate";
+  const isExact = provider.confidence === "exact" || provider.confidence === "reported" || statusInfo.status === "live";
+  const level = isProviderPlan ? "exact-provider" : isExact ? "exact-local" : "derived";
+  const label = isProviderPlan ? "精确" : isExact ? "本地精确" : "汇总";
+
+  return {
+    level,
+    label,
+    sourceLabel,
+    updatedAt: latestTimestamp || null,
+    ageMs: dataAgeMs,
+    freshness,
+    explain: isProviderPlan
+      ? "Provider plan usage API reported this quota; prompts, completions, and API keys are not included."
+      : "Local explicit usage events were aggregated; prompts, completions, and source files are not included."
   };
 }
 
@@ -246,6 +334,7 @@ module.exports = {
   _test: {
     getDisplayMode,
     getFreshness,
+    getTrustInfo,
     remainingPercent
   }
 };

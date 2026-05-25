@@ -21,9 +21,9 @@ if (process.env.WHO_EATS_TOKEN_DISABLE_GPU === "1") {
   app.commandLine.appendSwitch("disable-gpu-compositing");
 }
 
-const BAR_HEIGHT = 54;
-const HUD_WIDTH = 324;
-const HUD_HEIGHT = 112;
+const BAR_HEIGHT = 64;
+const HUD_WIDTH = 396;
+const HUD_HEIGHT = 136;
 const SYSTEM_REFRESH_MS = 2000;
 const DESKTOP_BAR_REFRESH_MS = 1000;
 const HUD_TRANSIENT_MISS_MS = 5000;
@@ -1386,6 +1386,7 @@ function buildHudPayload(snapshot, activeWindow, tool) {
           syncStatus: provider.latest?.rateLimitsTrust?.status || "missing",
           syncLabel: provider.latest?.rateLimitsTrust?.label || "等待",
           health: providerHealth || null,
+          trust: providerHealth?.trust || null,
           delight: providerHealth?.delight || null,
           capacityTrend,
           trendStatus: capacityTrend?.status || "unknown",

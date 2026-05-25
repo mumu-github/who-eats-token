@@ -11,7 +11,8 @@
       <div class="hud-head">
         <span class="hud-dot"></span>
         <span id="toolName">LLM</span>
-        <span class="hud-pill" id="hudPill">余量</span>
+        <span class="hud-plan" id="hudPlan">余量</span>
+        <span class="hud-trust" id="hudTrust">等待</span>
       </div>
       <div class="hud-stats">
         <div class="hud-stat" id="hudFiveMetric">
@@ -44,8 +45,17 @@
             <span class="chart-caption" id="hudWeekCaption">7d</span>
           </span>
         </div>
+        <div class="hud-mascot" id="hudMascot" aria-hidden="true">
+          <span class="mascot-leaf left"></span>
+          <span class="mascot-leaf right"></span>
+          <span class="mascot-face"></span>
+          <span class="mascot-bowl"></span>
+        </div>
       </div>
-      <div class="hud-meta" id="hudMeta">等待数据</div>
+      <div class="hud-footer">
+        <span class="hud-predict" id="hudPredict">等待接入</span>
+        <span class="hud-meta" id="hudMeta">等待数据</span>
+      </div>
     </main>
     <script src="./hud.js"></script>
   </body>

@@ -102,6 +102,7 @@ function testDesktopRendererProviderSelection() {
   assert.equal(harness.text("secondaryMetricLabel"), "一周", "Codex should render weekly capacity labels.");
   assert.equal(harness.text("fiveHourRemaining"), "85%", "Codex five-hour remaining should render from Codex data.");
   assert.equal(harness.text("weekRemaining"), "80%", "Codex weekly remaining should render from Codex data.");
+  assert.equal(harness.text("trustBadge"), "本地精确", "Top bar should expose Codex trust status.");
   assert.equal(harness.style("miniChart", "--five-fill"), "85%", "Mini chart should track Codex five-hour remaining.");
   assert.equal(harness.style("miniChart", "--week-fill"), "80%", "Mini chart should track Codex weekly remaining.");
 
@@ -114,6 +115,7 @@ function testDesktopRendererProviderSelection() {
   assert.equal(harness.text("secondaryMetricLabel"), "已用", "Hermes token plan should render used credits.");
   assert.equal(harness.text("fiveHourRemaining"), "24%", "Hermes remaining should render from token plan.");
   assert.equal(harness.text("weekRemaining"), "152.75M", "Hermes used credits should render compactly.");
+  assert.equal(harness.text("trustBadge"), "本地精确", "Top bar should expose Hermes trust fallback when provider health is absent.");
   assert.equal(harness.style("miniChart", "--five-fill"), "24%", "Mini chart should track Hermes remaining.");
   assert.equal(harness.style("miniChart", "--week-fill"), "76%", "Mini chart should track Hermes used percent.");
 
@@ -147,7 +149,9 @@ function testHudRendererCoupledVisuals() {
   assert.equal(harness.text("hudWeekLabelText"), "已用", "Token plan HUD should label used credits.");
   assert.equal(harness.text("hudFiveHour"), "17%", "Token plan remaining should render as percent.");
   assert.equal(harness.text("hudWeek"), "166.51M", "Token plan used credits should render compactly.");
-  assert.equal(harness.text("hudPill"), "告警", "HUD pill should warn below 20%.");
+  assert.equal(harness.text("hudPlan"), "Token Plan", "HUD plan pill should show the active plan.");
+  assert.equal(harness.text("hudTrust"), "精确", "HUD trust pill should expose provider exactness.");
+  assert.equal(harness.text("hudPredict"), "轻量对话更稳", "HUD should show an action-oriented low-quota hint.");
   assert.equal(harness.dataset("hudChart", "level"), "danger", "HUD chart level must follow low remaining.");
   assert.equal(harness.style("hudChart", "--five-fill"), "17%", "HUD chart left bar should follow remaining.");
   assert.equal(harness.style("hudChart", "--week-fill"), "83%", "HUD chart used bar should follow used percent.");
@@ -172,6 +176,8 @@ function testHudRendererCoupledVisuals() {
   assert.equal(harness.text("hudWeekLabelText"), "一周", "Codex HUD should label weekly capacity.");
   assert.equal(harness.text("hudFiveHour"), "95%", "Codex five-hour remaining should render.");
   assert.equal(harness.text("hudWeek"), "80%", "Codex weekly remaining should render.");
+  assert.equal(harness.text("hudTrust"), "本地精确", "Codex HUD should expose local exactness.");
+  assert.equal(harness.text("hudPredict"), "可以继续工作", "Healthy Codex HUD should show a calm work hint.");
   assert.equal(harness.dataset("hudChart", "level"), "healthy", "HUD chart level should recover with healthy capacity.");
   assert.equal(harness.style("hudChart", "--five-fill"), "95%", "HUD chart should follow Codex five-hour remaining.");
   assert.equal(harness.style("hudChart", "--week-fill"), "80%", "HUD chart should follow Codex weekly remaining.");

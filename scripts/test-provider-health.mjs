@@ -95,6 +95,8 @@ assert.equal(codex.displayMode, "capacity");
 assert.equal(codex.primaryRemainingPercent, 82);
 assert.equal(codex.secondaryRemainingPercent, 58);
 assert.equal(codex.freshness, "fresh");
+assert.equal(codex.trust.level, "exact-local");
+assert.equal(codex.trust.label, "本地精确");
 assert.equal(codex.delight.id, "steady");
 assert.equal(codex.delight.shortLabel, "刚刚好");
 assert.equal(codex.delight.motion, "none");
@@ -105,6 +107,8 @@ assert.equal(hermes.status, "estimated");
 assert.equal(hermes.displayMode, "token-plan");
 assert.equal(hermes.tokenPlanRemainingPercent, 17);
 assert.equal(hermes.lowestRemainingPercent, 17);
+assert.equal(hermes.trust.level, "estimated");
+assert.equal(hermes.trust.label, "估算");
 assert.equal(hermes.delight.shortLabel, "省着点");
 assert.equal(hermes.delight.attention, true);
 assert.equal(hermes.delight.severity, "critical");
@@ -161,5 +165,6 @@ const staleQuotaHealth = summarizeProviderHealth({
 const staleCodex = staleQuotaHealth.providers.find((provider) => provider.id === "codex");
 assert.equal(staleCodex.latestTimestamp, "2026-05-24T09:40:00.000Z");
 assert.equal(staleCodex.freshness, "stale");
+assert.equal(staleCodex.trust.label, "过期");
 
 console.log("Provider health checks passed.");
