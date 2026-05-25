@@ -155,9 +155,7 @@ function buildListReport() {
     slowCommandMs,
     requiredFiles,
     commands: commands.map(([command, commandArgs]) => ({
-      label: formatCommand(command, commandArgs),
-      command,
-      args: commandArgs
+      label: formatCommand(command, commandArgs)
     }))
   };
 }
