@@ -43,7 +43,7 @@ const PROVIDER_REGISTRY = [
     id: "hermes",
     name: "Hermes",
     source: "hermes-local",
-    description: "读取本地 Hermes 会话库折算小米 Token Plan Credits；配置平台 Cookie 后可同步官方总量和已用。",
+    description: "读取本地 Hermes 会话库里的用量和上下文；检测到 Xiaomi/MiMo 配置时可额外同步 Token Plan Credits。",
     configurable: true,
     enabledByDefault: true
   }

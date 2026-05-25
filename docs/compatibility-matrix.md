@@ -16,7 +16,7 @@ Catalog updated: 2026-05-24
 | Adapter | Claim | Status | Type | Platforms | Verification | Signals |
 | --- | --- | --- | --- | --- | --- | --- |
 | [Codex Local Collector](../README.md) | `first-class` | `supported` | `native-collector` | `windows`, `macos` | `runtime-check` | `usage-tokens`, `quota-capacity`, `provider-health` |
-| [Hermes Local Collector](../README.md) | `first-class` | `supported` | `native-collector` | `windows`, `macos` | `runtime-check` | `usage-tokens`, `quota-token-plan`, `provider-health` |
+| [Hermes Local Collector](../README.md) | `first-class` | `supported` | `native-collector` | `windows`, `macos` | `runtime-check` | `usage-tokens`, `quota-token-plan`, `context-window`, `provider-health` |
 | [Hermes OpenAI-Compatible Bridge](../README.md) | `first-class` | `supported` | `local-gateway` | `windows`, `macos` | `runtime-check` | `usage-tokens`, `local-health` |
 | [Browser Extension Adapter](../docs/browser-extension.md) | `reference` | `reference` | `browser-extension` | `windows`, `macos` | `runtime-check` | `hud-overlays`, `usage-events`, `local-health` |
 | [VS Code/Cursor Adapter](../docs/ide-extension.md) | `reference` | `reference` | `ide-extension` | `windows`, `macos` | `runtime-check` | `local-health`, `snapshot-read`, `status-display` |
@@ -31,7 +31,7 @@ Catalog updated: 2026-05-24
 | Signal | Adapters | Supported | Reference | Planned |
 | --- | --- | --- | --- | --- |
 | `adapter-authoring` | `agent-workflows` | 0 | 1 | 0 |
-| `context-window` | `external-summary-import`, `provider-specific-adapters` | 0 | 1 | 1 |
+| `context-window` | `hermes-local-collector`, `external-summary-import`, `provider-specific-adapters` | 1 | 1 | 1 |
 | `hud-overlays` | `browser-extension`, `node-sdk` | 0 | 2 | 0 |
 | `local-health` | `hermes-bridge`, `browser-extension`, `vscode-extension`, `node-sdk` | 1 | 3 | 0 |
 | `provider-health` | `codex-local-collector`, `hermes-local-collector`, `mcp-server`, `agent-workflows` | 2 | 2 | 0 |

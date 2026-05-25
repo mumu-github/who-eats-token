@@ -53,6 +53,21 @@ function getXiaomiTokenPlan({ localAppData, hermesDataPath, sessions, collectedA
   };
 }
 
+function shouldUseXiaomiTokenPlan({ env = null, hermesDataPath = null, model = "", source = "", modelConfig = "" } = {}) {
+  const resolvedEnv = env || loadHermesEnv(hermesDataPath);
+  if (Object.keys(resolvedEnv).some((key) => key.startsWith("XIAOMI_"))) return true;
+  if (hermesDataPath && readPlatformCookie(resolvedEnv, hermesDataPath)) return true;
+
+  const haystack = [
+    model,
+    source,
+    modelConfig,
+    resolvedEnv.XIAOMI_BASE_URL,
+    resolvedEnv.XIAOMI_API_KEY
+  ].filter(Boolean).join(" ");
+  return /(xiaomi|xiaomimimo|mimo-v?2|mimo.*pro|token-plan-cn)/i.test(haystack);
+}
+
 function getEstimatedLabel(localEstimate, platformStatus) {
   if (platformStatus === "auth-missing") return "登录过期";
   if (platformStatus === "refreshing") return "刷新中";
@@ -521,5 +536,6 @@ module.exports = {
   getXiaomiTokenPlan,
   estimateSessionCredits,
   getModelCreditRate,
-  normalizePlatformQuota
+  normalizePlatformQuota,
+  shouldUseXiaomiTokenPlan
 };

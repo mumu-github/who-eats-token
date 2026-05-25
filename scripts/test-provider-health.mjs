@@ -3,6 +3,7 @@ import { createRequire } from "node:module";
 
 const require = createRequire(import.meta.url);
 const { summarizeProviderHealth } = require("../src/protocol/provider-health.cjs");
+const { shouldUseXiaomiTokenPlan } = require("../src/collectors/xiaomi-token-plan.cjs");
 
 const collectedAt = "2026-05-24T10:00:00.000Z";
 const health = summarizeProviderHealth({
@@ -121,6 +122,22 @@ assert.equal(claude.delight.shortLabel, "排队中");
 const smoke = health.providers.find((provider) => provider.id === "packaged-smoke");
 assert.equal(smoke.status, "live");
 assert.equal(smoke.source, "test");
+
+assert.equal(
+  shouldUseXiaomiTokenPlan({ env: {}, model: "gpt-4o-mini", source: "openai", modelConfig: "{}" }),
+  false,
+  "Generic Hermes providers should not opt into Xiaomi Token Plan quota."
+);
+assert.equal(
+  shouldUseXiaomiTokenPlan({ env: { XIAOMI_API_KEY: "tp-redacted" }, model: "gpt-4o-mini" }),
+  true,
+  "Explicit Xiaomi config should enable Xiaomi Token Plan quota."
+);
+assert.equal(
+  shouldUseXiaomiTokenPlan({ env: {}, model: "mimo-v2.5-pro" }),
+  true,
+  "MiMo models should enable Xiaomi Token Plan quota."
+);
 
 const staleQuotaHealth = summarizeProviderHealth({
   collectedAt,

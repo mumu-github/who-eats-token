@@ -7,7 +7,7 @@ Legend: `yes` means the adapter may provide that signal. Blank means it must not
 | Adapter | Status | Platforms | Type | Usage | Capacity | Token Plan | Context | HUD Avoidance | Health | Snapshot | Status Display | Workflows |
 | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
 | [Codex Local Collector](../README.md) | `supported` | `windows`, `macos` | `native-collector` | yes | yes |  |  |  | yes |  |  |  |
-| [Hermes Local Collector](../README.md) | `supported` | `windows`, `macos` | `native-collector` | yes |  | yes |  |  | yes |  |  |  |
+| [Hermes Local Collector](../README.md) | `supported` | `windows`, `macos` | `native-collector` | yes |  | yes | yes |  | yes |  |  |  |
 | [Hermes OpenAI-Compatible Bridge](../README.md) | `supported` | `windows`, `macos` | `local-gateway` | yes |  |  |  |  | yes |  |  |  |
 | [Browser Extension Adapter](../docs/browser-extension.md) | `reference` | `windows`, `macos` | `browser-extension` | yes |  |  |  | yes | yes |  |  |  |
 | [VS Code/Cursor Adapter](../docs/ide-extension.md) | `reference` | `windows`, `macos` | `ide-extension` |  |  |  |  |  | yes | yes | yes |  |

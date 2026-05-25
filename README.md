@@ -385,12 +385,14 @@ npm run package:adapters
 - `who-eats-token-browser-extension-*.zip`
 - `who-eats-token-vscode-adapter-*.vsix`
 
-### Xiaomi Token Plan Credits
+### Hermes Local Usage And Optional Xiaomi Token Plan
 
-Hermes 会额外读取本地 Hermes 数据库，按小米 Token Plan 规则把 MiMo 调用折算成 Credits：
+Hermes Local Collector 默认只读取本地 Hermes 数据库里的会话用量和上下文窗口，适用于任意 Hermes 后端：
 
 - Windows: `%LOCALAPPDATA%\hermes\state.db`
 - macOS: `~/Library/Application Support/hermes/state.db`
+
+如果检测到 Xiaomi/MiMo 配置，才会启用额外的 Xiaomi Token Plan Credits 适配：
 
 - `mimo-v2.5-pro`: `1 token = 2 Credits`
 - `mimo-v2.5`: `1 token = 1 Credit`

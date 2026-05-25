@@ -13,7 +13,7 @@ The generated compatibility matrix is [docs/compatibility-matrix.md](compatibili
 | Active window metadata | `get-windows`, with PowerShell fallback for dialog detection | `get-windows`; title and URL detection may require macOS Screen Recording and Accessibility permissions |
 | System CPU/memory | Supported | Supported |
 | Codex collector | `~/.codex/sessions` | `~/.codex/sessions` |
-| Hermes local collector | `%LOCALAPPDATA%\hermes` | `~/Library/Application Support/hermes` |
+| Hermes local collector | `%LOCALAPPDATA%\hermes`; Xiaomi Token Plan is optional | `~/Library/Application Support/hermes`; Xiaomi Token Plan is optional |
 | Local ingest API | `127.0.0.1:17667` | `127.0.0.1:17667` |
 | Hermes bridge | `127.0.0.1:17668` | `127.0.0.1:17668` |
 
@@ -28,6 +28,8 @@ Prefer stable integration surfaces in this order:
 5. Estimates only when the provider does not expose exact usage.
 
 Each provider should label its data source and confidence so the UI can distinguish live, delayed, estimated, missing, and auth-expired data.
+
+Hermes is treated as a generic local provider first. Xiaomi/MiMo Token Plan credits are a provider-specific quota adapter layered on top only when Xiaomi configuration, MiMo models, or a Xiaomi platform cookie is present.
 
 ## Low-Overhead Rules
 

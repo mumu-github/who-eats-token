@@ -1,6 +1,6 @@
 const fs = require("node:fs");
 const path = require("node:path");
-const { getXiaomiTokenPlan } = require("./xiaomi-token-plan.cjs");
+const { getXiaomiTokenPlan, shouldUseXiaomiTokenPlan } = require("./xiaomi-token-plan.cjs");
 const { getHermesDataPath } = require("../system/paths.cjs");
 
 const RECENT_MS = 60 * 60 * 1000;
@@ -49,7 +49,7 @@ function collectHermesUsage({ localAppData = process.env.LOCALAPPDATA, hermesDat
 
       const latestSession = sessions[0];
       const latestMessages = readSessionMessages(db, latestSession.id);
-      const model = latestSession.model || "mimo-v2.5-pro";
+      const model = latestSession.model || readModelFromConfig(latestSession.modelConfig) || "unknown";
       const contextLimit = getContextLimit(model, latestSession.modelConfig, hermesDir);
       const sessionTokens = getSessionTokenTotal(latestSession);
       const estimatedContextTokens = estimateSessionTokens(latestSession, latestMessages);
@@ -57,13 +57,20 @@ function collectHermesUsage({ localAppData = process.env.LOCALAPPDATA, hermesDat
       const contextUsedPercent = percentage(contextUsedTokens, contextLimit);
       const contextRemaining = Math.max(0, Math.min(100, 100 - Math.round(contextUsedPercent)));
       const totals = summarizeSessions(sessions, collectedAt);
-      const tokenPlan = getXiaomiTokenPlan({
-        localAppData,
+      const tokenPlan = shouldUseXiaomiTokenPlan({
         hermesDataPath: hermesDir,
-        sessions,
-        collectedAt,
-        model
-      });
+        model,
+        source: latestSession.source,
+        modelConfig: latestSession.modelConfig
+      })
+        ? getXiaomiTokenPlan({
+            localAppData,
+            hermesDataPath: hermesDir,
+            sessions,
+            collectedAt,
+            model
+          })
+        : null;
 
       return {
         id: "hermes",
@@ -71,9 +78,7 @@ function collectHermesUsage({ localAppData = process.env.LOCALAPPDATA, hermesDat
         status: "live",
         source: "hermes-state-db",
         confidence: sessionTokens > 0 ? "reported-local" : "estimated-local",
-        note: tokenPlan.status === "live"
-          ? "Xiaomi Token Plan quota is read from the Xiaomi platform session."
-          : "Xiaomi Token Plan usage is estimated from local Hermes sessions until a Xiaomi platform login cookie is configured.",
+        note: getHermesNote(tokenPlan),
         collectedAt: collectedAt.toISOString(),
         todayTokens: totals.todayTokens,
         recentTokens: totals.recentTokens,
@@ -83,14 +88,7 @@ function collectHermesUsage({ localAppData = process.env.LOCALAPPDATA, hermesDat
           model,
           lastTurnTokens: estimateLastTurnTokens(latestMessages),
           rateLimits: null,
-          rateLimitsTrust: {
-            status: tokenPlan.status === "live" ? "live" : "estimated",
-            label: tokenPlan.label || "Token Plan",
-            reason: tokenPlan.status === "live"
-              ? null
-              : tokenPlan.platformReason || "Xiaomi platform quota is not authenticated; using local Token Plan credit estimate.",
-            ageMs: ageMs(latestSession.lastMessageAt, collectedAt)
-          },
+          rateLimitsTrust: getHermesTrust(tokenPlan, latestSession, collectedAt),
           tokenPlan,
           context: {
             sessionId: latestSession.id,
@@ -116,6 +114,34 @@ function collectHermesUsage({ localAppData = process.env.LOCALAPPDATA, hermesDat
   } catch (error) {
     return buildMissingProvider(collectedAt, error.message);
   }
+}
+
+function getHermesNote(tokenPlan) {
+  if (!tokenPlan) {
+    return "Read local Hermes session usage and context. Provider-specific quota is not configured.";
+  }
+  return tokenPlan.status === "live"
+    ? "Xiaomi Token Plan quota is read from the Xiaomi platform session."
+    : "Xiaomi Token Plan usage is estimated from local Hermes sessions until a Xiaomi platform login cookie is configured.";
+}
+
+function getHermesTrust(tokenPlan, latestSession, collectedAt) {
+  if (!tokenPlan) {
+    return {
+      status: "live",
+      label: "本地",
+      reason: null,
+      ageMs: ageMs(latestSession.lastMessageAt, collectedAt)
+    };
+  }
+  return {
+    status: tokenPlan.status === "live" ? "live" : "estimated",
+    label: tokenPlan.label || "Token Plan",
+    reason: tokenPlan.status === "live"
+      ? null
+      : tokenPlan.platformReason || "Xiaomi platform quota is not authenticated; using local Token Plan credit estimate.",
+    ageMs: ageMs(latestSession.lastMessageAt, collectedAt)
+  };
 }
 
 function readSessionMessages(db, sessionId) {
@@ -215,6 +241,24 @@ function readLimitFromModelConfig(modelConfig) {
   } catch {
     return null;
   }
+}
+
+function readModelFromConfig(modelConfig) {
+  if (!modelConfig) return null;
+  try {
+    const parsed = JSON.parse(modelConfig);
+    return firstText(parsed.model, parsed.id, parsed.name, parsed.model_id, parsed.modelId);
+  } catch {
+    return null;
+  }
+}
+
+function firstText(...values) {
+  for (const value of values) {
+    const text = String(value || "").trim();
+    if (text) return text;
+  }
+  return null;
 }
 
 function readLimitFromModelCache(model, hermesDataPath) {
