@@ -46,6 +46,9 @@ assert.ok(aggressive.windows.desktopWidthRatio <= 0.5, "Desktop bar width must s
 
 assertNumericConstant(mainSource, "SYSTEM_REFRESH_MS", 2000, Infinity);
 assertNumericConstant(mainSource, "DESKTOP_BAR_REFRESH_MS", 1000, Infinity);
+assertNumericConstant(mainSource, "CODEX_SESSION_WATCH_DEBOUNCE_MS", 250, 2000);
+assert.ok(mainSource.includes("fs.watch("), "Codex session updates should be event-driven, not a tighter polling loop.");
+assert.ok(mainSource.includes("scheduleCodexSessionRefresh"), "Codex session watcher must debounce snapshot refreshes.");
 assert.ok(mainSource.includes("HUD_DEBUG_LOG_MAX_BYTES = 1 * 1024 * 1024"), "Debug log cap must stay <= 1MB.");
 
 assert.ok(!hermesOverlayInstaller.includes("setInterval("), "Hermes overlay installer must not inject setInterval.");

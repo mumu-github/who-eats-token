@@ -38,6 +38,7 @@ const health = summarizeProviderHealth({
       latest: {
         model: "gpt-5.5",
         latestTokenAt: "2026-05-24T09:59:00.000Z",
+        rateLimitsSource: { updatedAt: "2026-05-24T09:59:00.000Z" },
         rateLimitsTrust: { status: "live", label: "实时" },
         rateLimits: {
           primary: { usedPercent: 18, windowMinutes: 300 },
@@ -120,5 +121,28 @@ assert.equal(claude.delight.shortLabel, "排队中");
 const smoke = health.providers.find((provider) => provider.id === "packaged-smoke");
 assert.equal(smoke.status, "live");
 assert.equal(smoke.source, "test");
+
+const staleQuotaHealth = summarizeProviderHealth({
+  collectedAt,
+  providers: [
+    {
+      id: "codex",
+      name: "Codex",
+      status: "live",
+      confidence: "exact",
+      latest: {
+        latestTokenAt: "2026-05-24T09:59:30.000Z",
+        rateLimitsSource: { updatedAt: "2026-05-24T09:40:00.000Z" },
+        rateLimitsTrust: { status: "delayed", label: "延迟" },
+        rateLimits: {
+          primary: { usedPercent: 10, windowMinutes: 300 }
+        }
+      }
+    }
+  ]
+});
+const staleCodex = staleQuotaHealth.providers.find((provider) => provider.id === "codex");
+assert.equal(staleCodex.latestTimestamp, "2026-05-24T09:40:00.000Z");
+assert.equal(staleCodex.freshness, "stale");
 
 console.log("Provider health checks passed.");

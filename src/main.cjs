@@ -1,5 +1,6 @@
 const { app, BrowserWindow, ipcMain, screen, Notification, Tray, Menu, nativeImage } = require("electron");
 const fs = require("node:fs");
+const os = require("node:os");
 const path = require("node:path");
 const { collectCodexUsage } = require("./collectors/codex.cjs");
 const { createHermesBridgeServer } = require("./collectors/hermes-bridge.cjs");
@@ -28,6 +29,7 @@ const DESKTOP_BAR_REFRESH_MS = 1000;
 const HUD_TRANSIENT_MISS_MS = 5000;
 const ACTIVE_TOOL_TTL_MS = 10 * 60 * 1000;
 const HUD_DEBUG_LOG_MAX_BYTES = 1 * 1024 * 1024;
+const CODEX_SESSION_WATCH_DEBOUNCE_MS = 750;
 const SETTINGS_WIDTH = 420;
 const SETTINGS_HEIGHT = 560;
 const TREND_WINDOW_MS = 15 * 60 * 1000;
@@ -61,6 +63,8 @@ let snapshotTimer = null;
 let desktopBarTimer = null;
 let hudTimer = null;
 let systemTimer = null;
+let codexSessionWatcher = null;
+let codexSessionWatchTimer = null;
 let isQuitting = false;
 
 applyUserDataOverride();
@@ -1525,6 +1529,7 @@ function applySettings(previous, current) {
   resizeDesktopBar();
   restartIngestServerIfNeeded(previous, current);
   restartHermesBridgeIfNeeded(previous, current);
+  restartCodexSessionWatcher();
   maybeInstallHermesOverlay(previous, current);
   applyLoginItemSettings();
   scheduleTimers();
@@ -1601,6 +1606,53 @@ function restartHermesBridge() {
       ingestToken: localApiAccess?.token || null
     });
   }
+}
+
+function restartCodexSessionWatcher() {
+  stopCodexSessionWatcher();
+  if (!isProviderEnabled("codex")) return;
+
+  const codexSessionsRoot = path.join(os.homedir(), ".codex", "sessions");
+  if (!fs.existsSync(codexSessionsRoot)) return;
+
+  try {
+    codexSessionWatcher = fs.watch(
+      codexSessionsRoot,
+      { recursive: true, persistent: false },
+      (_eventType, filename) => {
+        if (filename && !String(filename).endsWith(".jsonl")) return;
+        scheduleCodexSessionRefresh();
+      }
+    );
+    codexSessionWatcher.on("error", stopCodexSessionWatcher);
+  } catch {
+    codexSessionWatcher = null;
+  }
+}
+
+function stopCodexSessionWatcher() {
+  if (codexSessionWatchTimer) {
+    clearTimeout(codexSessionWatchTimer);
+    codexSessionWatchTimer = null;
+  }
+  if (!codexSessionWatcher) return;
+  try {
+    codexSessionWatcher.close();
+  } catch {
+    // File watchers can already be closed during app shutdown.
+  }
+  codexSessionWatcher = null;
+}
+
+function scheduleCodexSessionRefresh() {
+  if (isQuitting) return;
+  if (codexSessionWatchTimer) clearTimeout(codexSessionWatchTimer);
+  codexSessionWatchTimer = setTimeout(() => {
+    codexSessionWatchTimer = null;
+    sendSnapshot();
+    refreshToolHud();
+  }, CODEX_SESSION_WATCH_DEBOUNCE_MS);
+  codexSessionWatchTimer.unref?.();
 }
 
 function applyUserDataOverride() {
@@ -1681,6 +1733,7 @@ app.whenReady().then(() => {
   applyLoginItemSettings();
   restartIngestServer();
   restartHermesBridge();
+  restartCodexSessionWatcher();
   if (!headless) {
     createDesktopBarWindow();
     createToolHudWindow();
@@ -1715,6 +1768,7 @@ app.on("will-quit", () => {
   if (desktopBarTimer) clearInterval(desktopBarTimer);
   if (hudTimer) clearInterval(hudTimer);
   if (systemTimer) clearInterval(systemTimer);
+  stopCodexSessionWatcher();
   if (ingestServer) ingestServer.close();
   if (hermesBridgeServer) hermesBridgeServer.close();
 });

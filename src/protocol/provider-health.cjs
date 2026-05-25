@@ -201,6 +201,21 @@ function getDisplayMode(provider) {
 }
 
 function getLatestTimestamp(provider) {
+  const displayMode = getDisplayMode(provider);
+  if (displayMode === "capacity") {
+    return provider?.latest?.rateLimitsSource?.updatedAt ||
+      provider?.latest?.timestamp ||
+      provider?.latest?.latestTokenAt ||
+      provider?.collectedAt ||
+      null;
+  }
+  if (displayMode === "token-plan") {
+    return provider?.latest?.tokenPlan?.snapshotAt ||
+      provider?.latest?.timestamp ||
+      provider?.latest?.latestTokenAt ||
+      provider?.collectedAt ||
+      null;
+  }
   return provider?.latest?.timestamp ||
     provider?.latest?.latestTokenAt ||
     provider?.latest?.tokenPlan?.snapshotAt ||
