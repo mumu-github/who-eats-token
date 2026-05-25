@@ -23,6 +23,7 @@ const diagnosticsBundleSource = read("src/diagnostics/diagnostics-bundle.cjs");
 const stabilityReportSource = read("src/diagnostics/stability-report.cjs");
 const importUsageReportSource = read("scripts/import-usage-report.mjs");
 const hermesOverlayInstaller = read("src/integrations/hermes-overlay-installer.cjs");
+const xiaomiTokenPlanSource = read("src/collectors/xiaomi-token-plan.cjs");
 const browserContentScript = read("adapters/browser-extension/content-script.js");
 const browserServiceWorker = read("adapters/browser-extension/service-worker.js");
 
@@ -50,6 +51,9 @@ assertNumericConstant(mainSource, "CODEX_SESSION_WATCH_DEBOUNCE_MS", 250, 2000);
 assert.ok(mainSource.includes("fs.watch("), "Codex session updates should be event-driven, not a tighter polling loop.");
 assert.ok(mainSource.includes("scheduleCodexSessionRefresh"), "Codex session watcher must debounce snapshot refreshes.");
 assert.ok(mainSource.includes("HUD_DEBUG_LOG_MAX_BYTES = 1 * 1024 * 1024"), "Debug log cap must stay <= 1MB.");
+assert.ok(xiaomiTokenPlanSource.includes("TOKEN_PLAN_CACHE_MS = 15 * 1000"), "Xiaomi platform quota should refresh on the normal HUD cadence.");
+assert.ok(xiaomiTokenPlanSource.includes("TOKEN_PLAN_STALE_MS = 45 * 1000"), "Xiaomi platform quota should not look live for minutes after it goes stale.");
+assert.ok(xiaomiTokenPlanSource.includes("fingerprintCookie"), "Xiaomi cookie changes must bypass the refresh interval.");
 
 assert.ok(!hermesOverlayInstaller.includes("setInterval("), "Hermes overlay installer must not inject setInterval.");
 assert.ok(!browserContentScript.includes("setInterval("), "Browser content script must not use setInterval.");

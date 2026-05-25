@@ -1,10 +1,11 @@
 const fs = require("node:fs");
+const crypto = require("node:crypto");
 const path = require("node:path");
 const { getHermesDataPath } = require("../system/paths.cjs");
 
 const PLATFORM_BASE_URL = "https://platform.xiaomimimo.com/api/v1";
-const TOKEN_PLAN_CACHE_MS = 60 * 1000;
-const TOKEN_PLAN_STALE_MS = 5 * 60 * 1000;
+const TOKEN_PLAN_CACHE_MS = 15 * 1000;
+const TOKEN_PLAN_STALE_MS = 45 * 1000;
 const DEFAULT_TOTAL_CREDITS = 60_000_000;
 const DEFAULT_FIVE_HOUR_CREDITS = 2_000_000;
 const FIVE_HOUR_MS = 5 * 60 * 60 * 1000;
@@ -12,12 +13,14 @@ const FIVE_HOUR_MS = 5 * 60 * 60 * 1000;
 let quotaCache = null;
 let quotaRefreshPromise = null;
 let quotaRefreshStartedAt = 0;
+let quotaRefreshCookieKey = null;
 
 function getXiaomiTokenPlan({ localAppData, hermesDataPath, sessions, collectedAt, model }) {
   const hermesDir = getHermesDataPath({ localAppData, hermesDataPath });
   const env = loadHermesEnv(hermesDir);
-  const hasPlatformCookie = Boolean(readPlatformCookie(env, hermesDir));
-  queuePlatformRefresh(env, hermesDir);
+  const platformCookie = readPlatformCookie(env, hermesDir);
+  const hasPlatformCookie = Boolean(platformCookie);
+  queuePlatformRefresh(env, hermesDir, platformCookie);
 
   const localEstimate = estimateLocalTokenPlan({
     env,
@@ -57,13 +60,16 @@ function getEstimatedLabel(localEstimate, platformStatus) {
   return localEstimate.label;
 }
 
-function queuePlatformRefresh(env, hermesDataPath) {
+function queuePlatformRefresh(env, hermesDataPath, platformCookie = readPlatformCookie(env, hermesDataPath)) {
   if (typeof fetch !== "function") return;
   if (quotaRefreshPromise) return;
-  if (Date.now() - quotaRefreshStartedAt < TOKEN_PLAN_CACHE_MS) return;
+  const nextCookieKey = fingerprintCookie(platformCookie);
+  const cookieChanged = nextCookieKey !== quotaRefreshCookieKey;
+  if (!cookieChanged && Date.now() - quotaRefreshStartedAt < TOKEN_PLAN_CACHE_MS) return;
 
   quotaRefreshStartedAt = Date.now();
-  quotaRefreshPromise = refreshPlatformQuota(env, hermesDataPath)
+  quotaRefreshCookieKey = nextCookieKey;
+  quotaRefreshPromise = refreshPlatformQuota(env, hermesDataPath, platformCookie)
     .then((result) => {
       quotaCache = result;
     })
@@ -80,8 +86,8 @@ function queuePlatformRefresh(env, hermesDataPath) {
     });
 }
 
-async function refreshPlatformQuota(env, hermesDataPath) {
-  const cookie = readPlatformCookie(env, hermesDataPath);
+async function refreshPlatformQuota(env, hermesDataPath, platformCookie = readPlatformCookie(env, hermesDataPath)) {
+  const cookie = platformCookie;
   if (!cookie) {
     return {
       status: "auth-missing",
@@ -348,6 +354,11 @@ function readPlatformCookie(env, hermesDataPath) {
   } catch {
     return null;
   }
+}
+
+function fingerprintCookie(cookie) {
+  if (!cookie) return "missing";
+  return crypto.createHash("sha256").update(cookie).digest("hex");
 }
 
 function loadHermesEnv(hermesDataPath) {
