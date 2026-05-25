@@ -1,0 +1,106 @@
+{
+  "schemaVersion": 1,
+  "releaseCandidate": "0.1.0-local",
+  "evidence": {
+    "windowsPackagedRuntime": {
+      "smoke": {
+        "status": "passed",
+        "recordedAt": "2026-05-24T00:00:00+08:00",
+        "command": "npm run smoke:packaged-win",
+        "notes": "ok true, workingSetMb 167, cpuPercent 0"
+      },
+      "soak": {
+        "status": "passed",
+        "recordedAt": "2026-05-24T00:00:00+08:00",
+        "command": "npm run soak:packaged-win",
+        "notes": "10-minute soak, maxWorkingSetMb 152, growthMb -49, maxCpuPercent 0.21"
+      },
+      "hudPermissionStates": {
+        "status": "passed",
+        "recordedAt": "2026-05-24T00:00:00+08:00",
+        "command": "manual Windows HUD desktop/tool placement check",
+        "notes": "Windows does not require macOS Accessibility or Screen Recording gates."
+      }
+    },
+    "macosPackagedRuntime": {
+      "smoke": {
+        "status": "not-run",
+        "recordedAt": "",
+        "command": "npm run smoke:packaged-mac",
+        "notes": "Requires a real macOS host."
+      },
+      "soak": {
+        "status": "not-run",
+        "recordedAt": "",
+        "command": "npm run soak:packaged-mac",
+        "notes": "Requires a real macOS host."
+      },
+      "hudPermissionStates": {
+        "status": "not-run",
+        "recordedAt": "",
+        "command": "manual macOS Accessibility and Screen Recording granted/denied check",
+        "notes": "Must verify HUD behavior with permissions both granted and denied."
+      }
+    },
+    "browserAdapter": {
+      "hostSmoke": {
+        "status": "host-smoke-only",
+        "recordedAt": "2026-05-24T00:00:00+08:00",
+        "command": "npm run smoke:browser-hosts -- --require",
+        "notes": "Edge host smoke passed. Official Chrome 148 command-line extension loading was policy-skipped; Chrome manual load or Chrome for Testing/Chromium automation is still required."
+      },
+      "manualLoad": {
+        "status": "not-run",
+        "recordedAt": "",
+        "command": "Chrome and Edge load adapters/browser-extension unpacked",
+        "notes": "Must verify Chrome and Edge extension pages manually."
+      },
+      "manualConnection": {
+        "status": "not-run",
+        "recordedAt": "",
+        "command": "Browser extension Options /health connection test",
+        "notes": "Must verify local token and /health connection in the Options page."
+      }
+    },
+    "ideAdapter": {
+      "hostSmoke": {
+        "status": "not-run",
+        "recordedAt": "",
+        "command": "npm run smoke:ide-hosts -- --require",
+        "notes": "Requires VS Code and Cursor installed on a validation machine."
+      },
+      "manualLoad": {
+        "status": "not-run",
+        "recordedAt": "",
+        "command": "Install VSIX in VS Code and Cursor",
+        "notes": "Must verify the packaged VSIX or extension folder in both hosts."
+      },
+      "manualConnection": {
+        "status": "not-run",
+        "recordedAt": "",
+        "command": "VS Code/Cursor status bar /health, refresh, and copy snapshot checks",
+        "notes": "Must verify the status bar and commands inside each host."
+      }
+    },
+    "signing": {
+      "windowsAuthenticode": {
+        "status": "not-run",
+        "recordedAt": "",
+        "command": "npm run signing:readiness -- --platform windows --require",
+        "notes": "Requires Windows code-signing certificate and password in release environment."
+      },
+      "macosNotarization": {
+        "status": "not-run",
+        "recordedAt": "",
+        "command": "npm run signing:readiness -- --platform macos --require",
+        "notes": "Requires Developer ID signing and Apple notarization credentials."
+      }
+    },
+    "dependencyAudit": {
+      "status": "passed",
+      "recordedAt": "2026-05-24T00:00:00+08:00",
+      "command": "npm audit --audit-level=high",
+      "notes": "found 0 vulnerabilities"
+    }
+  }
+}

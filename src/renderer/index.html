@@ -1,0 +1,80 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>谁在吃 token</title>
+    <link rel="stylesheet" href="./styles.css" />
+  </head>
+  <body>
+    <main class="shell">
+      <section class="bar">
+        <button class="brand" id="toggle" title="桌面监控">
+          <span class="mark"></span>
+          <span class="brand-title" aria-label="谁在吃 TOKEN">
+            <span class="brand-art-word" aria-hidden="true">
+              <span class="art-char">谁</span>
+              <span class="art-char">在</span>
+              <span class="art-char">吃</span>
+            </span>
+            <span class="token-sticker" aria-hidden="true">TOKEN</span>
+          </span>
+        </button>
+        <div class="usage-strip" id="usageStrip" title="用量节奏">
+          <span class="usage-dot" aria-hidden="true"></span>
+          <span class="usage-name" id="usageName">等待数据</span>
+          <span class="usage-status" id="usageStatus">同步中</span>
+          <span class="usage-meta"><span id="todayLabel">今</span> <strong id="todayTokens">--</strong></span>
+          <span class="usage-meta"><span id="recentLabel">1h</span> <strong id="recentTokens">--</strong></span>
+        </div>
+        <div class="metric" id="fiveHourMetric">
+          <span class="label">
+            <svg class="label-icon" viewBox="0 0 24 24" aria-hidden="true">
+              <circle cx="12" cy="12" r="8"></circle>
+              <path d="M12 7v5l3 2"></path>
+            </svg>
+            <span id="primaryMetricLabel">5小时</span>
+          </span>
+          <span class="metric-value" id="fiveHourRemaining">--</span>
+        </div>
+        <div class="metric" id="weekMetric">
+          <span class="label">
+            <svg class="label-icon" viewBox="0 0 24 24" aria-hidden="true">
+              <rect x="5" y="6" width="14" height="13" rx="3"></rect>
+              <path d="M8 4v4M16 4v4M5 10h14"></path>
+            </svg>
+            <span id="secondaryMetricLabel">一周</span>
+          </span>
+          <span class="metric-value" id="weekRemaining">--</span>
+        </div>
+        <div class="mini-chart" id="miniChart" title="余量小图表" aria-label="余量小图表">
+          <span class="chart-column chart-five" title="5小时余量">
+            <span class="chart-track"><span class="chart-fill"></span></span>
+            <span class="chart-caption" id="primaryChartCaption">5h</span>
+          </span>
+          <span class="chart-column chart-week" title="一周余量">
+            <span class="chart-track"><span class="chart-fill"></span></span>
+            <span class="chart-caption" id="secondaryChartCaption">7d</span>
+          </span>
+        </div>
+        <div class="system-strip" id="systemStrip" title="系统实时状态">
+          <div class="system-pill" data-kind="cpu">
+            <span class="system-label">CPU</span>
+            <strong id="cpuUsage">--</strong>
+          </div>
+          <div class="system-pill" data-kind="memory">
+            <span class="system-label">内存</span>
+            <strong id="memoryUsage">--</strong>
+          </div>
+          <div class="system-pill" data-kind="available">
+            <span class="system-label">可用</span>
+            <strong id="availableMemory">--</strong>
+          </div>
+        </div>
+        <button class="icon-button" id="close" title="退出">×</button>
+      </section>
+      <section class="details" id="details" aria-hidden="true"></section>
+    </main>
+    <script src="./app.js"></script>
+  </body>
+</html>

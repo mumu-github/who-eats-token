@@ -1,0 +1,13 @@
+{
+  "mcpServers": {
+    "who-eats-token": {
+      "command": "node",
+      "args": [
+        "./scripts/mcp-server.mjs"
+      ],
+      "env": {
+        "WHO_EATS_TOKEN_BASE_URL": "http://127.0.0.1:17667"
+      }
+    }
+  }
+}

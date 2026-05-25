@@ -1,0 +1,88 @@
+name: Performance report
+description: Report CPU, memory, lag, HUD delay, or battery impact.
+title: "[Perf]: "
+labels: ["performance"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Performance reports are most useful with measured CPU/RSS numbers and the active adapters/providers.
+        Please run `npm run support:bundle -- --json`, remove any local paths or account details you do not want to share, and paste the redacted output below.
+  - type: dropdown
+    id: os
+    attributes:
+      label: Operating system
+      options:
+        - Windows 10
+        - Windows 11
+        - macOS Intel
+        - macOS Apple Silicon
+        - Other
+    validations:
+      required: true
+  - type: checkboxes
+    id: enabled_areas
+    attributes:
+      label: Enabled areas
+      options:
+        - label: Desktop top bar
+        - label: In-tool HUD
+        - label: Browser extension
+        - label: VS Code/Cursor adapter
+        - label: Hermes bridge
+        - label: Xiaomi Token Plan sync
+        - label: Debug HUD logging
+  - type: textarea
+    id: stability
+    attributes:
+      label: Diagnostics bundle
+      description: Paste redacted output from `npm run support:bundle -- --json`.
+      render: json
+      placeholder: |
+        {
+          "summary": {
+            "critical": 0,
+            "warning": 0
+          },
+          "system": {
+            "cpuPercent": 12,
+            "appRssMb": 155
+          }
+        }
+    validations:
+      required: true
+  - type: textarea
+    id: measurements
+    attributes:
+      label: Measurements
+      description: Include any extra CPU %, RSS/working set MB, duration, and how you measured it.
+      placeholder: |
+        Idle 10 min: 155 MB RSS, 0.1% CPU
+        During tool switch: ...
+    validations:
+      required: true
+  - type: textarea
+    id: behavior
+    attributes:
+      label: What felt slow or unstable?
+      placeholder: HUD appears late, desktop switch delays, typing lag, browser lag, etc.
+    validations:
+      required: true
+  - type: textarea
+    id: checks
+    attributes:
+      label: Checks run
+      render: text
+      placeholder: |
+        npm run diagnostics -- --json
+        npm run support:bundle -- --json
+        npm run stability -- --json
+        npm run test:performance-budget
+        npm run smoke:packaged-win
+  - type: checkboxes
+    id: safety
+    attributes:
+      label: Safety checklist
+      options:
+        - label: I removed secrets, cookies, local tokens, and account screenshots.
+          required: true

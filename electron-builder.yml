@@ -1,0 +1,56 @@
+appId: dev.whoeatstoken.app
+productName: Who Eats Token
+copyright: Copyright © 2026 Who Eats Token contributors
+
+directories:
+  output: release
+
+files:
+  - src/**/*
+  - package.json
+  - LICENSE
+  - README.md
+
+asar: true
+npmRebuild: false
+compression: normal
+publish: null
+
+win:
+  icon: src/assets/app-icon.ico
+  target:
+    - target: nsis
+      arch:
+        - x64
+        - arm64
+    - target: zip
+      arch:
+        - x64
+        - arm64
+
+nsis:
+  oneClick: false
+  perMachine: false
+  allowToChangeInstallationDirectory: true
+  createDesktopShortcut: false
+  createStartMenuShortcut: true
+  artifactName: ${productName}-${version}-${arch}-setup.${ext}
+
+mac:
+  icon: src/assets/app-icon.png
+  identity: null
+  hardenedRuntime: true
+  gatekeeperAssess: false
+  target:
+    - target: dmg
+      arch:
+        - x64
+        - arm64
+    - target: zip
+      arch:
+        - x64
+        - arm64
+  artifactName: ${productName}-${version}-${arch}.${ext}
+
+dmg:
+  sign: false

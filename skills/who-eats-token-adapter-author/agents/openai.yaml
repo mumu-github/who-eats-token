@@ -1,0 +1,4 @@
+interface:
+  display_name: "Who Eats Token Adapter Author"
+  short_description: "Create a safe low-overhead adapter."
+  default_prompt: "Create or update a Who Eats Token adapter for a provider, browser tool, IDE, gateway, SDK, MCP client, or skill/plugin workflow."

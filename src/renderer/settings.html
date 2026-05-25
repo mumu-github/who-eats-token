@@ -1,0 +1,107 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>谁在吃 token 设置</title>
+    <link rel="stylesheet" href="./styles.css" />
+  </head>
+  <body class="settings-body">
+    <main class="settings-panel">
+      <header class="settings-head">
+        <div>
+          <h1>设置</h1>
+          <span id="settingsState">已同步</span>
+        </div>
+        <button class="settings-close" id="settingsClose" title="关闭">×</button>
+      </header>
+
+      <section class="settings-section">
+        <h2>显示</h2>
+        <label class="settings-toggle">
+          <input type="checkbox" data-path="windows.desktopBarEnabled" />
+          <span>桌面顶部条</span>
+        </label>
+        <label class="settings-toggle">
+          <input type="checkbox" data-path="windows.toolHudEnabled" />
+          <span>工具内 HUD</span>
+        </label>
+        <label class="settings-row">
+          <span>顶部宽度</span>
+          <input type="range" min="0.24" max="0.5" step="0.01" data-path="windows.desktopWidthRatio" />
+          <output data-for="windows.desktopWidthRatio"></output>
+        </label>
+      </section>
+
+      <section class="settings-section">
+        <h2>质感</h2>
+        <label class="settings-row">
+          <span>玻璃浓度</span>
+          <input type="range" min="0.18" max="0.72" step="0.01" data-path="appearance.glassOpacity" />
+          <output data-for="appearance.glassOpacity"></output>
+        </label>
+        <label class="settings-row">
+          <span>模糊强度</span>
+          <input type="range" min="12" max="42" step="1" data-path="appearance.glassBlur" />
+          <output data-for="appearance.glassBlur"></output>
+        </label>
+        <label class="settings-row">
+          <span>字体大小</span>
+          <input type="range" min="0.88" max="1.16" step="0.01" data-path="appearance.fontScale" />
+          <output data-for="appearance.fontScale"></output>
+        </label>
+      </section>
+
+      <section class="settings-section">
+        <h2>告警</h2>
+        <label class="settings-toggle">
+          <input type="checkbox" data-path="behavior.alertsEnabled" />
+          <span>系统提醒</span>
+        </label>
+        <div class="threshold-grid">
+          <label>
+            <span>偏紧</span>
+            <input type="number" min="1" max="90" data-path="alertThresholds.caution" />
+          </label>
+          <label>
+            <span>告警</span>
+            <input type="number" min="1" max="60" data-path="alertThresholds.danger" />
+          </label>
+          <label>
+            <span>紧急</span>
+            <input type="number" min="1" max="30" data-path="alertThresholds.critical" />
+          </label>
+        </div>
+      </section>
+
+      <section class="settings-section">
+        <h2>性能</h2>
+        <label class="settings-row">
+          <span>数据刷新</span>
+          <input type="range" min="5" max="60" step="1" data-path="behavior.refreshSeconds" />
+          <output data-for="behavior.refreshSeconds"></output>
+        </label>
+        <label class="settings-row">
+          <span>窗口检测</span>
+          <input type="range" min="3" max="15" step="1" data-path="behavior.activeWindowSeconds" />
+          <output data-for="behavior.activeWindowSeconds"></output>
+        </label>
+        <label class="settings-toggle">
+          <input type="checkbox" data-path="system.startAtLogin" />
+          <span>开机自启</span>
+        </label>
+      </section>
+
+      <section class="settings-section">
+        <h2>接入</h2>
+        <div class="provider-settings" id="providerSettings"></div>
+      </section>
+
+      <footer class="settings-actions">
+        <button class="settings-button ghost" id="settingsReset">恢复默认</button>
+        <button class="settings-button primary" id="settingsSave">保存</button>
+      </footer>
+    </main>
+    <script src="./settings.js"></script>
+  </body>
+</html>

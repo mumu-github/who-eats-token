@@ -1,0 +1,16 @@
+{
+  "id": "example-provider",
+  "name": "Example Provider Adapter",
+  "type": "sdk-wrapper",
+  "status": "reference",
+  "platforms": ["windows", "macos"],
+  "providedSignals": ["usage-events", "quota-capacity"],
+  "scope": "Replace this with the exact tool or provider surface and the usage or quota data it reports.",
+  "entrypoints": ["adapters/example-provider/README.md"],
+  "docs": ["docs/adapter-guide.md"],
+  "automatedChecks": ["test:protocol", "test:adapter-catalog"],
+  "manualChecks": ["Replace this with one reproducible manual verification step for Windows and macOS."],
+  "privacyBoundary": "Reports only usage and quota metadata; does not collect prompts, completions, source files, API keys, cookies, or local tokens.",
+  "performanceBoundary": "Uses short timeouts, bounded queues, provider cache windows, and no watchdog or tight polling loop.",
+  "disablePath": "Replace this with the setting, extension toggle, or uninstall path that disables the adapter."
+}

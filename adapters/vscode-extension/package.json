@@ -1,0 +1,72 @@
+{
+  "name": "who-eats-token-vscode-adapter",
+  "displayName": "Who Eats Token Adapter",
+  "description": "Shows local Who Eats Token status in VS Code and compatible IDEs.",
+  "version": "0.1.0",
+  "publisher": "who-eats-token",
+  "license": "MIT",
+  "files": [
+    "extension.js",
+    "README.md",
+    "LICENSE"
+  ],
+  "engines": {
+    "vscode": "^1.85.0"
+  },
+  "categories": [
+    "Other"
+  ],
+  "main": "./extension.js",
+  "activationEvents": [
+    "onStartupFinished",
+    "onCommand:whoEatsToken.refresh",
+    "onCommand:whoEatsToken.copySnapshot",
+    "onCommand:whoEatsToken.openSettings"
+  ],
+  "contributes": {
+    "commands": [
+      {
+        "command": "whoEatsToken.refresh",
+        "title": "Refresh Token Status",
+        "category": "Who Eats Token"
+      },
+      {
+        "command": "whoEatsToken.copySnapshot",
+        "title": "Copy Token Snapshot",
+        "category": "Who Eats Token"
+      },
+      {
+        "command": "whoEatsToken.openSettings",
+        "title": "Open Adapter Settings",
+        "category": "Who Eats Token"
+      }
+    ],
+    "configuration": {
+      "title": "Who Eats Token",
+      "properties": {
+        "whoEatsToken.enabled": {
+          "type": "boolean",
+          "default": true,
+          "description": "Enable the local Who Eats Token status-bar adapter."
+        },
+        "whoEatsToken.endpoint": {
+          "type": "string",
+          "default": "http://127.0.0.1:17667",
+          "description": "Local Who Eats Token ingest API endpoint. Only localhost and 127.0.0.1 are accepted."
+        },
+        "whoEatsToken.token": {
+          "type": "string",
+          "default": "",
+          "markdownDescription": "Optional local access token. Leave empty to read the default local token file."
+        },
+        "whoEatsToken.refreshSeconds": {
+          "type": "number",
+          "default": 15,
+          "minimum": 5,
+          "maximum": 120,
+          "description": "Status-bar refresh interval in seconds."
+        }
+      }
+    }
+  }
+}

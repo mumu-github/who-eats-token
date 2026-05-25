@@ -1,0 +1,57 @@
+name: Adapter request
+description: Request support for a new LLM tool, IDE, browser app, or provider.
+title: "[Adapter]: "
+labels: ["adapter"]
+body:
+  - type: input
+    id: tool
+    attributes:
+      label: Tool or provider
+      placeholder: "Cursor, Claude, Gemini, LiteLLM, OpenAI-compatible gateway, ..."
+    validations:
+      required: true
+  - type: dropdown
+    id: adapter_type
+    attributes:
+      label: Best integration surface
+      options:
+        - Official provider usage/billing API
+        - OpenAI-compatible gateway bridge
+        - Browser extension
+        - VS Code/Cursor extension
+        - Node/Python SDK wrapper
+        - MCP server/tool
+        - Skill/plugin for setup or diagnostics
+        - Not sure
+    validations:
+      required: true
+  - type: textarea
+    id: usage_surface
+    attributes:
+      label: Where can usage or quota be observed?
+      description: Link public docs if possible. Do not paste private tokens, API keys, prompts, completions, or cookies.
+      placeholder: API response usage field, billing endpoint, visible quota page, local database, etc.
+    validations:
+      required: true
+  - type: textarea
+    id: workflow
+    attributes:
+      label: User workflow
+      placeholder: What app/page/IDE should show the status, and where should HUD avoid overlap?
+    validations:
+      required: true
+  - type: checkboxes
+    id: boundaries
+    attributes:
+      label: Privacy boundaries
+      options:
+        - label: The adapter can work without uploading prompts or completions.
+          required: true
+        - label: The adapter can work without uploading API keys, cookies, or local access tokens.
+          required: true
+        - label: The adapter can fail quietly when Who Eats Token is not running.
+          required: true
+        - label: If implemented, the adapter can be represented in adapters/catalog.json with a clear disable path and performance boundary.
+          required: true
+        - label: If implemented, the adapter should be able to pass `npm run adapter:fixture -- --json` or explain which fixture signal does not apply.
+          required: false

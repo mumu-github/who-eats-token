@@ -1,0 +1,88 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Who Eats Token release evidence",
+  "type": "object",
+  "required": ["schemaVersion", "releaseCandidate", "evidence"],
+  "properties": {
+    "schemaVersion": {
+      "type": "integer",
+      "const": 1
+    },
+    "releaseCandidate": {
+      "type": "string",
+      "minLength": 1
+    },
+    "evidence": {
+      "type": "object",
+      "required": [
+        "windowsPackagedRuntime",
+        "macosPackagedRuntime",
+        "browserAdapter",
+        "ideAdapter",
+        "signing",
+        "dependencyAudit"
+      ],
+      "properties": {
+        "windowsPackagedRuntime": { "$ref": "#/$defs/runtimeEvidence" },
+        "macosPackagedRuntime": { "$ref": "#/$defs/runtimeEvidence" },
+        "browserAdapter": { "$ref": "#/$defs/adapterEvidence" },
+        "ideAdapter": { "$ref": "#/$defs/adapterEvidence" },
+        "signing": { "$ref": "#/$defs/signingEvidence" },
+        "dependencyAudit": { "$ref": "#/$defs/checkEvidence" }
+      },
+      "additionalProperties": false
+    }
+  },
+  "additionalProperties": false,
+  "$defs": {
+    "checkEvidence": {
+      "type": "object",
+      "required": ["status", "recordedAt", "command", "notes"],
+      "properties": {
+        "status": {
+          "type": "string",
+          "enum": ["passed", "failed", "not-run", "blocked", "host-smoke-only"]
+        },
+        "recordedAt": {
+          "type": "string"
+        },
+        "command": {
+          "type": "string"
+        },
+        "notes": {
+          "type": "string"
+        }
+      },
+      "additionalProperties": false
+    },
+    "runtimeEvidence": {
+      "type": "object",
+      "required": ["smoke", "soak", "hudPermissionStates"],
+      "properties": {
+        "smoke": { "$ref": "#/$defs/checkEvidence" },
+        "soak": { "$ref": "#/$defs/checkEvidence" },
+        "hudPermissionStates": { "$ref": "#/$defs/checkEvidence" }
+      },
+      "additionalProperties": false
+    },
+    "adapterEvidence": {
+      "type": "object",
+      "required": ["hostSmoke", "manualLoad", "manualConnection"],
+      "properties": {
+        "hostSmoke": { "$ref": "#/$defs/checkEvidence" },
+        "manualLoad": { "$ref": "#/$defs/checkEvidence" },
+        "manualConnection": { "$ref": "#/$defs/checkEvidence" }
+      },
+      "additionalProperties": false
+    },
+    "signingEvidence": {
+      "type": "object",
+      "required": ["windowsAuthenticode", "macosNotarization"],
+      "properties": {
+        "windowsAuthenticode": { "$ref": "#/$defs/checkEvidence" },
+        "macosNotarization": { "$ref": "#/$defs/checkEvidence" }
+      },
+      "additionalProperties": false
+    }
+  }
+}

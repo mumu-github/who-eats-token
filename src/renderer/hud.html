@@ -1,0 +1,52 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>LLM HUD</title>
+    <link rel="stylesheet" href="./styles.css" />
+  </head>
+  <body class="hud-body">
+    <main class="hud">
+      <div class="hud-head">
+        <span class="hud-dot"></span>
+        <span id="toolName">LLM</span>
+        <span class="hud-pill" id="hudPill">余量</span>
+      </div>
+      <div class="hud-stats">
+        <div class="hud-stat" id="hudFiveMetric">
+          <span class="hud-label">
+            <svg class="label-icon" viewBox="0 0 24 24" aria-hidden="true">
+              <circle cx="12" cy="12" r="8"></circle>
+              <path d="M12 7v5l3 2"></path>
+            </svg>
+            <span id="hudFiveLabelText">5小时</span>
+          </span>
+          <strong id="hudFiveHour">--</strong>
+        </div>
+        <div class="hud-stat" id="hudWeekMetric">
+          <span class="hud-label">
+            <svg class="label-icon" viewBox="0 0 24 24" aria-hidden="true">
+              <rect x="5" y="6" width="14" height="13" rx="3"></rect>
+              <path d="M8 4v4M16 4v4M5 10h14"></path>
+            </svg>
+            <span id="hudWeekLabelText">一周</span>
+          </span>
+          <strong id="hudWeek">--</strong>
+        </div>
+        <div class="hud-chart" id="hudChart" aria-label="余量小图表">
+          <span class="chart-column chart-five" title="5小时余量">
+            <span class="chart-track"><span class="chart-fill"></span></span>
+            <span class="chart-caption" id="hudFiveCaption">5h</span>
+          </span>
+          <span class="chart-column chart-week" title="一周余量">
+            <span class="chart-track"><span class="chart-fill"></span></span>
+            <span class="chart-caption" id="hudWeekCaption">7d</span>
+          </span>
+        </div>
+      </div>
+      <div class="hud-meta" id="hudMeta">等待数据</div>
+    </main>
+    <script src="./hud.js"></script>
+  </body>
+</html>

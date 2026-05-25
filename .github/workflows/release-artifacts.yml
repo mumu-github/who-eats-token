@@ -1,0 +1,39 @@
+name: Release Artifacts
+
+on:
+  workflow_dispatch:
+  push:
+    tags:
+      - "v*"
+
+jobs:
+  package:
+    name: ${{ matrix.os }}
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [windows-latest, macos-latest]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22.12"
+          cache: npm
+      - run: npm ci
+      - run: npm run release:check
+      - run: npm run secret:scan
+      - run: npm run license:check
+      - run: npm run signing:readiness -- --platform all
+      - run: npm run package:dir
+      - run: npm run smoke:packaged-win
+      - run: npm run smoke:packaged-mac
+      - run: npm run package:adapters
+      - run: npm run release:manifest
+      - run: npm run verify:release-manifest
+      - uses: actions/upload-artifact@v4
+        with:
+          name: who-eats-token-${{ matrix.os }}
+          path: release/**
+          if-no-files-found: error
+          retention-days: 14

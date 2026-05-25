@@ -1,0 +1,39 @@
+{
+  "name": "who-eats-token",
+  "version": "0.1.0",
+  "description": "Agent workflow plugin for Who Eats Token setup, diagnostics, adapter authoring, and MCP snapshot access.",
+  "author": {
+    "name": "Who Eats Token contributors"
+  },
+  "homepage": "https://github.com/who-eats-token/who-eats-token",
+  "repository": "https://github.com/who-eats-token/who-eats-token",
+  "license": "MIT",
+  "keywords": [
+    "llm",
+    "token",
+    "monitor",
+    "mcp",
+    "adapter"
+  ],
+  "skills": "./skills/",
+  "mcpServers": "./.mcp.json",
+  "interface": {
+    "displayName": "Who Eats Token",
+    "shortDescription": "Set up and diagnose local LLM token monitoring.",
+    "longDescription": "Use Who Eats Token from Codex with setup, doctor, adapter-authoring skills, plus an MCP server for local snapshot and provider health access. The plugin is an agent workflow layer, not the desktop HUD runtime.",
+    "developerName": "Who Eats Token contributors",
+    "category": "Productivity",
+    "capabilities": [
+      "Interactive"
+    ],
+    "websiteURL": "https://github.com/who-eats-token/who-eats-token",
+    "privacyPolicyURL": "https://github.com/who-eats-token/who-eats-token/blob/main/PRIVACY.md",
+    "termsOfServiceURL": "https://github.com/who-eats-token/who-eats-token/blob/main/LICENSE",
+    "defaultPrompt": [
+      "Set up Who Eats Token and verify local monitoring.",
+      "Diagnose why my token HUD or adapter is not updating.",
+      "Create a safe adapter for a new LLM tool."
+    ],
+    "brandColor": "#8EF5AC"
+  }
+}

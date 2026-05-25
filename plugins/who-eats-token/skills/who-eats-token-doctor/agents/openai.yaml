@@ -1,0 +1,4 @@
+interface:
+  display_name: "Who Eats Token Doctor"
+  short_description: "Diagnose HUD, adapter, and packaging issues."
+  default_prompt: "Diagnose why Who Eats Token is not showing, not updating, using too much CPU, or failing adapter/package checks."

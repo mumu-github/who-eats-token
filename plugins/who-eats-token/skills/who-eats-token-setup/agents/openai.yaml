@@ -1,0 +1,4 @@
+interface:
+  display_name: "Who Eats Token Setup"
+  short_description: "Install and configure Who Eats Token locally."
+  default_prompt: "Set up Who Eats Token from this repository and verify the local desktop app, API, and adapter packages."
