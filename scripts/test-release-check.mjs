@@ -34,6 +34,7 @@ console.log("Release check wiring checks passed.");
 function run(args, expectedStatus) {
   const result = spawnSync(process.execPath, ["scripts/release-check.mjs", ...args], {
     encoding: "utf8",
+    maxBuffer: 8 * 1024 * 1024,
     stdio: ["ignore", "pipe", "pipe"]
   });
   assert.equal(result.status, expectedStatus, result.stderr || result.stdout);
