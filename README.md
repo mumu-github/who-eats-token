@@ -11,6 +11,7 @@
 开源形态和接入路线见 [docs/open-source-form-strategy.md](docs/open-source-form-strategy.md)。
 GitHub 同类项目调研和定位边界见 [docs/open-source-landscape.md](docs/open-source-landscape.md)。
 TokenTracker 深度学习和轻量趣味交互突破点见 [docs/token-tracker-lessons.md](docs/token-tracker-lessons.md)。
+竞品差异化和 beta 产品路线见 [docs/competitive-differentiation-plan.md](docs/competitive-differentiation-plan.md)。
 轻量趣味交互契约见 [docs/delight-contract.md](docs/delight-contract.md)。
 本地事件协议见 [docs/protocol.md](docs/protocol.md)，新工具接入指南见 [docs/adapter-guide.md](docs/adapter-guide.md)。
 Adapter 支持目录见 [docs/adapter-catalog.md](docs/adapter-catalog.md)。

@@ -4,7 +4,7 @@ Checked on 2026-05-24 against public GitHub project pages and official project d
 
 This file keeps the project honest about what already exists. The goal is not to clone another token dashboard; it is to decide where Who Eats Token should fit in the open-source ecosystem.
 
-The deeper product lessons from TokenTracker are captured in [docs/token-tracker-lessons.md](token-tracker-lessons.md).
+The deeper product lessons from TokenTracker are captured in [docs/token-tracker-lessons.md](token-tracker-lessons.md). The broader competitive and beta differentiation route is captured in [docs/competitive-differentiation-plan.md](competitive-differentiation-plan.md).
 
 ## Closest Existing Projects
 
