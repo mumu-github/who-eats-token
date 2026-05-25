@@ -23,6 +23,16 @@ npm run release:summary -- --json
 
 Before recording runtime evidence, make sure `npm run lag:triage -- --json` does not report `partial-snapshot`. If it does, restart the desktop app and confirm `npm run diagnostics -- --json` includes `stability.system`.
 
+## Current Windows Non-macOS Blockers
+
+These items do not block the source beta, but they still block a polished public binary/adapters release. Current Windows validation status:
+
+- Browser adapter: `npm run package:browser-extension` succeeds and Edge host smoke loads the extension. Official Chrome 137+ may ignore command-line extension loading, so Chrome still needs either manual unpacked loading or validation with Chrome for Testing/Chromium.
+- IDE adapter: `npm run package:vscode-extension` succeeds and the VSIX is generated, but this validation machine does not currently have VS Code or Cursor installed. Install those hosts, then run `npm run smoke:ide-hosts -- --require`.
+- Windows signing: `npm run signing:readiness -- --platform windows --require` is blocked until `WIN_CSC_LINK` or `CSC_LINK`, plus `WIN_CSC_KEY_PASSWORD` or `CSC_KEY_PASSWORD`, are present in the release environment.
+
+Do not mark `browserAdapter.manualLoad`, `browserAdapter.manualConnection`, `ideAdapter.manualLoad`, `ideAdapter.manualConnection`, or `signing.windowsAuthenticode` as passed until those exact host/certificate checks have really been completed.
+
 ## macOS Real-Machine Validation
 
 Run this on the macOS validation machine:
