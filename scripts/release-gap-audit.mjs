@@ -59,7 +59,7 @@ function buildChecks() {
     {
       id: "windows-ci",
       requirement: "Windows source-level checks are wired.",
-      status: hasAll(ciWorkflow, ["windows-2025"]) && hasScript(packageJson, "release:check") ? "automated" : "missing",
+      status: hasAll(ciWorkflow, ["windows-2025-vs2026"]) && hasScript(packageJson, "release:check") ? "automated" : "missing",
       evidence: [".github/workflows/ci.yml", "npm run release:check"],
       next: "Run release:check on Windows before tagging."
     },

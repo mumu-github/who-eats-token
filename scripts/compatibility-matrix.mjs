@@ -37,7 +37,7 @@ function buildMatrix() {
   const adapters = (catalog.adapters || []).map(summarizeAdapter);
   const platformRows = [
     platformRow("windows", "Windows 10+", {
-      ciNeedle: "windows-2025",
+      ciNeedle: "windows-2025-vs2026",
       manualNeedle: "## Windows 10+",
       smokeScript: "smoke:packaged-win",
       soakScript: "soak:packaged-win",

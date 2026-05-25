@@ -48,7 +48,7 @@ assertContains(releaseWorkflow, "npm run signing:readiness");
 assertContains(releaseWorkflow, "npm run smoke:packaged-win");
 assertContains(releaseWorkflow, "npm run smoke:packaged-mac");
 assertContains(releaseWorkflow, "actions/upload-artifact");
-assertContains(releaseWorkflow, "windows-2025");
+assertContains(releaseWorkflow, "windows-2025-vs2026");
 assertContains(releaseWorkflow, "macos-latest");
 
 assertContains(gitignore, "release/");

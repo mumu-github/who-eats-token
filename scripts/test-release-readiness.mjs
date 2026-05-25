@@ -247,9 +247,9 @@ assertPackagingEvidence();
 console.log("Release readiness checks passed.");
 
 function assertCrossPlatformEvidence() {
-  assertIncludes(ci, "windows-2025", "CI must include Windows.");
+  assertIncludes(ci, "windows-2025-vs2026", "CI must include Windows.");
   assertIncludes(ci, "macos-latest", "CI must include macOS.");
-  assertIncludes(releaseWorkflow, "windows-2025", "Release artifacts must include Windows.");
+  assertIncludes(releaseWorkflow, "windows-2025-vs2026", "Release artifacts must include Windows.");
   assertIncludes(releaseWorkflow, "macos-latest", "Release artifacts must include macOS.");
   assertIncludes(manualValidation, "## Windows 10+", "Manual validation must cover Windows 10+.");
   assertIncludes(manualValidation, "## macOS", "Manual validation must cover macOS.");
