@@ -109,6 +109,18 @@ assert.deepEqual(
   "Missing data should be quiet and non-alarming."
 );
 
+assert.equal(
+  getQuotaDelight({ status: "disabled", lowestRemainingPercent: null }).cue.mascot,
+  "nap",
+  "Disabled/silent mode should use the sleeping mascot scene."
+);
+
+assert.equal(
+  getQuotaDelight({ status: "auth-expired", lowestRemainingPercent: null }).cue.mascot,
+  "locked",
+  "Auth-expired providers should use the locked-token login scene."
+);
+
 const estimatedLow = getQuotaDelight({
   status: "estimated",
   lowestRemainingPercent: 17,

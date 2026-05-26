@@ -19,6 +19,12 @@
   --glass-blur: 28px;
   --font-scale: 1;
   --bar-height: 64px;
+  --mascot-comfy: url("../assets/delight/mascot-comfy.png");
+  --mascot-careful: url("../assets/delight/mascot-careful.png");
+  --mascot-low: url("../assets/delight/mascot-low.png");
+  --mascot-login: url("../assets/delight/mascot-login.png");
+  --mascot-asleep: url("../assets/delight/mascot-asleep.png");
+  --token-coin: url("../assets/delight/token-coin.png");
 }
 
 * {
@@ -283,52 +289,101 @@ button {
 
 .usage-mascot {
   position: relative;
-  width: 24px;
-  height: 25px;
-  flex: 0 0 24px;
-  border-radius: 44% 44% 48% 48%;
+  width: 32px;
+  height: 38px;
+  flex: 0 0 32px;
+  background-image: var(--mascot-careful);
+  background-position: center;
+  background-repeat: no-repeat;
+  background-size: contain;
+  filter: drop-shadow(0 4px 9px rgba(0, 0, 0, 0.2));
+  transform-origin: 50% 82%;
+}
+
+.usage-mascot > *,
+.hud-mascot > * {
+  display: none;
+}
+
+.usage-strip[data-delight-mood="comfy"] .usage-mascot,
+.usage-strip[data-delight-mood="snacking"] .usage-mascot,
+.usage-strip[data-mascot="stretch"] .usage-mascot,
+.usage-strip[data-mascot="snack"] .usage-mascot {
+  background-image: var(--mascot-comfy);
+  animation: mascot-happy-bob 2.6s ease-in-out infinite;
+}
+
+.usage-strip[data-delight-mood="comfy"] .usage-mascot::before,
+.usage-strip[data-delight-mood="snacking"] .usage-mascot::before,
+.usage-strip[data-mascot="stretch"] .usage-mascot::before,
+.usage-strip[data-mascot="snack"] .usage-mascot::before {
+  content: "";
+  position: absolute;
+  inset: 4px -2px 0;
+  z-index: -1;
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(255, 211, 111, 0.34), transparent 66%);
+  animation: comfy-glow-breathe 2.8s ease-in-out infinite;
+}
+
+.usage-strip[data-delight-mood="steady"] .usage-mascot,
+.usage-strip[data-delight-mood="tight"] .usage-mascot,
+.usage-strip[data-delight-mood="waiting"] .usage-mascot,
+.usage-strip[data-delight-mood="queued"] .usage-mascot,
+.usage-strip[data-delight-mood="counting"] .usage-mascot,
+.usage-strip[data-delight-mood="lagging"] .usage-mascot,
+.usage-strip[data-delight-mood="watching"] .usage-mascot,
+.usage-strip[data-mascot="careful"] .usage-mascot,
+.usage-strip[data-mascot="sip"] .usage-mascot,
+.usage-strip[data-mascot="peek"] .usage-mascot,
+.usage-strip[data-mascot="waiting"] .usage-mascot,
+.usage-strip[data-mascot="counting"] .usage-mascot,
+.usage-strip[data-mascot="blink"] .usage-mascot,
+.usage-strip[data-mascot="watch"] .usage-mascot {
+  background-image: var(--mascot-careful);
+}
+
+.usage-strip[data-delight-mood="low"] .usage-mascot,
+.usage-strip[data-delight-mood="empty"] .usage-mascot,
+.usage-strip[data-delight-mood="wobbly"] .usage-mascot,
+.usage-strip[data-mascot="small-bites"] .usage-mascot,
+.usage-strip[data-mascot="panic"] .usage-mascot,
+.usage-strip[data-mascot="wobble"] .usage-mascot {
+  background-image: var(--mascot-low);
+  animation: mascot-anxious-shake 0.78s ease-in-out infinite;
+}
+
+.usage-strip[data-delight-mood="asleep"] .usage-mascot,
+.usage-strip[data-mascot="nap"] .usage-mascot {
+  background-image: var(--mascot-asleep);
+  animation: mascot-sleep-breathe 3.8s ease-in-out infinite;
+}
+
+.usage-strip[data-delight-mood="login"] .usage-mascot,
+.usage-strip[data-mascot="locked"] .usage-mascot {
+  width: 40px;
+  flex-basis: 40px;
+  background-image: var(--mascot-login);
+  animation: mascot-keyhole-nudge 1.8s ease-in-out infinite;
+}
+
+.usage-strip[data-keyhole="on"] .usage-mascot::after,
+.hud-mascot[data-keyhole="on"]::after {
+  content: "";
+  position: absolute;
+  left: 55%;
+  top: 40%;
+  width: 10px;
+  height: 14px;
+  border-radius: 999px 999px 5px 5px;
   background:
-    radial-gradient(circle at 35% 42%, rgba(98, 74, 53, 0.72) 0 1.4px, transparent 1.6px),
-    radial-gradient(circle at 65% 42%, rgba(98, 74, 53, 0.72) 0 1.4px, transparent 1.6px),
-    radial-gradient(circle at 50% 65%, rgba(255, 143, 166, 0.36) 0 3px, transparent 3.4px),
-    linear-gradient(180deg, #fff9db, #f6e7c4);
+    radial-gradient(circle at 50% 32%, transparent 0 3px, rgba(20, 22, 24, 0.92) 3.4px 4.8px, transparent 5px),
+    linear-gradient(180deg, rgba(255, 244, 199, 0.95), rgba(255, 211, 111, 0.28));
   box-shadow:
-    inset 0 -2px 5px rgba(135, 83, 45, 0.18),
-    0 0 10px rgba(255, 211, 111, 0.16);
-}
-
-.sprout-leaf,
-.mascot-leaf {
-  position: absolute;
-  top: -5px;
-  width: 12px;
-  height: 8px;
-  border-radius: 12px 2px 12px 2px;
-  background: linear-gradient(135deg, #d2f296, #75d789);
-  box-shadow: inset 0 0 0 1px rgba(53, 96, 43, 0.1);
-}
-
-.sprout-leaf.left,
-.mascot-leaf.left {
-  left: 5px;
-  transform: rotate(-28deg);
-}
-
-.sprout-leaf.right,
-.mascot-leaf.right {
-  right: 4px;
-  transform: scaleX(-1) rotate(-28deg);
-}
-
-.sprout-face {
-  position: absolute;
-  left: 50%;
-  bottom: 4px;
-  width: 5px;
-  height: 2px;
-  border-radius: 0 0 999px 999px;
-  border-bottom: 1.4px solid rgba(98, 74, 53, 0.62);
-  transform: translateX(-50%);
+    0 0 0 4px rgba(255, 211, 111, 0.2),
+    0 0 18px rgba(255, 211, 111, 0.68);
+  transform: translate(-50%, -50%);
+  animation: keyhole-pop 1.1s ease both;
 }
 
 .usage-name {
@@ -910,7 +965,7 @@ button {
   width: 100vw;
   height: 100vh;
   border-radius: 22px;
-  padding: 13px 16px 12px;
+  padding: 10px 16px;
   background:
     radial-gradient(circle at 14% 0%, rgba(255, 209, 155, 0.18), transparent 36%),
     radial-gradient(circle at 88% 0%, rgba(139, 215, 255, 0.15), transparent 36%),
@@ -982,11 +1037,11 @@ button {
 }
 
 .hud-stats {
-  margin-top: 10px;
+  margin-top: 6px;
   display: grid;
-  grid-template-columns: minmax(0, 1fr) minmax(0, 1.15fr) 58px 54px;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1.05fr) 48px 64px;
   align-items: center;
-  gap: 12px;
+  gap: 8px;
 }
 
 .hud-stat {
@@ -1006,10 +1061,10 @@ button {
 
 .hud-stat strong {
   display: block;
-  margin-top: 4px;
+  margin-top: 3px;
   color: var(--text);
-  font-size: 24px;
-  font-size: calc(24px * var(--font-scale));
+  font-size: 22px;
+  font-size: calc(22px * var(--font-scale));
   line-height: 1;
   font-weight: 720;
   font-variant-numeric: tabular-nums;
@@ -1020,7 +1075,7 @@ button {
   --five-fill: 0%;
   --week-fill: 0%;
   --pulse-speed: 2.15s;
-  height: 56px;
+  height: 50px;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -1028,92 +1083,187 @@ button {
 }
 
 .hud-chart .chart-column {
-  height: 54px;
+  height: 49px;
 }
 
 .hud-chart .chart-track {
   width: 11px;
-  height: 41px;
+  height: 36px;
 }
 
 .hud-mascot {
   position: relative;
-  width: 52px;
-  height: 55px;
+  width: 64px;
+  height: 54px;
   justify-self: end;
-  border-radius: 46% 46% 48% 48%;
+  background-image: var(--mascot-careful);
+  background-position: center;
+  background-repeat: no-repeat;
+  background-size: contain;
+  filter: drop-shadow(0 6px 12px rgba(0, 0, 0, 0.22));
+  transform-origin: 50% 84%;
+}
+
+.hud-mascot::before,
+.hud-mascot::after {
+  pointer-events: none;
+}
+
+.hud-mascot[data-delight-mood="comfy"],
+.hud-mascot[data-delight-mood="snacking"],
+.hud-mascot[data-mascot="stretch"],
+.hud-mascot[data-mascot="snack"] {
+  background-image: var(--mascot-comfy);
+  animation: mascot-happy-bob 2.6s ease-in-out infinite;
+}
+
+.hud-mascot[data-delight-mood="comfy"]::before,
+.hud-mascot[data-delight-mood="snacking"]::before,
+.hud-mascot[data-mascot="stretch"]::before,
+.hud-mascot[data-mascot="snack"]::before {
+  content: "";
+  position: absolute;
+  inset: 8px 2px 0;
+  z-index: -1;
+  border-radius: 50%;
   background:
-    radial-gradient(circle at 34% 42%, rgba(98, 74, 53, 0.76) 0 2px, transparent 2.3px),
-    radial-gradient(circle at 66% 42%, rgba(98, 74, 53, 0.76) 0 2px, transparent 2.3px),
-    radial-gradient(circle at 28% 58%, rgba(255, 145, 168, 0.38) 0 5px, transparent 5.5px),
-    radial-gradient(circle at 72% 58%, rgba(255, 145, 168, 0.38) 0 5px, transparent 5.5px),
-    linear-gradient(180deg, #fff9df, #f4e1bf);
+    radial-gradient(circle, rgba(255, 211, 111, 0.36), transparent 64%),
+    radial-gradient(circle at 35% 35%, rgba(125, 242, 173, 0.24), transparent 42%);
+  animation: comfy-glow-breathe 2.8s ease-in-out infinite;
+}
+
+.hud-mascot[data-delight-mood="comfy"]::after,
+.hud-mascot[data-delight-mood="snacking"]::after,
+.hud-mascot[data-mascot="stretch"]::after,
+.hud-mascot[data-mascot="snack"]::after {
+  content: "";
+  position: absolute;
+  right: -5px;
+  top: 5px;
+  width: 24px;
+  height: 16px;
+  background: var(--token-coin) center / contain no-repeat;
+  filter: drop-shadow(0 0 10px rgba(255, 211, 111, 0.54));
+  animation: token-overflow-float 2.4s ease-in-out infinite;
+}
+
+.hud-mascot[data-delight-mood="steady"],
+.hud-mascot[data-delight-mood="tight"],
+.hud-mascot[data-delight-mood="waiting"],
+.hud-mascot[data-delight-mood="queued"],
+.hud-mascot[data-delight-mood="counting"],
+.hud-mascot[data-delight-mood="lagging"],
+.hud-mascot[data-delight-mood="watching"],
+.hud-mascot[data-mascot="careful"],
+.hud-mascot[data-mascot="sip"],
+.hud-mascot[data-mascot="peek"],
+.hud-mascot[data-mascot="waiting"],
+.hud-mascot[data-mascot="counting"],
+.hud-mascot[data-mascot="blink"],
+.hud-mascot[data-mascot="watch"] {
+  background-image: var(--mascot-careful);
+  animation: mascot-careful-breathe 2.1s ease-in-out infinite;
+}
+
+.hud-mascot[data-delight-mood="low"],
+.hud-mascot[data-delight-mood="empty"],
+.hud-mascot[data-delight-mood="wobbly"],
+.hud-mascot[data-mascot="small-bites"],
+.hud-mascot[data-mascot="panic"],
+.hud-mascot[data-mascot="wobble"] {
+  background-image: var(--mascot-low);
+  animation: mascot-anxious-shake 0.78s ease-in-out infinite;
+}
+
+.hud-mascot[data-delight-mood="asleep"],
+.hud-mascot[data-mascot="nap"] {
+  background-image: var(--mascot-asleep);
+  animation: mascot-sleep-breathe 3.8s ease-in-out infinite;
+}
+
+.hud-mascot[data-delight-mood="asleep"]::before,
+.hud-mascot[data-delight-mood="asleep"]::after,
+.hud-mascot[data-mascot="nap"]::before,
+.hud-mascot[data-mascot="nap"]::after {
+  position: absolute;
+  color: rgba(139, 215, 255, 0.74);
+  font-family: "Comic Sans MS", "Segoe UI", sans-serif;
+  font-weight: 900;
+  text-shadow: 0 0 9px rgba(139, 215, 255, 0.38);
+}
+
+.hud-mascot[data-delight-mood="asleep"]::before,
+.hud-mascot[data-mascot="nap"]::before {
+  content: "♪";
+  left: -5px;
+  top: 7px;
+  font-size: 13px;
+  animation: melody-drift 4.2s ease-in-out infinite;
+}
+
+.hud-mascot[data-delight-mood="asleep"]::after,
+.hud-mascot[data-mascot="nap"]::after {
+  content: "z";
+  left: 8px;
+  top: 0;
+  font-size: 12px;
+  animation: melody-drift 3.4s ease-in-out infinite reverse;
+}
+
+.hud-mascot[data-delight-mood="login"],
+.hud-mascot[data-mascot="locked"] {
+  background-image: var(--mascot-login);
+  animation: mascot-keyhole-nudge 1.8s ease-in-out infinite;
+}
+
+.hud-mascot[data-delight-mood="login"]::before,
+.hud-mascot[data-mascot="locked"]::before {
+  content: "";
+  position: absolute;
+  right: 4px;
+  bottom: 12px;
+  width: 12px;
+  height: 16px;
+  border-radius: 999px 999px 5px 5px;
+  background:
+    radial-gradient(circle at 50% 32%, transparent 0 4px, rgba(20, 22, 24, 0.92) 4.4px 6px, transparent 6.2px),
+    linear-gradient(180deg, rgba(255, 244, 199, 0.98), rgba(255, 211, 111, 0.34));
   box-shadow:
-    inset 0 -5px 10px rgba(135, 83, 45, 0.18),
-    0 0 18px rgba(255, 211, 111, 0.22);
-}
-
-.mascot-face {
-  position: absolute;
-  left: 50%;
-  top: 31px;
-  width: 9px;
-  height: 5px;
-  border-radius: 0 0 999px 999px;
-  border-bottom: 2px solid rgba(98, 74, 53, 0.7);
-  transform: translateX(-50%);
-}
-
-.mascot-bowl {
-  position: absolute;
-  left: 50%;
-  bottom: 5px;
-  width: 28px;
-  height: 11px;
-  border-radius: 4px 4px 12px 12px;
-  background: linear-gradient(180deg, #65503b, #3b2f25);
-  transform: translateX(-50%);
-  box-shadow: inset 0 2px 0 rgba(255, 255, 255, 0.14);
-}
-
-.hud-mascot[data-level="danger"] {
-  animation: mascot-wiggle 0.8s ease-in-out 1;
-}
-
-.hud-mascot[data-level="caution"] {
-  animation: mascot-breathe 1.05s ease-in-out 1;
+    0 0 0 5px rgba(255, 211, 111, 0.18),
+    0 0 18px rgba(255, 211, 111, 0.58);
+  animation: keyhole-idle 1.6s ease-in-out infinite;
 }
 
 .hud-footer {
-  margin-top: 9px;
+  margin-top: 6px;
   min-width: 0;
   display: grid;
   grid-template-columns: max-content minmax(0, 1fr);
   align-items: center;
   gap: 8px;
-  padding-top: 8px;
+  padding-top: 6px;
   border-top: 1px solid rgba(255, 255, 255, 0.09);
 }
 
 .hud-predict {
   min-width: 0;
-  height: 20px;
+  height: 18px;
   display: inline-flex;
   align-items: center;
   padding: 0 7px;
   border-radius: 999px;
   color: rgba(207, 240, 255, 0.94);
   background: rgba(139, 215, 255, 0.12);
-  font-size: 10px;
-  font-size: calc(10px * var(--font-scale));
+  font-size: 9.5px;
+  font-size: calc(9.5px * var(--font-scale));
   font-weight: 780;
   white-space: nowrap;
 }
 
 .hud-meta {
   color: rgba(255, 255, 255, 0.62);
-  font-size: 10px;
-  font-size: calc(10px * var(--font-scale));
+  font-size: 9.5px;
+  font-size: calc(9.5px * var(--font-scale));
   line-height: 1.15;
   white-space: nowrap;
   overflow: hidden;
@@ -1180,7 +1330,7 @@ body[data-delight-tone="danger"] .hud-dot {
   box-shadow: 0 0 14px rgba(255, 127, 159, 0.18);
 }
 
-@keyframes mascot-breathe {
+@keyframes mascot-careful-breathe {
   0%,
   100% {
     transform: translateY(0) scale(1);
@@ -1191,18 +1341,134 @@ body[data-delight-tone="danger"] .hud-dot {
   }
 }
 
-@keyframes mascot-wiggle {
+@keyframes mascot-happy-bob {
   0%,
   100% {
-    transform: rotate(0deg);
+    transform: translateY(0) rotate(0deg) scale(1);
   }
 
-  30% {
-    transform: rotate(-3deg);
+  35% {
+    transform: translateY(-2px) rotate(-1.5deg) scale(1.02);
   }
 
-  65% {
-    transform: rotate(3deg);
+  68% {
+    transform: translateY(-1px) rotate(1.2deg) scale(1.01);
+  }
+}
+
+@keyframes comfy-glow-breathe {
+  0%,
+  100% {
+    opacity: 0.38;
+    transform: scale(0.92);
+  }
+
+  50% {
+    opacity: 0.82;
+    transform: scale(1.08);
+  }
+}
+
+@keyframes token-overflow-float {
+  0%,
+  100% {
+    transform: translateY(0) rotate(-6deg);
+    opacity: 0.78;
+  }
+
+  50% {
+    transform: translateY(-5px) rotate(5deg);
+    opacity: 1;
+  }
+}
+
+@keyframes mascot-anxious-shake {
+  0%,
+  100% {
+    transform: translateX(0) rotate(0deg);
+  }
+
+  18% {
+    transform: translateX(-1px) rotate(-2deg);
+  }
+
+  36% {
+    transform: translateX(1px) rotate(2deg);
+  }
+
+  54% {
+    transform: translateX(-0.8px) rotate(-1deg);
+  }
+
+  72% {
+    transform: translateX(0.8px) rotate(1deg);
+  }
+}
+
+@keyframes mascot-sleep-breathe {
+  0%,
+  100% {
+    transform: translateY(0) scale(1);
+    opacity: 0.94;
+  }
+
+  50% {
+    transform: translateY(1px) scale(0.985);
+    opacity: 1;
+  }
+}
+
+@keyframes melody-drift {
+  0%,
+  100% {
+    transform: translateY(0);
+    opacity: 0.28;
+  }
+
+  50% {
+    transform: translateY(-6px);
+    opacity: 0.78;
+  }
+}
+
+@keyframes mascot-keyhole-nudge {
+  0%,
+  100% {
+    transform: translateX(0) rotate(0deg);
+  }
+
+  45% {
+    transform: translateX(-1px) rotate(-1deg);
+  }
+}
+
+@keyframes keyhole-idle {
+  0%,
+  100% {
+    opacity: 0.45;
+    transform: scale(0.92);
+  }
+
+  50% {
+    opacity: 1;
+    transform: scale(1.04);
+  }
+}
+
+@keyframes keyhole-pop {
+  0% {
+    opacity: 0;
+    transform: translate(-50%, -50%) scale(0.52);
+  }
+
+  42% {
+    opacity: 1;
+    transform: translate(-50%, -50%) scale(1.18);
+  }
+
+  100% {
+    opacity: 0;
+    transform: translate(-50%, -50%) scale(0.92);
   }
 }
 

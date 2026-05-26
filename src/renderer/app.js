@@ -34,6 +34,11 @@ els.close.addEventListener("click", () => {
   window.tokenBar.close();
 });
 
+els.usageStrip?.addEventListener("click", () => {
+  if (els.usageStrip.dataset.delightMood !== "login") return;
+  triggerKeyholeHint(els.usageStrip);
+});
+
 window.tokenBar.onUpdate(render);
 window.tokenBar.onSystemUpdate?.(renderSystemStrip);
 window.tokenBar.onSettingsUpdate(applyVisualSettings);
@@ -70,10 +75,23 @@ function renderUsageStrip(snapshot, provider, display) {
   els.usageStrip.dataset.mode = display?.mode || "waiting";
   els.usageStrip.dataset.delightMood = delight?.mood || "watching";
   els.usageStrip.dataset.delightTone = delight?.tone || "muted";
+  els.usageStrip.dataset.mascot = delight?.cue?.mascot || "watch";
   els.usageStrip.dataset.motion = delight?.motion || "none";
+  if (els.usageStrip.dataset.delightMood !== "login") {
+    delete els.usageStrip.dataset.keyhole;
+  }
   els.usageStrip.title = provider
     ? `${delight?.label ? `${delight.label} · ` : ""}${display?.title || `${provider.name} · ${getSyncLabel(provider)} · 今日 ${formatTokens(provider.todayTokens)} · 近 1h ${formatTokens(provider.recentTokens)}`}`
     : `今日 ${formatTokens(totals.todayTokens)} · 近 1h ${formatTokens(totals.recentTokens)}`;
+}
+
+function triggerKeyholeHint(element) {
+  if (!element) return;
+  element.dataset.keyhole = "on";
+  clearTimeout(element._keyholeTimer);
+  element._keyholeTimer = setTimeout(() => {
+    delete element.dataset.keyhole;
+  }, 1100);
 }
 
 function renderTrustBadge(element, trust) {

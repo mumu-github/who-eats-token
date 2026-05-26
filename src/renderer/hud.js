@@ -21,6 +21,11 @@ window.tokenBar.onSettingsUpdate(applyVisualSettings);
 window.tokenBar.getHudSnapshot().then(renderHud);
 window.tokenBar.getSettings().then(applyVisualSettings);
 
+els.hudMascot?.addEventListener("pointerdown", () => {
+  if (els.hudMascot.dataset.delightMood !== "login") return;
+  triggerKeyholeHint(els.hudMascot);
+});
+
 function renderHud(payload) {
   if (!payload || !payload.visible) return;
 
@@ -172,6 +177,22 @@ function renderHudMascot(provider) {
       : Math.min(provider?.fiveHourRemaining ?? 100, provider?.weekRemaining ?? 100);
   els.hudMascot.dataset.level = getRemainingLevel(remaining);
   els.hudMascot.dataset.delightMood = provider?.delight?.mood || "watching";
+  els.hudMascot.dataset.mascot = provider?.delight?.cue?.mascot || "watch";
+  els.hudMascot.title = provider?.delight?.mood === "login"
+    ? "要登录：点击顶部条小人会出现钥匙孔提示"
+    : provider?.delight?.a11yLabel || "";
+  if (provider?.delight?.mood !== "login") {
+    delete els.hudMascot.dataset.keyhole;
+  }
+}
+
+function triggerKeyholeHint(element) {
+  if (!element) return;
+  element.dataset.keyhole = "on";
+  clearTimeout(element._keyholeTimer);
+  element._keyholeTimer = setTimeout(() => {
+    delete element.dataset.keyhole;
+  }, 1100);
 }
 
 function getPredictLabel(provider) {

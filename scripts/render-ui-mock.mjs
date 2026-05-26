@@ -8,7 +8,8 @@ const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const out = path.join(root, "output", "playwright");
 const htmlOut = path.join(os.tmpdir(), "who-eats-token-ui-mock");
 
-const css = fs.readFileSync(path.join(root, "src/renderer/styles.css"), "utf8");
+const css = fs.readFileSync(path.join(root, "src/renderer/styles.css"), "utf8")
+  .replaceAll("../assets/", `${pathToFileURL(path.join(root, "src/assets")).href}/`);
 const appJs = fs.readFileSync(path.join(root, "src/renderer/app.js"), "utf8");
 const hudJs = fs.readFileSync(path.join(root, "src/renderer/hud.js"), "utf8");
 
@@ -36,12 +37,13 @@ const snapshot = {
         },
         delight: {
           id: "live-tight",
-          mood: "careful",
+          mood: "tight",
           shortLabel: "省着吃",
           label: "余量偏紧",
           tone: "caution",
           motion: "breathe",
-          severity: "warning"
+          severity: "warning",
+          cue: { mascot: "careful" }
         }
       }
     ]

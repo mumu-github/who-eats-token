@@ -167,15 +167,24 @@ function inspectRendererCoupling() {
 function inspectDelightAssets() {
   const assetRoot = path.join(root, "src", "assets");
   if (!fs.existsSync(assetRoot)) return [];
-  return fs.readdirSync(assetRoot)
-    .filter((name) => /\.(png|ico|jpg|jpeg|gif|webp|svg|json)$/i.test(name))
-    .map((name) => {
-      const filePath = path.join(assetRoot, name);
-      return {
-        path: path.relative(root, filePath).replace(/\\/g, "/"),
-        bytes: fs.statSync(filePath).size
-      };
+  const assets = [];
+  walkAssets(assetRoot, assets);
+  return assets;
+}
+
+function walkAssets(dir, assets) {
+  for (const entry of fs.readdirSync(dir, { withFileTypes: true })) {
+    const filePath = path.join(dir, entry.name);
+    if (entry.isDirectory()) {
+      walkAssets(filePath, assets);
+      continue;
+    }
+    if (!entry.isFile() || !/\.(png|ico|jpg|jpeg|gif|webp|svg|json)$/i.test(entry.name)) continue;
+    assets.push({
+      path: path.relative(root, filePath).replace(/\\/g, "/"),
+      bytes: fs.statSync(filePath).size
     });
+  }
 }
 
 function compactDelight(delight) {

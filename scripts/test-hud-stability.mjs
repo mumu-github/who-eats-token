@@ -130,6 +130,8 @@ function testDesktopRendererProviderSelection() {
   assert.equal(harness.text("trustBadge"), "本地精确", "Top bar should expose Codex trust status.");
   assert.equal(harness.style("miniChart", "--five-fill"), "85%", "Mini chart should track Codex five-hour remaining.");
   assert.equal(harness.style("miniChart", "--week-fill"), "80%", "Mini chart should track Codex weekly remaining.");
+  assert.equal(harness.dataset("usageStrip", "delightMood"), "comfy", "Top bar mascot mood should follow Codex delight state.");
+  assert.equal(harness.dataset("usageStrip", "mascot"), "stretch", "Top bar mascot sprite should follow Codex delight cue.");
 
   harness.callbacks.onUpdate({
     ...snapshot,
@@ -143,6 +145,8 @@ function testDesktopRendererProviderSelection() {
   assert.equal(harness.text("trustBadge"), "本地精确", "Top bar should expose Hermes trust fallback when provider health is absent.");
   assert.equal(harness.style("miniChart", "--five-fill"), "24%", "Mini chart should track Hermes remaining.");
   assert.equal(harness.style("miniChart", "--week-fill"), "76%", "Mini chart should track Hermes used percent.");
+  assert.equal(harness.dataset("usageStrip", "delightMood"), "low", "Top bar should switch to the low-quota mascot state.");
+  assert.equal(harness.dataset("usageStrip", "mascot"), "small-bites", "Top bar should switch to the anxious low-quota sprite cue.");
 
   harness.callbacks.onUpdate({
     ...snapshot,
@@ -166,7 +170,12 @@ function testHudRendererCoupledVisuals() {
       tokenPlanUsedCredits: 166_510_000,
       tokenPlanTotalCredits: 200_000_000,
       tokenPlanSource: "xiaomi-platform",
-      tokenPlanValidUntil: "2026-05-28T23:59:00Z"
+      tokenPlanValidUntil: "2026-05-28T23:59:00Z",
+      delight: {
+        mood: "low",
+        cue: { mascot: "small-bites" },
+        a11yLabel: "余量告急：省着点"
+      }
     }
   });
   assert.equal(harness.text("toolName"), "Hermes", "HUD should show the active tool name.");
@@ -178,6 +187,8 @@ function testHudRendererCoupledVisuals() {
   assert.equal(harness.text("hudTrust"), "精确", "HUD trust pill should expose provider exactness.");
   assert.equal(harness.text("hudPredict"), "轻量对话更稳", "HUD should show an action-oriented low-quota hint.");
   assert.equal(harness.dataset("hudChart", "level"), "danger", "HUD chart level must follow low remaining.");
+  assert.equal(harness.dataset("hudMascot", "delightMood"), "low", "HUD mascot mood must follow provider delight.");
+  assert.equal(harness.dataset("hudMascot", "mascot"), "small-bites", "HUD mascot sprite must follow provider delight cue.");
   assert.equal(harness.style("hudChart", "--five-fill"), "17%", "HUD chart left bar should follow remaining.");
   assert.equal(harness.style("hudChart", "--week-fill"), "83%", "HUD chart used bar should follow used percent.");
   assert.match(harness.text("hudMeta"), /平台实时/, "HUD meta should expose live platform source.");
@@ -193,7 +204,12 @@ function testHudRendererCoupledVisuals() {
       weekRemaining: 80,
       recentTokens: 7_190_000,
       syncStatus: "live",
-      trendLabel: "稳定"
+      trendLabel: "稳定",
+      delight: {
+        mood: "comfy",
+        cue: { mascot: "stretch" },
+        a11yLabel: "余量充足：放心吃"
+      }
     }
   });
   assert.equal(harness.text("toolName"), "Codex", "HUD should switch tool names.");
@@ -204,6 +220,8 @@ function testHudRendererCoupledVisuals() {
   assert.equal(harness.text("hudTrust"), "本地精确", "Codex HUD should expose local exactness.");
   assert.equal(harness.text("hudPredict"), "可以继续工作", "Healthy Codex HUD should show a calm work hint.");
   assert.equal(harness.dataset("hudChart", "level"), "healthy", "HUD chart level should recover with healthy capacity.");
+  assert.equal(harness.dataset("hudMascot", "delightMood"), "comfy", "Healthy HUD should use the relaxed mascot state.");
+  assert.equal(harness.dataset("hudMascot", "mascot"), "stretch", "Healthy HUD should use the overflow-token mascot cue.");
   assert.equal(harness.style("hudChart", "--five-fill"), "95%", "HUD chart should follow Codex five-hour remaining.");
   assert.equal(harness.style("hudChart", "--week-fill"), "80%", "HUD chart should follow Codex weekly remaining.");
 }
@@ -294,6 +312,28 @@ function buildRendererSnapshot() {
         }
       }
     ],
+    providerHealth: {
+      providers: [
+        {
+          id: "codex",
+          trust: { level: "exact-local", label: "本地精确", sourceLabel: "codex-jsonl" },
+          delight: {
+            mood: "comfy",
+            shortLabel: "放心吃",
+            cue: { mascot: "stretch" }
+          }
+        },
+        {
+          id: "hermes",
+          trust: { level: "exact-local", label: "本地精确", sourceLabel: "hermes-local" },
+          delight: {
+            mood: "low",
+            shortLabel: "省着点",
+            cue: { mascot: "small-bites" }
+          }
+        }
+      ]
+    },
     system: {
       cpu: { percent: 7 },
       memory: {
