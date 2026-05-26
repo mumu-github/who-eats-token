@@ -15,6 +15,7 @@ const {
 testToolDetectionAndOverlayAvoidance();
 testDesktopRendererProviderSelection();
 testHudRendererCoupledVisuals();
+testHudWindowLifecycleGuards();
 
 console.log("HUD stability checks passed.");
 
@@ -25,6 +26,30 @@ function testToolDetectionAndOverlayAvoidance() {
   });
   assert.equal(codex?.id, "codex", "Codex windows should resolve to the Codex tool.");
   assert.deepEqual(codex.providerIds, ["codex"], "Codex HUD must only read Codex provider data.");
+
+  const terminalCodex = detectTool({
+    processName: "pwsh",
+    title: "Codex - 谁在吃token"
+  });
+  assert.equal(terminalCodex?.id, "codex", "An explicit Codex terminal session should resolve to Codex.");
+
+  const codexPathOnlyTerminal = detectTool({
+    processName: "powershell",
+    title: "C:\\Users\\lhy10\\.codex\\worktrees\\95d9"
+  });
+  assert.equal(codexPathOnlyTerminal, null, "A path-only terminal title containing .codex must not show the Codex HUD.");
+
+  const codexFolderOnlyTerminal = detectTool({
+    processName: "cmd",
+    title: "Command Prompt - C:\\Users\\lhy10\\Documents\\Codex\\2026-05-26"
+  });
+  assert.equal(codexFolderOnlyTerminal, null, "A Codex-named folder in cmd must not be treated as an active Codex tool.");
+
+  const plainTerminal = detectTool({
+    processName: "powershell",
+    title: "Windows PowerShell"
+  });
+  assert.equal(plainTerminal, null, "Plain cmd/PowerShell windows should not inherit a stale in-tool HUD.");
 
   const hermes = detectTool({
     processName: "Google Chrome",
@@ -181,6 +206,30 @@ function testHudRendererCoupledVisuals() {
   assert.equal(harness.dataset("hudChart", "level"), "healthy", "HUD chart level should recover with healthy capacity.");
   assert.equal(harness.style("hudChart", "--five-fill"), "95%", "HUD chart should follow Codex five-hour remaining.");
   assert.equal(harness.style("hudChart", "--week-fill"), "80%", "HUD chart should follow Codex weekly remaining.");
+}
+
+function testHudWindowLifecycleGuards() {
+  const mainSource = read("src/main.cjs");
+  assert.match(
+    mainSource,
+    /function hideToolHudForUnsupportedForeground/,
+    "The fast desktop foreground pass should also retire stale in-tool HUDs."
+  );
+  assert.match(
+    mainSource,
+    /hiddenReason:\s*"unsupported-foreground"/,
+    "Unsupported foreground windows should clear stale HUD payloads immediately."
+  );
+  assert.match(
+    mainSource,
+    /hidden-unsupported-foreground/,
+    "Unsupported foreground HUD hides should be logged for diagnostics."
+  );
+  assert.match(
+    mainSource,
+    /setFocusable\(false\)/,
+    "The HUD window must stay non-focusable so Explorer rename/edit focus is not stolen."
+  );
 }
 
 function buildRendererSnapshot() {

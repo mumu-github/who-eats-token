@@ -40,7 +40,7 @@ const TOOL_RULES = [
     providerIds: ["codex"],
     match: ({ processName, title }) =>
       processName === "codex" ||
-      (TERMINAL_PROCESSES.has(processName) && /\bcodex\b/i.test(title))
+      (TERMINAL_PROCESSES.has(processName) && terminalTitleMentionsTool(title, /\bcodex\b/i))
   },
   {
     id: "cursor",
@@ -55,8 +55,7 @@ const TOOL_RULES = [
     providerIds: ["anthropic", "claude"],
     match: ({ processName, title }) =>
       processName === "claude" ||
-      /claude/i.test(title) ||
-      (TERMINAL_PROCESSES.has(processName) && /\bclaude\b/i.test(title))
+      titleMentionsTool(processName, title, /claude/i)
   },
   {
     id: "chatgpt",
@@ -84,27 +83,26 @@ const TOOL_RULES = [
     providerIds: ["gemini", "google"],
     match: ({ processName, title }) =>
       processName === "gemini" ||
-      /gemini/i.test(title) ||
-      (TERMINAL_PROCESSES.has(processName) && /\bgemini\b/i.test(title))
+      titleMentionsTool(processName, title, /gemini/i)
   },
   {
     id: "deepseek",
     name: "DeepSeek",
     providerIds: ["deepseek"],
     match: ({ processName, title }) =>
-      processName === "deepseek" || /deepseek/i.test(title)
+      processName === "deepseek" || titleMentionsTool(processName, title, /deepseek/i)
   },
   {
     id: "qwen",
     name: "Qwen",
     providerIds: ["qwen", "dashscope", "aliyun"],
-    match: ({ title }) => /(qwen|通义|千问)/i.test(title)
+    match: ({ processName, title }) => titleMentionsTool(processName, title, /(qwen|通义|千问)/i)
   },
   {
     id: "doubao",
     name: "豆包",
     providerIds: ["doubao", "volcengine"],
-    match: ({ title }) => /(豆包|doubao)/i.test(title)
+    match: ({ processName, title }) => titleMentionsTool(processName, title, /(豆包|doubao)/i)
   },
   {
     id: "vscode-ai",
@@ -115,6 +113,31 @@ const TOOL_RULES = [
       /(cline|continue|copilot|roo code|aider)/i.test(title)
   }
 ];
+
+function titleMentionsTool(processName, title, pattern) {
+  const text = String(title || "");
+  if (!TERMINAL_PROCESSES.has(processName)) return pattern.test(text);
+  return terminalTitleMentionsTool(text, pattern);
+}
+
+function terminalTitleMentionsTool(title, pattern) {
+  const text = String(title || "").trim();
+  if (!pattern.test(text)) return false;
+  return !isPathLikeTerminalTitle(text);
+}
+
+function isPathLikeTerminalTitle(title) {
+  const text = String(title || "")
+    .trim()
+    .replace(/^(administrator|管理员)\s*:\s*/i, "")
+    .replace(/^(command prompt|cmd|windows powershell|powershell|pwsh)\s*[-:]\s*/i, "")
+    .replace(/^["']|["']$/g, "")
+    .trim();
+
+  return /^[a-z]:[\\/]/i.test(text) ||
+    /^\\\\/.test(text) ||
+    /^~?[\\/]/.test(text);
+}
 
 function isHermesBrowserWindow(title, path, url) {
   const normalizedTitle = String(title || "").trim();

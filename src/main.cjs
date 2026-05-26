@@ -163,7 +163,11 @@ function createToolHudWindow() {
   });
 
   toolHudWindow.setAlwaysOnTop(true, "pop-up-menu");
+  toolHudWindow.setFocusable(false);
   toolHudWindow.setIgnoreMouseEvents(true, { forward: true });
+  toolHudWindow.on("focus", () => {
+    toolHudWindow?.blur();
+  });
   toolHudWindow.loadFile(path.join(__dirname, "renderer", "hud.html"));
   toolHudWindow.webContents.once("did-finish-load", () => {
     toolHudWindow.webContents.send("settings:update", getPublicSettings());
@@ -383,15 +387,17 @@ function clampNumber(value, min, max) {
 
 async function refreshDesktopBarFromForeground() {
   const activeWindow = await getActiveWindow(getFastWindowInspectionOptions());
-  updateActiveToolFromWindow(activeWindow);
+  const foregroundTool = updateActiveToolFromWindow(activeWindow);
   updateDesktopBarVisibility(activeWindow);
+  hideToolHudForUnsupportedForeground(activeWindow, foregroundTool);
 }
 
 function updateActiveToolFromWindow(activeWindow) {
   const anchorWindow = getHudAnchorWindow(activeWindow);
   const tool = detectTool(activeWindow) || detectTool(anchorWindow);
-  if (!tool) return;
+  if (!tool) return null;
   rememberActiveTool(tool, anchorWindow || activeWindow);
+  return tool;
 }
 
 function rememberActiveTool(tool, activeWindow) {
@@ -479,6 +485,42 @@ function hideToolHudForDesktop(activeWindow) {
     writeHudDebugLog({
       event: "hud-refresh",
       outcome: "hidden-desktop",
+      activeWindow: summarizeHudWindow(activeWindow),
+      payload: summarizeHudPayload(latestHudPayload),
+      hudWindowVisible: false
+    });
+  }
+}
+
+function hideToolHudForUnsupportedForeground(activeWindow, foregroundTool) {
+  if (!toolHudWindow || toolHudWindow.isDestroyed()) return;
+  if (!settings.windows.toolHudEnabled) return;
+  if (!activeWindow || foregroundTool) return;
+  if (isDesktopAvailable(activeWindow)) return;
+
+  const shouldLog =
+    Boolean(latestHudPayload?.visible) ||
+    toolHudWindow.isVisible() ||
+    Boolean(lastVisibleHudPayload);
+
+  latestHudPayload = {
+    visible: false,
+    hiddenReason: "unsupported-foreground",
+    activeWindow
+  };
+  lastVisibleHudPayload = null;
+  lastVisibleHudBounds = null;
+  lastVisibleHudAt = 0;
+
+  if (toolHudWindow.isVisible()) {
+    toolHudWindow.hide();
+  }
+  toolHudWindow.webContents.send("hud:update", latestHudPayload);
+
+  if (shouldLog) {
+    writeHudDebugLog({
+      event: "hud-refresh",
+      outcome: "hidden-unsupported-foreground",
       activeWindow: summarizeHudWindow(activeWindow),
       payload: summarizeHudPayload(latestHudPayload),
       hudWindowVisible: false
@@ -1037,8 +1079,10 @@ async function refreshToolHud() {
 function showToolHudWindow() {
   if (!toolHudWindow || toolHudWindow.isDestroyed()) return;
   toolHudWindow.setAlwaysOnTop(true, "pop-up-menu");
+  toolHudWindow.setFocusable(false);
   toolHudWindow.setIgnoreMouseEvents(true, { forward: true });
   toolHudWindow.showInactive();
+  toolHudWindow.blur();
 }
 
 function buildHudDebugEntry({ id, snapshot, activeWindow, anchorWindow, tool, payload }) {

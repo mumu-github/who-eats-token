@@ -28,6 +28,8 @@ Use `npm run validation:template -- --target browser|ide|macos|signing` when han
 - App starts from unpacked package.
 - Desktop top bar appears only on desktop.
 - In-tool HUD appears in Codex/Hermes and does not cover send buttons.
+- Switching from Codex/Hermes to File Explorer allows rename/edit focus immediately and removes the stale in-tool HUD.
+- Opening a plain cmd or PowerShell window does not inherit the Codex/Hermes HUD or move it to the terminal.
 - Closing from tray exits all app windows and local servers.
 - Local API responds on `127.0.0.1:17667/snapshot`.
 - Local `/snapshot` contains `ingest`, `bridges`, `system`, `settings`, and `providers`.
@@ -62,6 +64,7 @@ Use `npm run validation:template -- --target browser|ide|macos|signing` when han
 - Options test connection succeeds with local token through `/health`.
 - Hermes Web UI reports overlay hints when dialogs/buttons appear.
 - Non-matching websites do not inject the content script.
+- Hermes HUD behavior in Chrome/Edge matches the desktop app rules: only Hermes pages show it, unrelated tabs hide it, and overlapping dialogs trigger hide or reposition.
 
 ## IDE Adapter
 

@@ -117,3 +117,5 @@ npm run test:performance-summary
 - unrelated browser tabs must not trigger the Hermes HUD
 - content overlays only hide or move the HUD when they overlap the HUD rectangle
 - mini charts and warning pills must be driven by the same remaining quota values shown as text
+- switching to unsupported foreground windows uses the existing 1s desktop foreground check to retire stale HUDs; it must not add a second active-window polling loop
+- terminal window titles that are only filesystem paths must not be treated as Codex/Claude/Gemini sessions
