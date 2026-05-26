@@ -393,11 +393,51 @@ async function refreshDesktopBarFromForeground() {
 }
 
 function updateActiveToolFromWindow(activeWindow) {
-  const anchorWindow = getHudAnchorWindow(activeWindow);
-  const tool = detectTool(activeWindow) || detectTool(anchorWindow);
-  if (!tool) return null;
-  rememberActiveTool(tool, anchorWindow || activeWindow);
-  return tool;
+  const toolContext = getDetectedToolContext(activeWindow);
+  if (!toolContext) return null;
+  rememberActiveTool(toolContext.tool, toolContext.window);
+  return toolContext.tool;
+}
+
+function getDetectedToolContext(activeWindow) {
+  for (const candidateWindow of getToolDetectionCandidates(activeWindow)) {
+    const anchorWindow = getHudAnchorWindow(candidateWindow);
+    const tool = detectTool(candidateWindow) || detectTool(anchorWindow);
+    if (tool) {
+      return {
+        tool,
+        window: anchorWindow || candidateWindow
+      };
+    }
+  }
+  return null;
+}
+
+function getToolDetectionCandidates(activeWindow) {
+  const candidates = [];
+  addWindowCandidate(candidates, activeWindow);
+  addWindowCandidate(candidates, getHudAnchorWindow(activeWindow));
+
+  const blockers = Array.isArray(activeWindow?.desktop?.blockers)
+    ? activeWindow.desktop.blockers
+    : [];
+  for (const blocker of blockers) {
+    addWindowCandidate(candidates, blocker);
+    addWindowCandidate(candidates, getHudAnchorWindow(blocker));
+  }
+
+  return candidates;
+}
+
+function addWindowCandidate(candidates, windowInfo) {
+  if (!windowInfo) return;
+  const key = `${windowInfo.hwnd || ""}:${windowInfo.pid || ""}:${windowInfo.processName || ""}:${windowInfo.title || ""}`;
+  if (candidates.some((candidate) =>
+    `${candidate.hwnd || ""}:${candidate.pid || ""}:${candidate.processName || ""}:${candidate.title || ""}` === key
+  )) {
+    return;
+  }
+  candidates.push(windowInfo);
 }
 
 function rememberActiveTool(tool, activeWindow) {
@@ -966,13 +1006,23 @@ async function refreshToolHud() {
   const debugId = ++hudDebugSequence;
   try {
     const snapshot = latestSnapshot || collectSnapshot();
-    const activeWindow = enrichActiveWindowWithOverlayReports(
+    let activeWindow = enrichActiveWindowWithOverlayReports(
       await getActiveWindow(getHudWindowInspectionOptions())
     );
-    const anchorWindow = getHudAnchorWindow(activeWindow);
-    const tool = detectTool(activeWindow) || detectTool(anchorWindow);
+    let toolContext = getDetectedToolContext(activeWindow);
+    if (!toolContext) {
+      const fastActiveWindow = await getActiveWindow(getFastWindowInspectionOptions());
+      const fastToolContext = getDetectedToolContext(fastActiveWindow);
+      if (fastToolContext) {
+        activeWindow = fastActiveWindow;
+        toolContext = fastToolContext;
+      }
+    }
+    const anchorWindow = toolContext?.window || getHudAnchorWindow(activeWindow);
+    const tool = toolContext?.tool || null;
     rememberActiveTool(tool, anchorWindow || activeWindow);
-    latestHudPayload = buildHudPayload(snapshot, activeWindow, tool);
+    const payloadWindow = tool ? anchorWindow || activeWindow : activeWindow;
+    latestHudPayload = buildHudPayload(snapshot, payloadWindow, tool);
     const debugBase = isHudDebugEnabled()
       ? buildHudDebugEntry({
           id: debugId,

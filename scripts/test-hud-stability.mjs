@@ -217,6 +217,21 @@ function testHudWindowLifecycleGuards() {
   );
   assert.match(
     mainSource,
+    /function getDetectedToolContext/,
+    "HUD tool detection should be shared by fast and full foreground passes."
+  );
+  assert.match(
+    mainSource,
+    /activeWindow\?\.desktop\?\.blockers/,
+    "Windows shell/taskbar foreground reports should inspect desktop blockers before hiding the HUD."
+  );
+  assert.match(
+    mainSource,
+    /const fastActiveWindow = await getActiveWindow\(getFastWindowInspectionOptions\(\)\)/,
+    "Full HUD refresh should recover from unreliable shell foreground misses using the low-overhead desktop pass."
+  );
+  assert.match(
+    mainSource,
     /hiddenReason:\s*"unsupported-foreground"/,
     "Unsupported foreground windows should clear stale HUD payloads immediately."
   );
