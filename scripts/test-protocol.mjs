@@ -41,6 +41,8 @@ assert.equal(event.inputTokens, 120);
 assert.equal(event.outputTokens, 30);
 assert.equal(event.totalTokens, 150);
 assert.equal(event.rateLimits.primary.usedPercent, 25);
+assert.equal(event.tokenAccuracy.level, "official-usage");
+assert.equal(event.tokenAccuracy.estimated, false);
 assert.equal(event.metadata.workspace, "demo");
 assert.equal(Object.hasOwn(event.metadata, "prompt"), false);
 assert.equal(Object.hasOwn(event.metadata, "api_key"), false);
@@ -54,6 +56,22 @@ const totalOnly = normalizeUsageEvent({
 });
 assert.equal(totalOnly.inputTokens, 420);
 assert.equal(totalOnly.outputTokens, 80);
+
+const heuristicContext = normalizeUsageEvent({
+  provider: "hermes",
+  total_tokens: 500,
+  confidence: "estimated",
+  token_accuracy: "heuristic",
+  context: {
+    used_tokens: 500,
+    limit_tokens: 200000,
+    source: "message-length-heuristic"
+  }
+});
+assert.equal(heuristicContext.tokenAccuracy.level, "heuristic");
+assert.equal(heuristicContext.tokenAccuracy.estimated, true);
+assert.equal(heuristicContext.context.tokenAccuracy.level, "heuristic");
+assert.equal(heuristicContext.context.estimated, true);
 
 assert.throws(
   () => normalizeUsageEvent({ provider: "empty" }),

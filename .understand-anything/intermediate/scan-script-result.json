@@ -1,0 +1,1353 @@
+{
+  "scriptCompleted": true,
+  "files": [
+    {
+      "path": ".gitattributes",
+      "language": "unknown",
+      "sizeLines": 10,
+      "fileCategory": "code"
+    },
+    {
+      "path": ".github/ISSUE_TEMPLATE/adapter_request.yml",
+      "language": "yaml",
+      "sizeLines": 57,
+      "fileCategory": "config"
+    },
+    {
+      "path": ".github/ISSUE_TEMPLATE/bug_report.yml",
+      "language": "yaml",
+      "sizeLines": 83,
+      "fileCategory": "config"
+    },
+    {
+      "path": ".github/ISSUE_TEMPLATE/config.yml",
+      "language": "yaml",
+      "sizeLines": 5,
+      "fileCategory": "config"
+    },
+    {
+      "path": ".github/ISSUE_TEMPLATE/performance_report.yml",
+      "language": "yaml",
+      "sizeLines": 88,
+      "fileCategory": "config"
+    },
+    {
+      "path": ".github/PULL_REQUEST_TEMPLATE.md",
+      "language": "markdown",
+      "sizeLines": 31,
+      "fileCategory": "docs"
+    },
+    {
+      "path": ".github/workflows/ci.yml",
+      "language": "yaml",
+      "sizeLines": 26,
+      "fileCategory": "infra"
+    },
+    {
+      "path": ".github/workflows/release-artifacts.yml",
+      "language": "yaml",
+      "sizeLines": 39,
+      "fileCategory": "infra"
+    },
+    {
+      "path": "adapters/browser-extension/content-script.js",
+      "language": "javascript",
+      "sizeLines": 264,
+      "fileCategory": "code"
+    },
+    {
+      "path": "adapters/browser-extension/manifest.json",
+      "language": "json",
+      "sizeLines": 37,
+      "fileCategory": "config"
+    },
+    {
+      "path": "adapters/browser-extension/options.html",
+      "language": "html",
+      "sizeLines": 120,
+      "fileCategory": "markup"
+    },
+    {
+      "path": "adapters/browser-extension/options.js",
+      "language": "javascript",
+      "sizeLines": 60,
+      "fileCategory": "code"
+    },
+    {
+      "path": "adapters/browser-extension/README.md",
+      "language": "markdown",
+      "sizeLines": 77,
+      "fileCategory": "docs"
+    },
+    {
+      "path": "adapters/browser-extension/service-worker.js",
+      "language": "javascript",
+      "sizeLines": 184,
+      "fileCategory": "code"
+    },
+    {
+      "path": "adapters/catalog.json",
+      "language": "json",
+      "sizeLines": 166,
+      "fileCategory": "config"
+    },
+    {
+      "path": "adapters/templates/provider-adapter/catalog-entry.json",
+      "language": "json",
+      "sizeLines": 16,
+      "fileCategory": "config"
+    },
+    {
+      "path": "adapters/templates/provider-adapter/README.md",
+      "language": "markdown",
+      "sizeLines": 61,
+      "fileCategory": "docs"
+    },
+    {
+      "path": "adapters/vscode-extension/extension.js",
+      "language": "javascript",
+      "sizeLines": 214,
+      "fileCategory": "code"
+    },
+    {
+      "path": "adapters/vscode-extension/package.json",
+      "language": "json",
+      "sizeLines": 72,
+      "fileCategory": "config"
+    },
+    {
+      "path": "adapters/vscode-extension/README.md",
+      "language": "markdown",
+      "sizeLines": 41,
+      "fileCategory": "docs"
+    },
+    {
+      "path": "agent_memory/bugs.md",
+      "language": "markdown",
+      "sizeLines": 87,
+      "fileCategory": "docs"
+    },
+    {
+      "path": "agent_memory/context.md",
+      "language": "markdown",
+      "sizeLines": 44,
+      "fileCategory": "docs"
+    },
+    {
+      "path": "agent_memory/progress.md",
+      "language": "markdown",
+      "sizeLines": 223,
+      "fileCategory": "docs"
+    },
+    {
+      "path": "CONTRIBUTING.md",
+      "language": "markdown",
+      "sizeLines": 74,
+      "fileCategory": "docs"
+    },
+    {
+      "path": "docs/adapter-catalog.md",
+      "language": "markdown",
+      "sizeLines": 73,
+      "fileCategory": "docs"
+    },
+    {
+      "path": "docs/adapter-fixture.md",
+      "language": "markdown",
+      "sizeLines": 69,
+      "fileCategory": "docs"
+    },
+    {
+      "path": "docs/adapter-guide.md",
+      "language": "markdown",
+      "sizeLines": 182,
+      "fileCategory": "docs"
+    },
+    {
+      "path": "docs/adapter-review.md",
+      "language": "markdown",
+      "sizeLines": 84,
+      "fileCategory": "docs"
+    },
+    {
+      "path": "docs/adapter-signal-matrix.md",
+      "language": "markdown",
+      "sizeLines": 36,
+      "fileCategory": "docs"
+    },
+    {
+      "path": "docs/beta-release-next-steps.md",
+      "language": "markdown",
+      "sizeLines": 169,
+      "fileCategory": "docs"
+    },
+    {
+      "path": "docs/browser-extension.md",
+      "language": "markdown",
+      "sizeLines": 87,
+      "fileCategory": "docs"
+    },
+    {
+      "path": "docs/compatibility-matrix.md",
+      "language": "markdown",
+      "sizeLines": 60,
+      "fileCategory": "docs"
+    },
+    {
+      "path": "docs/compatibility.md",
+      "language": "markdown",
+      "sizeLines": 58,
+      "fileCategory": "docs"
+    },
+    {
+      "path": "docs/competitive-differentiation-plan.md",
+      "language": "markdown",
+      "sizeLines": 255,
+      "fileCategory": "docs"
+    },
+    {
+      "path": "docs/delight-contract.md",
+      "language": "markdown",
+      "sizeLines": 65,
+      "fileCategory": "docs"
+    },
+    {
+      "path": "docs/diagnostics.md",
+      "language": "markdown",
+      "sizeLines": 81,
+      "fileCategory": "docs"
+    },
+    {
+      "path": "docs/external-summary-import.md",
+      "language": "markdown",
+      "sizeLines": 92,
+      "fileCategory": "docs"
+    },
+    {
+      "path": "docs/ide-extension.md",
+      "language": "markdown",
+      "sizeLines": 56,
+      "fileCategory": "docs"
+    },
+    {
+      "path": "docs/license-policy.md",
+      "language": "markdown",
+      "sizeLines": 54,
+      "fileCategory": "docs"
+    },
+    {
+      "path": "docs/manual-validation.md",
+      "language": "markdown",
+      "sizeLines": 102,
+      "fileCategory": "docs"
+    },
+    {
+      "path": "docs/mcp-server.md",
+      "language": "markdown",
+      "sizeLines": 76,
+      "fileCategory": "docs"
+    },
+    {
+      "path": "docs/next-product-design-plan.md",
+      "language": "markdown",
+      "sizeLines": 334,
+      "fileCategory": "docs"
+    },
+    {
+      "path": "docs/node-sdk.md",
+      "language": "markdown",
+      "sizeLines": 74,
+      "fileCategory": "docs"
+    },
+    {
+      "path": "docs/open-source-form-strategy.md",
+      "language": "markdown",
+      "sizeLines": 169,
+      "fileCategory": "docs"
+    },
+    {
+      "path": "docs/open-source-landscape.md",
+      "language": "markdown",
+      "sizeLines": 71,
+      "fileCategory": "docs"
+    },
+    {
+      "path": "docs/performance-budget.md",
+      "language": "markdown",
+      "sizeLines": 122,
+      "fileCategory": "docs"
+    },
+    {
+      "path": "docs/plugin.md",
+      "language": "markdown",
+      "sizeLines": 53,
+      "fileCategory": "docs"
+    },
+    {
+      "path": "docs/protocol.md",
+      "language": "markdown",
+      "sizeLines": 183,
+      "fileCategory": "docs"
+    },
+    {
+      "path": "docs/release-evidence.json",
+      "language": "json",
+      "sizeLines": 106,
+      "fileCategory": "config"
+    },
+    {
+      "path": "docs/release-evidence.md",
+      "language": "markdown",
+      "sizeLines": 108,
+      "fileCategory": "docs"
+    },
+    {
+      "path": "docs/release-evidence.schema.json",
+      "language": "json",
+      "sizeLines": 88,
+      "fileCategory": "config"
+    },
+    {
+      "path": "docs/release-readiness.md",
+      "language": "markdown",
+      "sizeLines": 191,
+      "fileCategory": "docs"
+    },
+    {
+      "path": "docs/release.md",
+      "language": "markdown",
+      "sizeLines": 304,
+      "fileCategory": "docs"
+    },
+    {
+      "path": "docs/risk-register.md",
+      "language": "markdown",
+      "sizeLines": 35,
+      "fileCategory": "docs"
+    },
+    {
+      "path": "docs/skills.md",
+      "language": "markdown",
+      "sizeLines": 58,
+      "fileCategory": "docs"
+    },
+    {
+      "path": "docs/stability.md",
+      "language": "markdown",
+      "sizeLines": 84,
+      "fileCategory": "docs"
+    },
+    {
+      "path": "docs/status.md",
+      "language": "markdown",
+      "sizeLines": 49,
+      "fileCategory": "docs"
+    },
+    {
+      "path": "docs/support-bundle.md",
+      "language": "markdown",
+      "sizeLines": 65,
+      "fileCategory": "docs"
+    },
+    {
+      "path": "docs/token-tracker-lessons.md",
+      "language": "markdown",
+      "sizeLines": 92,
+      "fileCategory": "docs"
+    },
+    {
+      "path": "electron-builder.yml",
+      "language": "yaml",
+      "sizeLines": 56,
+      "fileCategory": "config"
+    },
+    {
+      "path": "package.json",
+      "language": "json",
+      "sizeLines": 145,
+      "fileCategory": "config"
+    },
+    {
+      "path": "plugins/who-eats-token/.codex-plugin/plugin.json",
+      "language": "json",
+      "sizeLines": 39,
+      "fileCategory": "config"
+    },
+    {
+      "path": "plugins/who-eats-token/.mcp.json",
+      "language": "json",
+      "sizeLines": 13,
+      "fileCategory": "config"
+    },
+    {
+      "path": "plugins/who-eats-token/scripts/check-plugin-env.mjs",
+      "language": "javascript",
+      "sizeLines": 27,
+      "fileCategory": "code"
+    },
+    {
+      "path": "plugins/who-eats-token/scripts/mcp-server.mjs",
+      "language": "javascript",
+      "sizeLines": 35,
+      "fileCategory": "code"
+    },
+    {
+      "path": "plugins/who-eats-token/skills/who-eats-token-adapter-author/agents/openai.yaml",
+      "language": "yaml",
+      "sizeLines": 4,
+      "fileCategory": "config"
+    },
+    {
+      "path": "plugins/who-eats-token/skills/who-eats-token-adapter-author/references/adapter-types.md",
+      "language": "markdown",
+      "sizeLines": 39,
+      "fileCategory": "docs"
+    },
+    {
+      "path": "plugins/who-eats-token/skills/who-eats-token-adapter-author/SKILL.md",
+      "language": "markdown",
+      "sizeLines": 49,
+      "fileCategory": "docs"
+    },
+    {
+      "path": "plugins/who-eats-token/skills/who-eats-token-doctor/agents/openai.yaml",
+      "language": "yaml",
+      "sizeLines": 4,
+      "fileCategory": "config"
+    },
+    {
+      "path": "plugins/who-eats-token/skills/who-eats-token-doctor/references/diagnostics.md",
+      "language": "markdown",
+      "sizeLines": 56,
+      "fileCategory": "docs"
+    },
+    {
+      "path": "plugins/who-eats-token/skills/who-eats-token-doctor/SKILL.md",
+      "language": "markdown",
+      "sizeLines": 53,
+      "fileCategory": "docs"
+    },
+    {
+      "path": "plugins/who-eats-token/skills/who-eats-token-setup/agents/openai.yaml",
+      "language": "yaml",
+      "sizeLines": 4,
+      "fileCategory": "config"
+    },
+    {
+      "path": "plugins/who-eats-token/skills/who-eats-token-setup/references/commands.md",
+      "language": "markdown",
+      "sizeLines": 47,
+      "fileCategory": "docs"
+    },
+    {
+      "path": "plugins/who-eats-token/skills/who-eats-token-setup/SKILL.md",
+      "language": "markdown",
+      "sizeLines": 33,
+      "fileCategory": "docs"
+    },
+    {
+      "path": "PRIVACY.md",
+      "language": "markdown",
+      "sizeLines": 41,
+      "fileCategory": "docs"
+    },
+    {
+      "path": "README.md",
+      "language": "markdown",
+      "sizeLines": 432,
+      "fileCategory": "docs"
+    },
+    {
+      "path": "scripts/adapter-fixture.mjs",
+      "language": "javascript",
+      "sizeLines": 422,
+      "fileCategory": "code"
+    },
+    {
+      "path": "scripts/adapter-guard.mjs",
+      "language": "javascript",
+      "sizeLines": 125,
+      "fileCategory": "code"
+    },
+    {
+      "path": "scripts/adapter-manual-readiness.mjs",
+      "language": "javascript",
+      "sizeLines": 276,
+      "fileCategory": "code"
+    },
+    {
+      "path": "scripts/adapter-review.mjs",
+      "language": "javascript",
+      "sizeLines": 233,
+      "fileCategory": "code"
+    },
+    {
+      "path": "scripts/adapter-signal-matrix.mjs",
+      "language": "javascript",
+      "sizeLines": 129,
+      "fileCategory": "code"
+    },
+    {
+      "path": "scripts/check-sync.mjs",
+      "language": "javascript",
+      "sizeLines": 63,
+      "fileCategory": "code"
+    },
+    {
+      "path": "scripts/check.mjs",
+      "language": "javascript",
+      "sizeLines": 50,
+      "fileCategory": "code"
+    },
+    {
+      "path": "scripts/compatibility-matrix.mjs",
+      "language": "javascript",
+      "sizeLines": 362,
+      "fileCategory": "code"
+    },
+    {
+      "path": "scripts/delight-contract.mjs",
+      "language": "javascript",
+      "sizeLines": 260,
+      "fileCategory": "code"
+    },
+    {
+      "path": "scripts/diagnostics.mjs",
+      "language": "javascript",
+      "sizeLines": 71,
+      "fileCategory": "code"
+    },
+    {
+      "path": "scripts/import-usage-report.mjs",
+      "language": "javascript",
+      "sizeLines": 117,
+      "fileCategory": "code"
+    },
+    {
+      "path": "scripts/install-hermes-overlay.mjs",
+      "language": "javascript",
+      "sizeLines": 21,
+      "fileCategory": "code"
+    },
+    {
+      "path": "scripts/lag-triage.mjs",
+      "language": "javascript",
+      "sizeLines": 368,
+      "fileCategory": "code"
+    },
+    {
+      "path": "scripts/lib/packaged-smoke.mjs",
+      "language": "javascript",
+      "sizeLines": 444,
+      "fileCategory": "code"
+    },
+    {
+      "path": "scripts/lib/packaged-soak.mjs",
+      "language": "javascript",
+      "sizeLines": 342,
+      "fileCategory": "code"
+    },
+    {
+      "path": "scripts/lib/zip.mjs",
+      "language": "javascript",
+      "sizeLines": 193,
+      "fileCategory": "code"
+    },
+    {
+      "path": "scripts/license-check.mjs",
+      "language": "javascript",
+      "sizeLines": 179,
+      "fileCategory": "code"
+    },
+    {
+      "path": "scripts/manual-preflight.mjs",
+      "language": "javascript",
+      "sizeLines": 141,
+      "fileCategory": "code"
+    },
+    {
+      "path": "scripts/mcp-server.mjs",
+      "language": "javascript",
+      "sizeLines": 6,
+      "fileCategory": "code"
+    },
+    {
+      "path": "scripts/package-adapters.mjs",
+      "language": "javascript",
+      "sizeLines": 18,
+      "fileCategory": "code"
+    },
+    {
+      "path": "scripts/package-browser-extension.mjs",
+      "language": "javascript",
+      "sizeLines": 32,
+      "fileCategory": "code"
+    },
+    {
+      "path": "scripts/package-vscode-extension.mjs",
+      "language": "javascript",
+      "sizeLines": 48,
+      "fileCategory": "code"
+    },
+    {
+      "path": "scripts/performance-summary.mjs",
+      "language": "javascript",
+      "sizeLines": 352,
+      "fileCategory": "code"
+    },
+    {
+      "path": "scripts/post-sample-event.mjs",
+      "language": "javascript",
+      "sizeLines": 76,
+      "fileCategory": "code"
+    },
+    {
+      "path": "scripts/release-check.mjs",
+      "language": "javascript",
+      "sizeLines": 230,
+      "fileCategory": "code"
+    },
+    {
+      "path": "scripts/release-evidence-quality.mjs",
+      "language": "javascript",
+      "sizeLines": 242,
+      "fileCategory": "code"
+    },
+    {
+      "path": "scripts/release-evidence-report.mjs",
+      "language": "javascript",
+      "sizeLines": 220,
+      "fileCategory": "code"
+    },
+    {
+      "path": "scripts/release-evidence.mjs",
+      "language": "javascript",
+      "sizeLines": 169,
+      "fileCategory": "code"
+    },
+    {
+      "path": "scripts/release-gap-audit.mjs",
+      "language": "javascript",
+      "sizeLines": 305,
+      "fileCategory": "code"
+    },
+    {
+      "path": "scripts/release-manifest.mjs",
+      "language": "javascript",
+      "sizeLines": 190,
+      "fileCategory": "code"
+    },
+    {
+      "path": "scripts/release-summary.mjs",
+      "language": "javascript",
+      "sizeLines": 195,
+      "fileCategory": "code"
+    },
+    {
+      "path": "scripts/release-validation-pack.mjs",
+      "language": "javascript",
+      "sizeLines": 250,
+      "fileCategory": "code"
+    },
+    {
+      "path": "scripts/render-ui-mock.mjs",
+      "language": "javascript",
+      "sizeLines": 272,
+      "fileCategory": "code"
+    },
+    {
+      "path": "scripts/secret-scan.mjs",
+      "language": "javascript",
+      "sizeLines": 249,
+      "fileCategory": "code"
+    },
+    {
+      "path": "scripts/signing-readiness.mjs",
+      "language": "javascript",
+      "sizeLines": 213,
+      "fileCategory": "code"
+    },
+    {
+      "path": "scripts/smoke-browser-hosts.mjs",
+      "language": "javascript",
+      "sizeLines": 582,
+      "fileCategory": "code"
+    },
+    {
+      "path": "scripts/smoke-ide-hosts.mjs",
+      "language": "javascript",
+      "sizeLines": 291,
+      "fileCategory": "code"
+    },
+    {
+      "path": "scripts/smoke-packaged-mac.mjs",
+      "language": "javascript",
+      "sizeLines": 17,
+      "fileCategory": "code"
+    },
+    {
+      "path": "scripts/smoke-packaged-win.mjs",
+      "language": "javascript",
+      "sizeLines": 17,
+      "fileCategory": "code"
+    },
+    {
+      "path": "scripts/snapshot.mjs",
+      "language": "javascript",
+      "sizeLines": 7,
+      "fileCategory": "code"
+    },
+    {
+      "path": "scripts/soak-packaged-mac.mjs",
+      "language": "javascript",
+      "sizeLines": 16,
+      "fileCategory": "code"
+    },
+    {
+      "path": "scripts/soak-packaged-win.mjs",
+      "language": "javascript",
+      "sizeLines": 16,
+      "fileCategory": "code"
+    },
+    {
+      "path": "scripts/stability.mjs",
+      "language": "javascript",
+      "sizeLines": 88,
+      "fileCategory": "code"
+    },
+    {
+      "path": "scripts/status.mjs",
+      "language": "javascript",
+      "sizeLines": 111,
+      "fileCategory": "code"
+    },
+    {
+      "path": "scripts/support-bundle.mjs",
+      "language": "javascript",
+      "sizeLines": 237,
+      "fileCategory": "code"
+    },
+    {
+      "path": "scripts/test-adapter-catalog.mjs",
+      "language": "javascript",
+      "sizeLines": 177,
+      "fileCategory": "code"
+    },
+    {
+      "path": "scripts/test-adapter-contract.mjs",
+      "language": "javascript",
+      "sizeLines": 273,
+      "fileCategory": "code"
+    },
+    {
+      "path": "scripts/test-adapter-contribution.mjs",
+      "language": "javascript",
+      "sizeLines": 77,
+      "fileCategory": "code"
+    },
+    {
+      "path": "scripts/test-adapter-fixture.mjs",
+      "language": "javascript",
+      "sizeLines": 54,
+      "fileCategory": "code"
+    },
+    {
+      "path": "scripts/test-adapter-manual-readiness.mjs",
+      "language": "javascript",
+      "sizeLines": 48,
+      "fileCategory": "code"
+    },
+    {
+      "path": "scripts/test-adapter-packages.mjs",
+      "language": "javascript",
+      "sizeLines": 38,
+      "fileCategory": "code"
+    },
+    {
+      "path": "scripts/test-adapter-review.mjs",
+      "language": "javascript",
+      "sizeLines": 61,
+      "fileCategory": "code"
+    },
+    {
+      "path": "scripts/test-adapter-signal-matrix.mjs",
+      "language": "javascript",
+      "sizeLines": 32,
+      "fileCategory": "code"
+    },
+    {
+      "path": "scripts/test-browser-extension-runtime.mjs",
+      "language": "javascript",
+      "sizeLines": 242,
+      "fileCategory": "code"
+    },
+    {
+      "path": "scripts/test-browser-extension.mjs",
+      "language": "javascript",
+      "sizeLines": 78,
+      "fileCategory": "code"
+    },
+    {
+      "path": "scripts/test-browser-host-smoke-script.mjs",
+      "language": "javascript",
+      "sizeLines": 39,
+      "fileCategory": "code"
+    },
+    {
+      "path": "scripts/test-codex-collector.mjs",
+      "language": "javascript",
+      "sizeLines": 131,
+      "fileCategory": "code"
+    },
+    {
+      "path": "scripts/test-compatibility-matrix.mjs",
+      "language": "javascript",
+      "sizeLines": 48,
+      "fileCategory": "code"
+    },
+    {
+      "path": "scripts/test-delight-contract.mjs",
+      "language": "javascript",
+      "sizeLines": 63,
+      "fileCategory": "code"
+    },
+    {
+      "path": "scripts/test-diagnostics.mjs",
+      "language": "javascript",
+      "sizeLines": 154,
+      "fileCategory": "code"
+    },
+    {
+      "path": "scripts/test-doc-quality.mjs",
+      "language": "javascript",
+      "sizeLines": 199,
+      "fileCategory": "code"
+    },
+    {
+      "path": "scripts/test-external-summary-import.mjs",
+      "language": "javascript",
+      "sizeLines": 105,
+      "fileCategory": "code"
+    },
+    {
+      "path": "scripts/test-hermes-bridge.mjs",
+      "language": "javascript",
+      "sizeLines": 21,
+      "fileCategory": "code"
+    },
+    {
+      "path": "scripts/test-hud-stability.mjs",
+      "language": "javascript",
+      "sizeLines": 1229,
+      "fileCategory": "code"
+    },
+    {
+      "path": "scripts/test-ide-host-smoke-script.mjs",
+      "language": "javascript",
+      "sizeLines": 37,
+      "fileCategory": "code"
+    },
+    {
+      "path": "scripts/test-lag-triage.mjs",
+      "language": "javascript",
+      "sizeLines": 208,
+      "fileCategory": "code"
+    },
+    {
+      "path": "scripts/test-license-check.mjs",
+      "language": "javascript",
+      "sizeLines": 64,
+      "fileCategory": "code"
+    },
+    {
+      "path": "scripts/test-local-health.mjs",
+      "language": "javascript",
+      "sizeLines": 236,
+      "fileCategory": "code"
+    },
+    {
+      "path": "scripts/test-manual-preflight.mjs",
+      "language": "javascript",
+      "sizeLines": 75,
+      "fileCategory": "code"
+    },
+    {
+      "path": "scripts/test-mcp-server.mjs",
+      "language": "javascript",
+      "sizeLines": 167,
+      "fileCategory": "code"
+    },
+    {
+      "path": "scripts/test-node-sdk.mjs",
+      "language": "javascript",
+      "sizeLines": 109,
+      "fileCategory": "code"
+    },
+    {
+      "path": "scripts/test-packaging.mjs",
+      "language": "javascript",
+      "sizeLines": 84,
+      "fileCategory": "code"
+    },
+    {
+      "path": "scripts/test-performance-budget.mjs",
+      "language": "javascript",
+      "sizeLines": 128,
+      "fileCategory": "code"
+    },
+    {
+      "path": "scripts/test-performance-summary.mjs",
+      "language": "javascript",
+      "sizeLines": 45,
+      "fileCategory": "code"
+    },
+    {
+      "path": "scripts/test-plugin.mjs",
+      "language": "javascript",
+      "sizeLines": 89,
+      "fileCategory": "code"
+    },
+    {
+      "path": "scripts/test-protocol.mjs",
+      "language": "javascript",
+      "sizeLines": 75,
+      "fileCategory": "code"
+    },
+    {
+      "path": "scripts/test-provider-health.mjs",
+      "language": "javascript",
+      "sizeLines": 174,
+      "fileCategory": "code"
+    },
+    {
+      "path": "scripts/test-quota-delight.mjs",
+      "language": "javascript",
+      "sizeLines": 165,
+      "fileCategory": "code"
+    },
+    {
+      "path": "scripts/test-release-check.mjs",
+      "language": "javascript",
+      "sizeLines": 42,
+      "fileCategory": "code"
+    },
+    {
+      "path": "scripts/test-release-evidence-cli.mjs",
+      "language": "javascript",
+      "sizeLines": 57,
+      "fileCategory": "code"
+    },
+    {
+      "path": "scripts/test-release-evidence-quality.mjs",
+      "language": "javascript",
+      "sizeLines": 91,
+      "fileCategory": "code"
+    },
+    {
+      "path": "scripts/test-release-evidence-report.mjs",
+      "language": "javascript",
+      "sizeLines": 60,
+      "fileCategory": "code"
+    },
+    {
+      "path": "scripts/test-release-evidence.mjs",
+      "language": "javascript",
+      "sizeLines": 111,
+      "fileCategory": "code"
+    },
+    {
+      "path": "scripts/test-release-gap-audit.mjs",
+      "language": "javascript",
+      "sizeLines": 76,
+      "fileCategory": "code"
+    },
+    {
+      "path": "scripts/test-release-manifest.mjs",
+      "language": "javascript",
+      "sizeLines": 65,
+      "fileCategory": "code"
+    },
+    {
+      "path": "scripts/test-release-readiness.mjs",
+      "language": "javascript",
+      "sizeLines": 458,
+      "fileCategory": "code"
+    },
+    {
+      "path": "scripts/test-release-summary.mjs",
+      "language": "javascript",
+      "sizeLines": 71,
+      "fileCategory": "code"
+    },
+    {
+      "path": "scripts/test-release-validation-pack.mjs",
+      "language": "javascript",
+      "sizeLines": 67,
+      "fileCategory": "code"
+    },
+    {
+      "path": "scripts/test-secret-scan.mjs",
+      "language": "javascript",
+      "sizeLines": 64,
+      "fileCategory": "code"
+    },
+    {
+      "path": "scripts/test-signing-readiness.mjs",
+      "language": "javascript",
+      "sizeLines": 99,
+      "fileCategory": "code"
+    },
+    {
+      "path": "scripts/test-skills.mjs",
+      "language": "javascript",
+      "sizeLines": 60,
+      "fileCategory": "code"
+    },
+    {
+      "path": "scripts/test-soak-script.mjs",
+      "language": "javascript",
+      "sizeLines": 48,
+      "fileCategory": "code"
+    },
+    {
+      "path": "scripts/test-stability.mjs",
+      "language": "javascript",
+      "sizeLines": 190,
+      "fileCategory": "code"
+    },
+    {
+      "path": "scripts/test-status.mjs",
+      "language": "javascript",
+      "sizeLines": 98,
+      "fileCategory": "code"
+    },
+    {
+      "path": "scripts/test-support-bundle.mjs",
+      "language": "javascript",
+      "sizeLines": 162,
+      "fileCategory": "code"
+    },
+    {
+      "path": "scripts/test-validation-next.mjs",
+      "language": "javascript",
+      "sizeLines": 59,
+      "fileCategory": "code"
+    },
+    {
+      "path": "scripts/test-validation-template.mjs",
+      "language": "javascript",
+      "sizeLines": 69,
+      "fileCategory": "code"
+    },
+    {
+      "path": "scripts/test-vscode-extension-runtime.mjs",
+      "language": "javascript",
+      "sizeLines": 179,
+      "fileCategory": "code"
+    },
+    {
+      "path": "scripts/test-vscode-extension.mjs",
+      "language": "javascript",
+      "sizeLines": 53,
+      "fileCategory": "code"
+    },
+    {
+      "path": "scripts/test-window-detection.mjs",
+      "language": "javascript",
+      "sizeLines": 550,
+      "fileCategory": "code"
+    },
+    {
+      "path": "scripts/validation-next.mjs",
+      "language": "javascript",
+      "sizeLines": 235,
+      "fileCategory": "code"
+    },
+    {
+      "path": "scripts/validation-template.mjs",
+      "language": "javascript",
+      "sizeLines": 274,
+      "fileCategory": "code"
+    },
+    {
+      "path": "scripts/verify-adapter-artifacts.mjs",
+      "language": "javascript",
+      "sizeLines": 78,
+      "fileCategory": "code"
+    },
+    {
+      "path": "SECURITY.md",
+      "language": "markdown",
+      "sizeLines": 61,
+      "fileCategory": "docs"
+    },
+    {
+      "path": "skills/who-eats-token-adapter-author/agents/openai.yaml",
+      "language": "yaml",
+      "sizeLines": 4,
+      "fileCategory": "config"
+    },
+    {
+      "path": "skills/who-eats-token-adapter-author/references/adapter-types.md",
+      "language": "markdown",
+      "sizeLines": 39,
+      "fileCategory": "docs"
+    },
+    {
+      "path": "skills/who-eats-token-adapter-author/SKILL.md",
+      "language": "markdown",
+      "sizeLines": 49,
+      "fileCategory": "docs"
+    },
+    {
+      "path": "skills/who-eats-token-doctor/agents/openai.yaml",
+      "language": "yaml",
+      "sizeLines": 4,
+      "fileCategory": "config"
+    },
+    {
+      "path": "skills/who-eats-token-doctor/references/diagnostics.md",
+      "language": "markdown",
+      "sizeLines": 56,
+      "fileCategory": "docs"
+    },
+    {
+      "path": "skills/who-eats-token-doctor/SKILL.md",
+      "language": "markdown",
+      "sizeLines": 53,
+      "fileCategory": "docs"
+    },
+    {
+      "path": "skills/who-eats-token-setup/agents/openai.yaml",
+      "language": "yaml",
+      "sizeLines": 4,
+      "fileCategory": "config"
+    },
+    {
+      "path": "skills/who-eats-token-setup/references/commands.md",
+      "language": "markdown",
+      "sizeLines": 47,
+      "fileCategory": "docs"
+    },
+    {
+      "path": "skills/who-eats-token-setup/SKILL.md",
+      "language": "markdown",
+      "sizeLines": 33,
+      "fileCategory": "docs"
+    },
+    {
+      "path": "src/adapters/external-summary-import.cjs",
+      "language": "javascript",
+      "sizeLines": 137,
+      "fileCategory": "code"
+    },
+    {
+      "path": "src/collectors/codex.cjs",
+      "language": "javascript",
+      "sizeLines": 491,
+      "fileCategory": "code"
+    },
+    {
+      "path": "src/collectors/hermes-bridge.cjs",
+      "language": "javascript",
+      "sizeLines": 325,
+      "fileCategory": "code"
+    },
+    {
+      "path": "src/collectors/hermes-local.cjs",
+      "language": "javascript",
+      "sizeLines": 385,
+      "fileCategory": "code"
+    },
+    {
+      "path": "src/collectors/ingest-server.cjs",
+      "language": "javascript",
+      "sizeLines": 434,
+      "fileCategory": "code"
+    },
+    {
+      "path": "src/collectors/xiaomi-token-plan.cjs",
+      "language": "javascript",
+      "sizeLines": 541,
+      "fileCategory": "code"
+    },
+    {
+      "path": "src/config/providers.cjs",
+      "language": "javascript",
+      "sizeLines": 76,
+      "fileCategory": "code"
+    },
+    {
+      "path": "src/config/settings.cjs",
+      "language": "javascript",
+      "sizeLines": 137,
+      "fileCategory": "code"
+    },
+    {
+      "path": "src/diagnostics/diagnostics-bundle.cjs",
+      "language": "javascript",
+      "sizeLines": 171,
+      "fileCategory": "code"
+    },
+    {
+      "path": "src/diagnostics/stability-report.cjs",
+      "language": "javascript",
+      "sizeLines": 257,
+      "fileCategory": "code"
+    },
+    {
+      "path": "src/integrations/hermes-overlay-installer.cjs",
+      "language": "javascript",
+      "sizeLines": 437,
+      "fileCategory": "code"
+    },
+    {
+      "path": "src/main.cjs",
+      "language": "javascript",
+      "sizeLines": 2571,
+      "fileCategory": "code"
+    },
+    {
+      "path": "src/mcp/server.cjs",
+      "language": "javascript",
+      "sizeLines": 294,
+      "fileCategory": "code"
+    },
+    {
+      "path": "src/preload.cjs",
+      "language": "javascript",
+      "sizeLines": 44,
+      "fileCategory": "code"
+    },
+    {
+      "path": "src/protocol/provider-health.cjs",
+      "language": "javascript",
+      "sizeLines": 374,
+      "fileCategory": "code"
+    },
+    {
+      "path": "src/protocol/quota-delight.cjs",
+      "language": "javascript",
+      "sizeLines": 205,
+      "fileCategory": "code"
+    },
+    {
+      "path": "src/protocol/usage-event.cjs",
+      "language": "javascript",
+      "sizeLines": 199,
+      "fileCategory": "code"
+    },
+    {
+      "path": "src/renderer/app.js",
+      "language": "javascript",
+      "sizeLines": 1043,
+      "fileCategory": "code"
+    },
+    {
+      "path": "src/renderer/hud-trust-popover.html",
+      "language": "html",
+      "sizeLines": 32,
+      "fileCategory": "markup"
+    },
+    {
+      "path": "src/renderer/hud-trust-popover.js",
+      "language": "javascript",
+      "sizeLines": 75,
+      "fileCategory": "code"
+    },
+    {
+      "path": "src/renderer/hud.html",
+      "language": "html",
+      "sizeLines": 70,
+      "fileCategory": "markup"
+    },
+    {
+      "path": "src/renderer/hud.js",
+      "language": "javascript",
+      "sizeLines": 568,
+      "fileCategory": "code"
+    },
+    {
+      "path": "src/renderer/index.html",
+      "language": "html",
+      "sizeLines": 94,
+      "fileCategory": "markup"
+    },
+    {
+      "path": "src/renderer/settings.html",
+      "language": "html",
+      "sizeLines": 137,
+      "fileCategory": "markup"
+    },
+    {
+      "path": "src/renderer/settings.js",
+      "language": "javascript",
+      "sizeLines": 235,
+      "fileCategory": "code"
+    },
+    {
+      "path": "src/renderer/styles.css",
+      "language": "css",
+      "sizeLines": 2675,
+      "fileCategory": "markup"
+    },
+    {
+      "path": "src/sdk/client.cjs",
+      "language": "javascript",
+      "sizeLines": 171,
+      "fileCategory": "code"
+    },
+    {
+      "path": "src/security/local-token.cjs",
+      "language": "javascript",
+      "sizeLines": 55,
+      "fileCategory": "code"
+    },
+    {
+      "path": "src/system/active-window.cjs",
+      "language": "javascript",
+      "sizeLines": 890,
+      "fileCategory": "code"
+    },
+    {
+      "path": "src/system/paths.cjs",
+      "language": "javascript",
+      "sizeLines": 43,
+      "fileCategory": "code"
+    },
+    {
+      "path": "src/system/system-metrics.cjs",
+      "language": "javascript",
+      "sizeLines": 79,
+      "fileCategory": "code"
+    },
+    {
+      "path": "src/system/tool-detector.cjs",
+      "language": "javascript",
+      "sizeLines": 297,
+      "fileCategory": "code"
+    }
+  ],
+  "totalFiles": 221,
+  "filteredByIgnore": 0,
+  "estimatedComplexity": "large",
+  "stats": {
+    "filesScanned": 221,
+    "byCategory": {
+      "code": 137,
+      "config": 20,
+      "docs": 56,
+      "infra": 2,
+      "markup": 6
+    },
+    "byLanguage": {
+      "unknown": 1,
+      "yaml": 13,
+      "markdown": 56,
+      "javascript": 136,
+      "json": 9,
+      "html": 5,
+      "css": 1
+    }
+  }
+}

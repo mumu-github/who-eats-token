@@ -1,0 +1,46 @@
+# .understandignore - patterns for files/dirs to exclude from analysis
+# Syntax follows .gitignore: globs, comments, ! negation, trailing / for dirs.
+
+# Dependencies and generated output
+node_modules/
+dist/
+build/
+out/
+coverage/
+.cache/
+.turbo/
+
+# Git and editor metadata
+.git/
+.idea/
+.vscode/
+
+# Logs, temporary files, and lockfiles
+*.log
+*.tmp
+*.lock
+package-lock.json
+yarn.lock
+pnpm-lock.yaml
+
+# Binary/media assets
+*.png
+*.jpg
+*.jpeg
+*.gif
+*.ico
+*.woff
+*.woff2
+*.ttf
+*.eot
+*.mp3
+*.mp4
+*.zip
+*.tar
+*.gz
+
+# Minified/generated frontend artifacts
+*.min.js
+*.min.css
+*.map
+*.generated.*

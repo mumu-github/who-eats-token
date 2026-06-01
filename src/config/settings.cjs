@@ -14,7 +14,12 @@ const DEFAULT_SETTINGS = {
   windows: {
     desktopBarEnabled: true,
     toolHudEnabled: true,
-    desktopWidthRatio: 0.5
+    desktopWidthRatio: 0.5,
+    desktopBarHeight: 64,
+    toolHudWidth: 396,
+    toolHudHeight: 136,
+    toolHudOffsetX: 0,
+    toolHudOffsetY: 0
   },
   behavior: {
     alertsEnabled: true,
@@ -27,6 +32,9 @@ const DEFAULT_SETTINGS = {
   },
   integrations: {
     hermesOverlayAutoInstall: false
+  },
+  security: {
+    allowUnauthenticatedNoOrigin: false
   },
   alertThresholds: {
     caution: 40,
@@ -79,19 +87,25 @@ function mergeSettings(base, override) {
 }
 
 function sanitizeSettings(input) {
-  const settings = mergeSettings(DEFAULT_SETTINGS, input);
+  const settings = mergeSettings(DEFAULT_SETTINGS, pickKnownSettings(input));
   settings.appearance.glassOpacity = clampNumber(settings.appearance.glassOpacity, 0.18, 0.72, 0.43);
   settings.appearance.glassBlur = clampNumber(settings.appearance.glassBlur, 12, 42, 28);
   settings.appearance.fontScale = clampNumber(settings.appearance.fontScale, 0.88, 1.16, 1);
-  settings.windows.desktopWidthRatio = clampNumber(settings.windows.desktopWidthRatio, 0.24, 0.5, 0.333);
+  settings.windows.desktopWidthRatio = clampNumber(settings.windows.desktopWidthRatio, 0.32, 0.9, 0.5);
+  settings.windows.desktopBarHeight = clampInteger(settings.windows.desktopBarHeight, 56, 96, 64);
+  settings.windows.toolHudWidth = clampInteger(settings.windows.toolHudWidth, 300, 560, 396);
+  settings.windows.toolHudHeight = clampInteger(settings.windows.toolHudHeight, 112, 220, 136);
+  settings.windows.toolHudOffsetX = clampInteger(settings.windows.toolHudOffsetX, -240, 240, 0);
+  settings.windows.toolHudOffsetY = clampInteger(settings.windows.toolHudOffsetY, -240, 240, 0);
   settings.windows.desktopBarEnabled = Boolean(settings.windows.desktopBarEnabled);
   settings.windows.toolHudEnabled = Boolean(settings.windows.toolHudEnabled);
   settings.behavior.alertsEnabled = Boolean(settings.behavior.alertsEnabled);
-  settings.behavior.refreshMs = clampInteger(settings.behavior.refreshMs, 5000, 60000, 15000);
+  settings.behavior.refreshMs = clampInteger(settings.behavior.refreshMs, 15000, 60000, 15000);
   settings.behavior.activeWindowMs = clampInteger(settings.behavior.activeWindowMs, 3000, 15000, 15000);
   settings.behavior.debugHud = Boolean(settings.behavior.debugHud);
   settings.system.startAtLogin = Boolean(settings.system.startAtLogin);
   settings.integrations.hermesOverlayAutoInstall = Boolean(settings.integrations.hermesOverlayAutoInstall);
+  settings.security.allowUnauthenticatedNoOrigin = Boolean(settings.security.allowUnauthenticatedNoOrigin);
   settings.alertThresholds.critical = clampInteger(settings.alertThresholds.critical, 1, 30, 10);
   settings.alertThresholds.danger = clampInteger(settings.alertThresholds.danger, settings.alertThresholds.critical + 1, 60, 20);
   settings.alertThresholds.caution = clampInteger(settings.alertThresholds.caution, settings.alertThresholds.danger + 1, 90, 40);
@@ -107,6 +121,30 @@ function sanitizeSettings(input) {
     };
   }
   return settings;
+}
+
+function pickKnownSettings(input) {
+  if (!input || typeof input !== "object" || Array.isArray(input)) return {};
+  const output = {};
+  for (const [section, defaults] of Object.entries(DEFAULT_SETTINGS)) {
+    if (section === "providers") continue;
+    if (!input[section] || typeof input[section] !== "object" || Array.isArray(input[section])) continue;
+    output[section] = {};
+    for (const key of Object.keys(defaults)) {
+      if (Object.hasOwn(input[section], key)) output[section][key] = input[section][key];
+    }
+  }
+  if (input.providers && typeof input.providers === "object" && !Array.isArray(input.providers)) {
+    output.providers = {};
+    for (const id of Object.keys(DEFAULT_SETTINGS.providers)) {
+      if (!input.providers[id] || typeof input.providers[id] !== "object") continue;
+      output.providers[id] = {};
+      if (Object.hasOwn(input.providers[id], "enabled")) {
+        output.providers[id].enabled = Boolean(input.providers[id].enabled);
+      }
+    }
+  }
+  return output;
 }
 
 function clampInteger(value, min, max, fallback) {

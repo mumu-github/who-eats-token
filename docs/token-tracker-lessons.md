@@ -55,7 +55,7 @@ The shared `quota-delight` state machine is the source of truth for this layer. 
 | Interaction | Good Version | Avoid |
 | --- | --- | --- |
 | Quota mood | Safe, warm, tight, urgent states derived from the same remaining percentages shown as text. | Decorative mood that disagrees with numbers. |
-| Micro mascot | Optional static/CSS companion that changes pose only on quota/state changes. | GIF/Lottie/canvas loops, high-refresh animation, or large asset bundles. |
+| Micro mascot | Optional static/CSS companion that changes pose only on quota/state changes; freshness can change the label/tone, but known quota still owns the pose. | GIF/Lottie/canvas loops, high-refresh animation, large asset bundles, or a worried pose when the visible quota is healthy. |
 | Mini chart | A tiny sparkline/bar linked to actual 5-hour and weekly remaining data. | Per-frame chart animation or fake waves unrelated to quota. |
 | Warning | Low quota warning below 20%, quiet until state changes or user dismisses it. | Repeating toasts or sounds while the user types. |
 | Reset relief | Show reset countdown as a small "safe again at..." hint when reliable. | Guessing reset times when provider data is missing. |

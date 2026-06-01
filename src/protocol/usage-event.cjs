@@ -1,4 +1,5 @@
 const PROTOCOL_VERSION = "who-eats-token.usage.v1";
+const { normalizeTokenAccuracy } = require("./token-accuracy.cjs");
 const MAX_ID_LENGTH = 80;
 const MAX_TEXT_LENGTH = 240;
 const CONFIDENCE_VALUES = new Set(["reported", "estimated", "derived", "manual", "unknown"]);
@@ -17,6 +18,12 @@ function normalizeUsageEvent(payload = {}, now = new Date()) {
   const inferredInput = inputTokens || Math.max(0, totalTokens - outputTokens);
   const normalizedInput = inferredInput || inputTokens;
   const normalizedOutput = outputTokens;
+  const confidence = normalizeConfidence(payload.confidence);
+  const source = optionalText(payload.source, MAX_TEXT_LENGTH);
+  const tokenAccuracy = normalizeTokenAccuracy(payload.token_accuracy ?? payload.tokenAccuracy, {
+    confidence,
+    source: optionalText(payload.token_source ?? payload.tokenSource, MAX_TEXT_LENGTH) || source
+  });
 
   if (normalizedInput === 0 && normalizedOutput === 0 && totalTokens === 0 && !payload.rate_limits && !payload.rateLimits) {
     throw new Error("Usage event must include token usage or rate limit data.");
@@ -34,8 +41,9 @@ function normalizeUsageEvent(payload = {}, now = new Date()) {
     outputTokens: normalizedOutput,
     totalTokens: totalTokens || normalizedInput + normalizedOutput,
     costUsd: nonNegativeNumber(payload.cost_usd ?? payload.costUsd),
-    confidence: normalizeConfidence(payload.confidence),
-    source: optionalText(payload.source, MAX_TEXT_LENGTH),
+    confidence,
+    source,
+    tokenAccuracy,
     rateLimits: normalizeRateLimits(payload.rate_limits || payload.rateLimits || null),
     context: normalizeContext(payload.context || null),
     metadata: normalizeMetadata(payload.metadata || null)
@@ -94,11 +102,18 @@ function normalizeContext(value) {
   const usedTokens = nonNegativeNumber(value.used_tokens ?? value.usedTokens);
   const limitTokens = nonNegativeNumber(value.limit_tokens ?? value.limitTokens);
   if (usedTokens === 0 && limitTokens === 0) return null;
+  const tokenAccuracy = normalizeTokenAccuracy(value.token_accuracy ?? value.tokenAccuracy, {
+    confidence: value.confidence,
+    source: value.token_source ?? value.tokenSource ?? value.source,
+    estimated: value.estimated
+  });
   return {
     usedTokens,
     limitTokens,
     remainingPercent: numericOrNull(value.remaining_percent ?? value.remainingPercent),
-    source: optionalText(value.source, MAX_TEXT_LENGTH)
+    source: optionalText(value.source, MAX_TEXT_LENGTH),
+    estimated: Boolean(value.estimated || tokenAccuracy.estimated),
+    tokenAccuracy
   };
 }
 

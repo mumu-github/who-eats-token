@@ -1,32 +1,48 @@
 const state = {
-  settings: null
+  settings: null,
+  dirty: false,
+  previewRunId: 0
 };
 
 const els = {
   close: document.getElementById("settingsClose"),
   save: document.getElementById("settingsSave"),
   reset: document.getElementById("settingsReset"),
+  done: document.getElementById("settingsDone"),
   status: document.getElementById("settingsState"),
-  providers: document.getElementById("providerSettings")
+  providers: document.getElementById("providerSettings"),
+  setupEndpoint: document.getElementById("setupEndpoint"),
+  setupTokenPath: document.getElementById("setupTokenPath")
 };
 
-els.close.addEventListener("click", () => window.tokenBar.closeSettings());
+els.close.addEventListener("click", closeSettings);
 els.save.addEventListener("click", saveSettings);
 els.reset.addEventListener("click", resetSettings);
+els.done.addEventListener("click", closeSettings);
+
+for (const button of document.querySelectorAll("[data-guide]")) {
+  button.addEventListener("click", () => openGuide(button.dataset.guide));
+}
 
 for (const input of document.querySelectorAll("[data-path]")) {
   input.addEventListener("input", () => {
+    if (!state.settings) return;
     updateOutputs();
-    applyVisualSettings(buildSettingsFromForm());
+    const nextSettings = buildSettingsFromForm();
+    applyVisualSettings(nextSettings);
+    previewVisualSettings(input.dataset.path, nextSettings);
     markDirty();
   });
 }
 
 window.tokenBar.onSettingsUpdate(renderSettings);
 window.tokenBar.getSettings().then(renderSettings);
+renderLocalSetupInfo();
 
 function renderSettings(settings) {
   state.settings = normalizeForForm(settings);
+  state.dirty = false;
+  state.previewRunId++;
   applyFormValues(state.settings);
   renderProviders(state.settings);
   applyVisualSettings(state.settings);
@@ -58,7 +74,10 @@ function renderProviders(settings) {
       input.dataset.provider = provider.id;
       input.checked = Boolean(provider.enabled);
       input.disabled = provider.source === "planned";
-      input.addEventListener("change", markDirty);
+      input.addEventListener("change", () => {
+        if (!state.settings) return;
+        markDirty();
+      });
 
       const copy = document.createElement("span");
       copy.className = "provider-setting-copy";
@@ -76,11 +95,34 @@ function renderProviders(settings) {
   );
 }
 
+async function renderLocalSetupInfo() {
+  if (!window.tokenBar.getLocalSetupInfo) return;
+  try {
+    const info = await window.tokenBar.getLocalSetupInfo();
+    if (els.setupEndpoint) els.setupEndpoint.textContent = info?.endpoint || "http://127.0.0.1:17667";
+    if (els.setupTokenPath) els.setupTokenPath.textContent = info?.tokenFile || info?.tokenSource || "等待本机 token";
+  } catch {
+    if (els.setupTokenPath) els.setupTokenPath.textContent = "状态通道未连接";
+  }
+}
+
+async function openGuide(guide) {
+  if (!window.tokenBar.openGuide) return;
+  try {
+    const result = await window.tokenBar.openGuide(guide);
+    setStatus(result?.ok === false ? "文档未打开" : "已打开文档");
+  } catch {
+    setStatus("文档未打开");
+  }
+}
+
 function buildSettingsFromForm() {
   const settings = structuredClone(state.settings);
   delete settings.providerRegistry;
   for (const input of document.querySelectorAll("[data-path]")) {
-    let value = input.type === "checkbox" ? input.checked : Number(input.value);
+    const parsed = readSettingInput(input);
+    if (parsed.skip) continue;
+    let value = parsed.value;
     if (input.dataset.path === "behavior.refreshSeconds") {
       setPath(settings, "behavior.refreshMs", value * 1000);
       continue;
@@ -102,6 +144,7 @@ function buildSettingsFromForm() {
 }
 
 async function saveSettings() {
+  if (!state.settings) return;
   const next = buildSettingsFromForm();
   const saved = await window.tokenBar.saveSettings(next);
   renderSettings(saved);
@@ -112,6 +155,13 @@ async function resetSettings() {
   const saved = await window.tokenBar.resetSettings();
   renderSettings(saved);
   setStatus("已恢复");
+}
+
+async function closeSettings() {
+  if (state.dirty) {
+    await restoreSavedVisualPreview();
+  }
+  await window.tokenBar.closeSettings();
 }
 
 function normalizeForForm(settings) {
@@ -125,12 +175,29 @@ function updateOutputs() {
   for (const output of document.querySelectorAll("output[data-for]")) {
     const input = document.querySelector(`[data-path="${output.dataset.for}"]`);
     if (!input) continue;
-    output.textContent = formatOutput(output.dataset.for, Number(input.value));
+    const parsed = readNumberInput(input);
+    output.textContent = parsed === null ? "" : formatOutput(output.dataset.for, parsed);
   }
+}
+
+function readSettingInput(input) {
+  if (input.type === "checkbox") return { skip: false, value: input.checked };
+  const value = readNumberInput(input);
+  return value === null ? { skip: true, value: null } : { skip: false, value };
+}
+
+function readNumberInput(input) {
+  const raw = String(input.value || "").trim();
+  if (raw === "") return null;
+  const value = Number(raw);
+  return Number.isFinite(value) ? value : null;
 }
 
 function formatOutput(path, value) {
   if (path === "windows.desktopWidthRatio") return `${Math.round(value * 100)}%`;
+  if (path === "windows.desktopBarHeight") return `${value}px`;
+  if (path === "windows.toolHudWidth" || path === "windows.toolHudHeight") return `${value}px`;
+  if (path === "windows.toolHudOffsetX" || path === "windows.toolHudOffsetY") return `${value > 0 ? "+" : ""}${value}px`;
   if (path === "appearance.glassOpacity") return `${Math.round(value * 100)}%`;
   if (path === "appearance.glassBlur") return `${value}px`;
   if (path === "appearance.fontScale") return `${Math.round(value * 100)}%`;
@@ -154,7 +221,41 @@ function applyVisualSettings(settings) {
   root.style.setProperty("--font-scale", settings.appearance.fontScale);
 }
 
+function previewVisualSettings(path, settings) {
+  if (!isLivePreviewPath(path) || !window.tokenBar.previewSettings) return;
+  const runId = ++state.previewRunId;
+  window.tokenBar.previewSettings(settings)
+    .then((result) => {
+      if (runId !== state.previewRunId) return;
+      if (result?.ok === false) setStatus("预览未应用");
+    })
+    .catch(() => {
+      if (runId === state.previewRunId) setStatus("预览通道未连接");
+    });
+}
+
+async function restoreSavedVisualPreview() {
+  if (!state.settings || !window.tokenBar.previewSettings) return;
+  try {
+    const result = await window.tokenBar.previewSettings(state.settings);
+    if (result?.ok === false) setStatus("预览恢复未应用");
+  } catch {
+    setStatus("预览通道未连接");
+  }
+}
+
+function isLivePreviewPath(path) {
+  return path.startsWith("appearance.") ||
+    path === "windows.desktopWidthRatio" ||
+    path === "windows.desktopBarHeight" ||
+    path === "windows.toolHudWidth" ||
+    path === "windows.toolHudHeight" ||
+    path === "windows.toolHudOffsetX" ||
+    path === "windows.toolHudOffsetY";
+}
+
 function markDirty() {
+  state.dirty = true;
   setStatus("未保存");
 }
 

@@ -94,18 +94,22 @@ assert.equal(codex.status, "live");
 assert.equal(codex.displayMode, "capacity");
 assert.equal(codex.primaryRemainingPercent, 82);
 assert.equal(codex.secondaryRemainingPercent, 58);
+assert.equal(codex.remainingStandardPercent, 82);
+assert.equal(codex.remainingStandardLabel, "当前 5 小时窗口余量");
 assert.equal(codex.freshness, "fresh");
 assert.equal(codex.trust.level, "exact-local");
 assert.equal(codex.trust.label, "本地精确");
-assert.equal(codex.delight.id, "steady");
-assert.equal(codex.delight.shortLabel, "刚刚好");
-assert.equal(codex.delight.motion, "none");
+assert.equal(codex.delight.id, "comfy");
+assert.equal(codex.delight.shortLabel, "放心吃");
+assert.equal(codex.delight.motion, "soft");
 assert.equal(codex.delight.cue.reducedMotion, "static");
 
 const hermes = health.providers.find((provider) => provider.id === "hermes");
 assert.equal(hermes.status, "estimated");
 assert.equal(hermes.displayMode, "token-plan");
 assert.equal(hermes.tokenPlanRemainingPercent, 17);
+assert.equal(hermes.remainingStandardPercent, 17);
+assert.equal(hermes.remainingStandardLabel, "Token Plan 剩余 / 总量");
 assert.equal(hermes.lowestRemainingPercent, 17);
 assert.equal(hermes.trust.level, "estimated");
 assert.equal(hermes.trust.label, "估算");
@@ -166,5 +170,105 @@ const staleCodex = staleQuotaHealth.providers.find((provider) => provider.id ===
 assert.equal(staleCodex.latestTimestamp, "2026-05-24T09:40:00.000Z");
 assert.equal(staleCodex.freshness, "stale");
 assert.equal(staleCodex.trust.label, "过期");
+
+const heuristicHealth = summarizeProviderHealth({
+  collectedAt,
+  providers: [
+    {
+      id: "hermes",
+      name: "Hermes",
+      status: "live",
+      source: "hermes-state-db",
+      confidence: "estimated",
+      tokenAccuracy: {
+        level: "heuristic",
+        source: "message-length-heuristic",
+        estimated: true,
+        reason: "Hermes session token columns were unavailable."
+      },
+      latest: {
+        timestamp: "2026-05-24T09:59:30.000Z",
+        context: {
+          usedTokens: 1200,
+          limitTokens: 200000,
+          remainingPercent: 99,
+          source: "message-length-heuristic"
+        },
+        rateLimitsTrust: { status: "estimated", label: "浼扮畻" }
+      }
+    }
+  ]
+});
+const heuristicHermes = heuristicHealth.providers.find((provider) => provider.id === "hermes");
+assert.equal(heuristicHermes.status, "estimated");
+assert.equal(heuristicHermes.tokenAccuracy.level, "heuristic");
+assert.equal(heuristicHermes.tokenEstimated, true);
+assert.equal(heuristicHermes.trust.level, "estimated");
+assert.equal(heuristicHermes.delight.estimated, true);
+
+const tokenizerHealth = summarizeProviderHealth({
+  collectedAt,
+  providers: [
+    {
+      id: "hermes",
+      name: "Hermes",
+      status: "live",
+      source: "hermes-state-db",
+      confidence: "derived",
+      tokenAccuracy: {
+        level: "tokenizer",
+        source: "message-token-count",
+        estimated: false
+      },
+      latest: {
+        timestamp: "2026-05-24T09:59:30.000Z",
+        context: {
+          usedTokens: 1200,
+          limitTokens: 200000,
+          remainingPercent: 99,
+          source: "message-token-count"
+        },
+        rateLimitsTrust: { status: "live", label: "鏈湴" }
+      }
+    }
+  ]
+});
+const tokenizerHermes = tokenizerHealth.providers.find((provider) => provider.id === "hermes");
+assert.equal(tokenizerHermes.status, "live");
+assert.equal(tokenizerHermes.tokenAccuracy.level, "tokenizer");
+assert.equal(tokenizerHermes.tokenEstimated, false);
+
+const livePlanWithHeuristicUsage = summarizeProviderHealth({
+  collectedAt,
+  providers: [
+    {
+      id: "hermes",
+      name: "Hermes",
+      status: "live",
+      source: "xiaomi-token-plan",
+      confidence: "estimated",
+      tokenAccuracy: {
+        level: "heuristic",
+        source: "message-length-heuristic",
+        estimated: true
+      },
+      latest: {
+        timestamp: "2026-05-24T09:59:30.000Z",
+        tokenPlan: {
+          status: "live",
+          platformStatus: "live",
+          remainingPercent: 61,
+          source: "xiaomi-platform",
+          snapshotAt: "2026-05-24T09:59:30.000Z"
+        },
+        rateLimitsTrust: { status: "live", label: "瀹炴椂" }
+      }
+    }
+  ]
+});
+const livePlanHermes = livePlanWithHeuristicUsage.providers.find((provider) => provider.id === "hermes");
+assert.equal(livePlanHermes.status, "live");
+assert.equal(livePlanHermes.trust.level, "exact-provider");
+assert.equal(livePlanHermes.tokenEstimated, true);
 
 console.log("Provider health checks passed.");

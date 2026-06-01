@@ -134,7 +134,6 @@ function classifyInterval(occurrence) {
       line.includes("snapshotTimer =")
       || line.includes("systemTimer =")
       || line.includes("desktopBarTimer =")
-      || line.includes("hudTimer =")
     )
   ) {
     return {

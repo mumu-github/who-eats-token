@@ -1,0 +1,32 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>数据可信度</title>
+    <link rel="stylesheet" href="./styles.css" />
+  </head>
+  <body class="hud-popover-body">
+    <main class="hud-trust-popover" id="hudTrustPopover">
+      <div class="hud-popover-arrow"></div>
+      <header class="hud-popover-head">
+        <span class="hud-popover-shield" aria-hidden="true">✓</span>
+        <strong>数据可信度：</strong>
+        <span id="trustStatus">等待</span>
+      </header>
+      <section class="hud-popover-rows" id="trustRows"></section>
+      <section class="hud-popover-privacy">
+        <div>
+          <strong>隐私边界</strong>
+          <span id="trustPrivacy">未读取 prompt / completion / API key</span>
+        </div>
+        <div>
+          <strong>说明</strong>
+          <span id="trustExplain">等待数据。</span>
+        </div>
+      </section>
+      <footer id="trustAction">了解更多数据口径 →</footer>
+    </main>
+    <script src="./hud-trust-popover.js"></script>
+  </body>
+</html>

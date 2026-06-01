@@ -17,19 +17,48 @@
       </header>
 
       <section class="settings-section">
-        <h2>显示</h2>
+        <h2>顶部条</h2>
         <label class="settings-toggle">
           <input type="checkbox" data-path="windows.desktopBarEnabled" />
           <span>桌面顶部条</span>
         </label>
+        <label class="settings-row">
+          <span>顶部宽度</span>
+          <input type="range" min="0.32" max="0.9" step="0.01" data-path="windows.desktopWidthRatio" />
+          <output data-for="windows.desktopWidthRatio"></output>
+        </label>
+        <label class="settings-row">
+          <span>顶部高度</span>
+          <input type="range" min="56" max="96" step="1" data-path="windows.desktopBarHeight" />
+          <output data-for="windows.desktopBarHeight"></output>
+        </label>
+      </section>
+
+      <section class="settings-section">
+        <h2>右侧 HUD</h2>
         <label class="settings-toggle">
           <input type="checkbox" data-path="windows.toolHudEnabled" />
           <span>工具内 HUD</span>
         </label>
         <label class="settings-row">
-          <span>顶部宽度</span>
-          <input type="range" min="0.24" max="0.5" step="0.01" data-path="windows.desktopWidthRatio" />
-          <output data-for="windows.desktopWidthRatio"></output>
+          <span>HUD 宽度</span>
+          <input type="range" min="300" max="560" step="4" data-path="windows.toolHudWidth" />
+          <output data-for="windows.toolHudWidth"></output>
+        </label>
+        <label class="settings-row">
+          <span>HUD 高度</span>
+          <input type="range" min="112" max="220" step="4" data-path="windows.toolHudHeight" />
+          <output data-for="windows.toolHudHeight"></output>
+        </label>
+        <label class="settings-row">
+          <span>水平偏移</span>
+          <input type="range" min="-240" max="240" step="4" data-path="windows.toolHudOffsetX" />
+          <output data-for="windows.toolHudOffsetX"></output>
+        </label>
+        <label class="settings-row">
+          <span>垂直偏移</span>
+          <input type="range" min="-240" max="240" step="4" data-path="windows.toolHudOffsetY" />
+          <output data-for="windows.toolHudOffsetY"></output>
         </label>
       </section>
 
@@ -78,7 +107,7 @@
         <h2>性能</h2>
         <label class="settings-row">
           <span>数据刷新</span>
-          <input type="range" min="5" max="60" step="1" data-path="behavior.refreshSeconds" />
+          <input type="range" min="15" max="60" step="1" data-path="behavior.refreshSeconds" />
           <output data-for="behavior.refreshSeconds"></output>
         </label>
         <label class="settings-row">
@@ -94,12 +123,33 @@
 
       <section class="settings-section">
         <h2>接入</h2>
+        <div class="setup-guide">
+          <div class="setup-guide-actions" aria-label="新用户指南">
+            <button type="button" class="guide-link" data-guide="user">用户指南</button>
+            <button type="button" class="guide-link" data-guide="agent">Agent 接入指南</button>
+          </div>
+          <dl class="setup-status">
+            <div>
+              <dt>本机 API</dt>
+              <dd id="setupEndpoint">http://127.0.0.1:17667</dd>
+            </div>
+            <div>
+              <dt>token 文件</dt>
+              <dd id="setupTokenPath">等待应用路径</dd>
+            </div>
+            <div>
+              <dt>自检</dt>
+              <dd>先运行 npm run status</dd>
+            </div>
+          </dl>
+        </div>
         <div class="provider-settings" id="providerSettings"></div>
       </section>
 
       <footer class="settings-actions">
         <button class="settings-button ghost" id="settingsReset">恢复默认</button>
         <button class="settings-button primary" id="settingsSave">保存</button>
+        <button class="settings-button ghost" id="settingsDone">关闭</button>
       </footer>
     </main>
     <script src="./settings.js"></script>

@@ -27,6 +27,8 @@ Use `npm run validation:template -- --target browser|ide|macos|signing` when han
 - `npm run test:window-detection` succeeds.
 - App starts from unpacked package.
 - Desktop top bar appears only on desktop.
+- Taskbar previews, tray overflow, Start menu, ordinary popups, and full-screen apps hide both the desktop top bar and in-tool HUD.
+- Opening the app settings window from the desktop top bar keeps the top bar visible for live preview.
 - In-tool HUD appears in Codex/Hermes and does not cover send buttons.
 - Switching from Codex/Hermes to File Explorer allows rename/edit focus immediately and removes the stale in-tool HUD.
 - Opening a plain cmd or PowerShell window does not inherit the Codex/Hermes HUD or move it to the terminal.
@@ -80,6 +82,7 @@ Use `npm run validation:template -- --target browser|ide|macos|signing` when han
 ## Cute But Quiet Visual QA
 
 - Desktop top bar is centered, does not cover desktop icons that are being selected, and never appears inside an active work app.
+- Desktop top bar and in-tool HUD are never visible at the same time.
 - Codex in-tool HUD stays in the bottom-right work area, uses Codex provider data, and does not fall back to Hermes when Codex has live quota.
 - Hermes in-tool HUD stays near the configured chat boundary, uses Hermes Token Plan data, and hides only when it actually overlaps a dialog or send control.
 - Quota text, mini chart fill, warning pill, and `delight` label agree with the same remaining value.

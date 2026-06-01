@@ -27,7 +27,9 @@ assert.equal(byId.get("live-low").alert, true);
 assert.equal(byId.get("live-low").cue.chart, "alert");
 assert.equal(byId.get("live-empty").priority, 3);
 assert.equal(byId.get("estimated-low").estimated, true);
-assert.equal(byId.get("delayed").cue.icon, "clock");
+assert.equal(byId.get("delayed").shortLabel, "慢半拍");
+assert.equal(byId.get("delayed").cue.mascot, "stretch");
+assert.equal(byId.get("delayed").tone, "caution");
 assert.equal(byId.get("missing").alert, false);
 
 for (const state of contract.states) {

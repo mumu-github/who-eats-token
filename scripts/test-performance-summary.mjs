@@ -17,7 +17,7 @@ assert.ok(report.packageWeight.lockPackageCount > 0, "Performance summary must i
 assert.ok(report.packageWeight.runtimeDependencyCount >= 1, "Performance summary must include runtime dependency count.");
 assert.equal(report.intervalAudit.unreviewedRuntimeIntervalCount, 0, "No unreviewed runtime intervals should be present.");
 assert.equal(report.intervalAudit.adapterDomIntervalCount, 0, "Browser/overlay adapters must stay event-driven.");
-assert.ok(report.intervalAudit.reviewedRuntimeIntervalCount >= 4, "Runtime refresh timers must be explicitly reviewed.");
+assert.ok(report.intervalAudit.reviewedRuntimeIntervalCount >= 2, "Runtime refresh intervals must be explicitly reviewed.");
 assert.equal(report.adapterReview.errorCount, 0, "Adapter review errors should be zero.");
 assert.equal(report.adapterReview.warningCount, 0, "Adapter review warnings should be zero.");
 assert.ok(report.adapterBoundaries.withShortTimeouts >= report.adapterBoundaries.supportedCount, "Supported adapters should have timeout/no-runtime boundaries.");

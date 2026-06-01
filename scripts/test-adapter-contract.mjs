@@ -23,6 +23,14 @@ try {
   });
   assert.equal(blockedOrigin.statusCode, 403);
 
+  const noOriginWithoutToken = await requestJson({
+    port,
+    route: "/health",
+    method: "GET",
+    allowError: true
+  });
+  assert.equal(noOriginWithoutToken.statusCode, 401);
+
   await requestJson({
     port,
     route: "/events",
@@ -118,6 +126,8 @@ try {
       inputTokens: 700,
       outputTokens: 300,
       confidence: "derived",
+      token_accuracy: "tokenizer",
+      token_source: "gateway-tokenizer",
       source: "local-gateway-contract"
     }
   });
@@ -136,7 +146,12 @@ try {
   assert.equal(findProvider(snapshot, "codex").latest.rateLimits.secondary.usedPercent, 18);
   assert.equal(findProvider(snapshot, "anthropic").latest.model, "claude-4.1");
   assert.equal(findProvider(snapshot, "hermes").latest.lastTurnTokens, 2000);
+  assert.equal(findProvider(snapshot, "hermes").sourceId, "http-ingest");
+  assert.ok(findProvider(snapshot, "hermes").sources.some((source) => source.sourceId === "hermes-bridge-contract"));
+  assert.equal(findProvider(snapshot, "hermes").usageAggregation.strategy, "single-source");
   assert.equal(findProvider(snapshot, "qwen").confidence, "derived");
+  assert.equal(findProvider(snapshot, "qwen").tokenAccuracy.level, "tokenizer");
+  assert.equal(findProvider(snapshot, "qwen").tokenEstimated, false);
 
   const health = await requestJson({
     port,
@@ -152,6 +167,8 @@ try {
   assert.equal(findHealthProvider(health, "openai").lowestRemainingPercent, 18);
   assert.equal(findHealthProvider(health, "anthropic").displayMode, "context");
   assert.equal(findHealthProvider(health, "qwen").displayMode, "usage");
+  assert.equal(findHealthProvider(health, "qwen").tokenAccuracy.level, "tokenizer");
+  assert.ok(findHealthProvider(health, "hermes").sources.some((source) => source.sourceId === "hermes-bridge-contract"));
   assert.ok(health.providerHealth.summary.attention >= 1);
 
   const serialized = JSON.stringify({ snapshot, health });
