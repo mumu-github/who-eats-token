@@ -15,6 +15,7 @@ const {
 } = require("../src/main/ipc-guards.cjs");
 
 const mainSource = read("src/main.cjs");
+const wakeProbeSource = read("src/main/wake-probe.ps1");
 const activeWindowSource = read("src/system/active-window.cjs");
 const settingsSource = read("src/config/settings.cjs");
 const stylesSource = read("src/renderer/styles.css");
@@ -139,9 +140,10 @@ assert.ok(
   "The tool-desktop wake guard should use native desktop fallback instead of a slow PowerShell fallback."
 );
 assert.ok(
-  mainSource.includes("GetShellWindow") &&
-    mainSource.includes("IsIconic") &&
-    mainSource.includes("tool-desktop-wake-offscreen-probe"),
+  mainSource.includes("TOOL_DESKTOP_WAKE_PROBE_PS1") &&
+    wakeProbeSource.includes("GetShellWindow") &&
+    wakeProbeSource.includes("IsIconic") &&
+    wakeProbeSource.includes("tool-desktop-wake-offscreen-probe"),
   "The tool-desktop wake helper should reuse its warm Win32 process to classify minimized/offscreen foreground tools without extra polling."
 );
 assert.ok(mainSource.includes("function hasLocalApiSecurityChanged"), "Local API security changes must have an explicit restart predicate.");
