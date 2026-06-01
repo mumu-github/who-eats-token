@@ -21,3 +21,7 @@ api-token.txt
 *.dmg
 *.exe
 *.msi
+
+# Local analysis artifacts (not product code)
+.understand-anything/
+agent_memory/
