@@ -313,6 +313,7 @@ function testHudRendererCoupledVisuals() {
 
 function testHudWindowLifecycleGuards() {
   const mainSource = read("src/main.cjs");
+  const wakeProbeSource = read("src/main/wake-probe.ps1");
   const activeWindowSource = read("src/system/active-window.cjs");
   const overlayControllerSource = read("src/main/overlay-controller.cjs");
   const stressSource = read("scripts/stress-overlay-switch.mjs");
@@ -476,12 +477,17 @@ function testHudWindowLifecycleGuards() {
   );
   assert.match(
     mainSource,
-    /const TOOL_DESKTOP_WAKE_POWERSHELL_SCRIPT = `[\s\S]*?GetForegroundWindow[\s\S]*?Start-Sleep -Milliseconds \$\{TOOL_DESKTOP_WAKE_PROBE_INTERVAL_MS\}/,
+    /const TOOL_DESKTOP_WAKE_PROBE_PS1 = path\.join\(__dirname, "main", "wake-probe\.ps1"\)/,
+    "The wake probe PowerShell script should be loaded from an external file."
+  );
+  assert.match(
+    wakeProbeSource,
+    /GetForegroundWindow[\s\S]*?Start-Sleep -Milliseconds \$IntervalMs/,
     "The Windows tool-desktop wake helper should keep Win32 foreground access warm instead of spawning a slow probe per sample."
   );
   assert.match(
-    mainSource,
-    /const TOOL_DESKTOP_WAKE_POWERSHELL_SCRIPT = `[\s\S]*?GetShellWindow[\s\S]*?IsIconic[\s\S]*?\$isOffscreenForeground[\s\S]*?tool-desktop-wake-offscreen-probe/,
+    wakeProbeSource,
+    /GetShellWindow[\s\S]*?IsIconic[\s\S]*?\$isOffscreenForeground[\s\S]*?tool-desktop-wake-offscreen-probe/,
     "The Windows tool-desktop wake helper should treat minimized or offscreen foreground tools as Show Desktop evidence and feed the real shell window back to the coordinator."
   );
   assert.match(
