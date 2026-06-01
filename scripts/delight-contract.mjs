@@ -15,8 +15,8 @@ const scenarios = [
   scenario("live-low", "Live 10-19% should alert quietly.", { status: "live", freshness: "fresh", lowestRemainingPercent: 17 }),
   scenario("live-empty", "Live below 10% should be urgent.", { status: "live", freshness: "fresh", lowestRemainingPercent: 7 }),
   scenario("estimated-low", "Estimated low quota should keep the same low band and estimate marker.", { status: "estimated", freshness: "fresh", lowestRemainingPercent: 17 }),
-  scenario("delayed", "Delayed data should be visually distinct from live quota.", { status: "delayed", freshness: "warm", lowestRemainingPercent: 70 }),
-  scenario("stale", "Stale data should not look live.", { status: "live", freshness: "stale", lowestRemainingPercent: 70 }),
+  scenario("delayed", "Delayed high quota should keep the quota pose while labeling stale data.", { status: "delayed", freshness: "warm", lowestRemainingPercent: 82 }),
+  scenario("stale", "Stale known quota should keep the quota pose while labeling stale data.", { status: "live", freshness: "stale", lowestRemainingPercent: 70 }),
   scenario("auth-expired", "Expired credentials should ask for login.", { status: "auth-expired", freshness: "unknown", lowestRemainingPercent: null }),
   scenario("missing", "Missing data should stay quiet.", { status: "missing", freshness: "unknown", lowestRemainingPercent: null }),
   scenario("disabled", "Disabled providers should stay asleep.", { status: "disabled", freshness: "unknown", lowestRemainingPercent: null }),
@@ -133,7 +133,9 @@ function validateRendererCoupling() {
   const ingest = read("src/collectors/ingest-server.cjs");
   const providerHealth = read("src/protocol/provider-health.cjs");
 
-  requireIncludes(findings, providerHealth, "getQuotaDelight(entry)", "provider-health-source", "Provider health must attach shared delight state.");
+  if (!providerHealth.includes("getQuotaDelight(entry)") && !providerHealth.includes("getQuotaDelight({")) {
+    add(findings, "error", "provider-health-source", "Provider health must attach shared delight state.");
+  }
   requireIncludes(findings, ingest, "compactDelight", "ingest-compact-delight", "Local API must compact delight without leaking raw provider data.");
   requireIncludes(findings, app, "display?.delight || getProviderDelight", "topbar-delight-source", "Top bar must read provider delight instead of inventing mood logic.");
   requireIncludes(findings, hud, "provider?.delight || null", "hud-delight-source", "HUD must read provider delight instead of inventing mood logic.");

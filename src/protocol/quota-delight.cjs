@@ -14,9 +14,11 @@ function getQuotaDelight(signal = {}) {
     attention: true
   });
   if (status === "delayed" || freshness === "stale") {
-    return state("lagging", "慢半拍", "数据延迟", "caution", "breathe", {
-      attention: true
-    });
+    return remaining === null
+      ? state("lagging", "慢半拍", "数据延迟", "caution", "breathe", {
+          attention: true
+        })
+      : delayedStateByRemaining(remaining, { estimated: status === "estimated" });
   }
   if (status === "estimated") {
     return remaining === null
@@ -53,6 +55,19 @@ function stateByRemaining(remaining, { estimated }) {
     });
   }
   return state("comfy", "放心吃", "余量充足", "comfy", "soft", {
+    estimated
+  });
+}
+
+function delayedStateByRemaining(remaining, { estimated }) {
+  if (remaining < 20) return stateByRemaining(remaining, { estimated });
+  const mood = remaining < 45
+    ? "tight"
+    : remaining < 75
+      ? "steady"
+      : "comfy";
+  return state(mood, "慢半拍", "数据延迟", "caution", "breathe", {
+    attention: true,
     estimated
   });
 }

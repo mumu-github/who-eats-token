@@ -20,6 +20,7 @@ This adapter may report only:
 - input/output/total token counts
 - quota windows or credit balances
 - confidence/source labels
+- token accuracy labels (`official-usage`, `tokenizer`, `heuristic`, or `unknown`)
 - small scalar metadata needed for debugging
 
 This adapter must not report:
@@ -32,7 +33,7 @@ This adapter must not report:
 ## Runtime Rules
 
 - Fail quietly when Who Eats Token is not running.
-- Use `X-Who-Eats-Token` for browser-origin requests.
+- Use `X-Who-Eats-Token` for every local request, including CLI/SDK calls without an `Origin` header.
 - Keep request timeouts short.
 - Avoid unbounded queues, watchdog loops, and per-second provider polling.
 - Respect provider cache windows for billing or quota APIs.

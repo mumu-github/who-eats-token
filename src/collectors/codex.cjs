@@ -49,10 +49,18 @@ function collectCodexUsage(options = {}) {
 
   return {
     id: "codex",
+    sourceId: "codex-jsonl",
     name: "Codex",
     status: latestSession ? "live" : "missing",
     source: "Codex Desktop session JSONL",
     confidence: "exact",
+    tokenAccuracy: {
+      level: "official-usage",
+      source: "codex-token_count",
+      estimated: false,
+      label: "reported",
+      reason: "Codex token_count events include explicit local usage counters."
+    },
     note: latestSession
       ? "Read from recent local token_count events."
       : "Session files exist, but no token_count events were found.",
@@ -230,6 +238,7 @@ function chooseBestRateLimitSession(sessions) {
 function missingProvider(name, note) {
   return {
     id: name.toLowerCase(),
+    sourceId: `${name.toLowerCase()}-missing`,
     name,
     status: "missing",
     source: "local",

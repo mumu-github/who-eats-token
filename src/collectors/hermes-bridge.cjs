@@ -3,19 +3,32 @@ const http = require("node:http");
 const DEFAULT_TARGET = "http://127.0.0.1:8642";
 const DEFAULT_INGEST = "http://127.0.0.1:17667/events";
 const MAX_BODY_BYTES = 16 * 1024 * 1024;
+const DEFAULT_UPSTREAM_TIMEOUT_MS = 30_000;
+const DEFAULT_INGEST_TIMEOUT_MS = 2_500;
 
 function createHermesBridgeServer({
   port = 17668,
   targetBaseUrl = DEFAULT_TARGET,
   ingestUrl = DEFAULT_INGEST,
   accessToken = null,
-  ingestToken = null
+  ingestToken = null,
+  upstreamTimeoutMs = DEFAULT_UPSTREAM_TIMEOUT_MS,
+  ingestTimeoutMs = DEFAULT_INGEST_TIMEOUT_MS,
+  security = {}
 } = {}) {
+  const allowUnauthenticatedNoOrigin = security.allowUnauthenticatedNoOrigin === true;
   let listening = false;
   let listenError = null;
   let proxiedCount = 0;
   let usageEventCount = 0;
   let lastUsageEvent = null;
+  let lastUpstreamError = null;
+  let lastUpstreamLatencyMs = null;
+  let upstreamReachable = null;
+  let usagePostFailureCount = 0;
+  let lastUsagePostError = null;
+  let lastUsagePostLatencyMs = null;
+  let lastUsagePostStatusCode = null;
 
   const server = http.createServer(async (req, res) => {
     const originAllowed = setCors(req, res);
@@ -31,7 +44,7 @@ function createHermesBridgeServer({
       return;
     }
 
-    if (!isAuthorizedBrowserRequest(req, accessToken)) {
+    if (!isAuthorizedBrowserRequest(req, accessToken, { allowUnauthenticatedNoOrigin })) {
       writeJson(res, { ok: false, error: "Missing or invalid local access token" }, 401);
       return;
     }
@@ -46,7 +59,14 @@ function createHermesBridgeServer({
         error: listenError ? listenError.message : null,
         proxiedCount,
         usageEventCount,
-        lastUsageEvent
+        lastUsageEvent,
+        upstreamReachable,
+        lastUpstreamError,
+        lastUpstreamLatencyMs,
+        usagePostFailureCount,
+        lastUsagePostError,
+        lastUsagePostLatencyMs,
+        lastUsagePostStatusCode
       });
       return;
     }
@@ -77,9 +97,13 @@ function createHermesBridgeServer({
         path: req.url,
         headers: req.headers,
         body: requestBody,
-        targetBaseUrl
+        targetBaseUrl,
+        timeoutMs: upstreamTimeoutMs
       });
       proxiedCount += 1;
+      upstreamReachable = true;
+      lastUpstreamError = null;
+      lastUpstreamLatencyMs = proxyResult.latencyMs;
 
       writeProxyResponse(res, proxyResult);
       const usageEvent = extractUsageEvent({
@@ -91,9 +115,23 @@ function createHermesBridgeServer({
       if (usageEvent) {
         lastUsageEvent = usageEvent;
         usageEventCount += 1;
-        postUsageEvent(ingestUrl, usageEvent, ingestToken).catch(() => {});
+        postUsageEvent(ingestUrl, usageEvent, ingestToken, ingestTimeoutMs)
+          .then((result) => {
+            lastUsagePostError = null;
+            lastUsagePostLatencyMs = result.latencyMs;
+            lastUsagePostStatusCode = result.statusCode;
+          })
+          .catch((error) => {
+            usagePostFailureCount += 1;
+            lastUsagePostError = error.message;
+            if (Number.isFinite(error.latencyMs)) lastUsagePostLatencyMs = error.latencyMs;
+            if (Number.isFinite(error.statusCode)) lastUsagePostStatusCode = error.statusCode;
+          });
       }
     } catch (error) {
+      upstreamReachable = false;
+      lastUpstreamError = error.message;
+      if (Number.isFinite(error.latencyMs)) lastUpstreamLatencyMs = error.latencyMs;
       writeJson(res, { ok: false, error: error.message }, 502);
     }
   });
@@ -109,20 +147,28 @@ function createHermesBridgeServer({
 
   return {
     port,
-    close: () => server.close(),
+    close: (callback) => server.close(callback),
     getStatus: () => ({
       port,
       targetBaseUrl,
+      ingestUrl,
       listening,
       error: listenError ? listenError.message : null,
       proxiedCount,
       usageEventCount,
-      lastUsageEvent
+      lastUsageEvent,
+      upstreamReachable,
+      lastUpstreamError,
+      lastUpstreamLatencyMs,
+      usagePostFailureCount,
+      lastUsagePostError,
+      lastUsagePostLatencyMs,
+      lastUsagePostStatusCode
     })
   };
 }
 
-function proxyRequest({ method, path, headers, body, targetBaseUrl }) {
+function proxyRequest({ method, path, headers, body, targetBaseUrl, timeoutMs = DEFAULT_UPSTREAM_TIMEOUT_MS }) {
   const target = new URL(path, targetBaseUrl);
   const proxyHeaders = { ...headers };
   delete proxyHeaders.host;
@@ -132,6 +178,19 @@ function proxyRequest({ method, path, headers, body, targetBaseUrl }) {
   proxyHeaders["content-length"] = Buffer.byteLength(body);
 
   return new Promise((resolve, reject) => {
+    const startedAt = Date.now();
+    let settled = false;
+    const settle = (callback, value) => {
+      if (settled) return;
+      settled = true;
+      callback(value);
+    };
+    const upstreamError = (message, error = null) => {
+      const output = error instanceof Error ? error : new Error(message);
+      if (!output.message) output.message = message;
+      if (!Number.isFinite(output.latencyMs)) output.latencyMs = Date.now() - startedAt;
+      return output;
+    };
     const req = http.request(
       {
         protocol: target.protocol,
@@ -145,15 +204,30 @@ function proxyRequest({ method, path, headers, body, targetBaseUrl }) {
         const chunks = [];
         res.on("data", (chunk) => chunks.push(chunk));
         res.on("end", () => {
-          resolve({
+          settle(resolve, {
             statusCode: res.statusCode || 200,
             headers: res.headers,
-            body: Buffer.concat(chunks)
+            body: Buffer.concat(chunks),
+            latencyMs: Date.now() - startedAt
           });
+        });
+        res.on("aborted", () => {
+          settle(reject, upstreamError("Upstream Hermes gateway interrupted."));
+        });
+        res.on("error", (error) => {
+          settle(reject, upstreamError("Upstream Hermes gateway interrupted.", error));
         });
       }
     );
-    req.on("error", reject);
+    req.setTimeout(timeoutMs, () => {
+      const error = new Error("Upstream Hermes gateway timeout");
+      error.latencyMs = Date.now() - startedAt;
+      req.destroy(error);
+    });
+    req.on("error", (error) => {
+      if (!Number.isFinite(error.latencyMs)) error.latencyMs = Date.now() - startedAt;
+      settle(reject, error);
+    });
     req.end(body);
   });
 }
@@ -183,6 +257,7 @@ function extractUsageEvent({ requestPayload, responseBody, contentType }) {
       input_tokens: inputTokens || Math.max(0, totalTokens - outputTokens),
       output_tokens: outputTokens,
       confidence: "reported",
+      source: "hermes-bridge",
       timestamp: new Date().toISOString()
     };
   }
@@ -244,7 +319,7 @@ function readBody(req) {
   });
 }
 
-function postUsageEvent(url, payload, accessToken = null) {
+function postUsageEvent(url, payload, accessToken = null, timeoutMs = DEFAULT_INGEST_TIMEOUT_MS) {
   const target = new URL(url);
   const body = JSON.stringify(payload);
   const headers = {
@@ -254,6 +329,7 @@ function postUsageEvent(url, payload, accessToken = null) {
   if (accessToken) headers["X-Who-Eats-Token"] = accessToken;
 
   return new Promise((resolve, reject) => {
+    const startedAt = Date.now();
     const req = http.request(
       {
         protocol: target.protocol,
@@ -265,10 +341,31 @@ function postUsageEvent(url, payload, accessToken = null) {
       },
       (res) => {
         res.resume();
-        res.on("end", resolve);
+        res.on("end", () => {
+          const result = {
+            statusCode: res.statusCode || 0,
+            latencyMs: Date.now() - startedAt
+          };
+          if (result.statusCode < 200 || result.statusCode >= 300) {
+            const error = new Error(`Usage event post failed with HTTP ${result.statusCode}.`);
+            error.statusCode = result.statusCode;
+            error.latencyMs = result.latencyMs;
+            reject(error);
+            return;
+          }
+          resolve(result);
+        });
       }
     );
-    req.on("error", reject);
+    req.setTimeout(timeoutMs, () => {
+      const error = new Error("Usage event post timed out.");
+      error.latencyMs = Date.now() - startedAt;
+      req.destroy(error);
+    });
+    req.on("error", (error) => {
+      if (!Number.isFinite(error.latencyMs)) error.latencyMs = Date.now() - startedAt;
+      reject(error);
+    });
     req.end(body);
   });
 }
@@ -301,10 +398,11 @@ function isAllowedLocalOrigin(origin) {
   return /^https?:\/\/(127\.0\.0\.1|localhost)(:\d+)?$/i.test(origin);
 }
 
-function isAuthorizedBrowserRequest(req, accessToken) {
+function isAuthorizedBrowserRequest(req, accessToken, { allowUnauthenticatedNoOrigin = false } = {}) {
   if (!accessToken) return true;
-  if (!req.headers.origin) return true;
-  return safeEqual(String(req.headers["x-who-eats-token"] || "").trim(), accessToken);
+  const requestToken = String(req.headers["x-who-eats-token"] || "").trim();
+  if (requestToken) return safeEqual(requestToken, accessToken);
+  return !req.headers.origin && allowUnauthenticatedNoOrigin;
 }
 
 function safeEqual(left, right) {

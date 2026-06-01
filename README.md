@@ -6,6 +6,8 @@
 - 在屏幕顶部显示 always-on-top 小条。
 - 暴露本地 ingest 接口，后续可以让 TokenScope、toktap、LiteLLM 或自写 SDK wrapper 把每次调用的 token/cost 推进来。
 
+第一次使用先看 [用户指南](docs/getting-started.md)。如果你要让本地工具里的 agent 读取状态或上报 usage，看 [Agent 接入指南](docs/agent-getting-started.md)。
+
 跨平台状态和已知缺口见 [docs/compatibility.md](docs/compatibility.md)。
 机器可读兼容矩阵见 [docs/compatibility-matrix.md](docs/compatibility-matrix.md)。
 开源形态和接入路线见 [docs/open-source-form-strategy.md](docs/open-source-form-strategy.md)。
@@ -199,7 +201,7 @@ macOS:
 token="$(cat "$HOME/Library/Application Support/who-eats-token/api-token.txt")"
 ```
 
-浏览器来源的请求必须来自 `localhost/127.0.0.1` 或已安装的浏览器扩展 origin，并带上 `X-Who-Eats-Token: $token`。普通本机 CLI/SDK 请求没有 `Origin` 时仍可直接调用；开源或多人环境建议统一带上 token。
+所有本地请求默认都需要带上 `X-Who-Eats-Token: $token`，包括没有 `Origin` 的普通本机 CLI/SDK 请求。浏览器来源的请求还必须来自 `localhost/127.0.0.1` 或已安装的浏览器扩展 origin。旧版无 `Origin` 兼容只应通过 `security.allowUnauthenticatedNoOrigin` 显式开启。
 
 最小事件：
 

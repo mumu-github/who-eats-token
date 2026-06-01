@@ -7,8 +7,8 @@
     <link rel="stylesheet" href="./styles.css" />
   </head>
   <body>
-    <main class="shell">
-      <section class="bar">
+    <main class="shell" id="shell">
+      <section class="bar" id="bar">
         <button class="brand" id="toggle" title="桌面监控">
           <span class="mark"></span>
           <span class="brand-title" aria-label="谁在吃 TOKEN">
@@ -22,7 +22,8 @@
         </button>
         <div class="usage-strip" id="usageStrip" title="用量节奏">
           <span class="usage-dot" aria-hidden="true"></span>
-          <span class="usage-mascot" aria-hidden="true">
+          <span class="usage-mascot" id="usageMascot" aria-hidden="true">
+            <span class="quota-orbit"></span>
             <span class="sprout-leaf left"></span>
             <span class="sprout-leaf right"></span>
             <span class="sprout-face"></span>
@@ -30,8 +31,10 @@
           <span class="usage-name" id="usageName">等待数据</span>
           <span class="usage-status" id="usageStatus">同步中</span>
           <span class="trust-badge" id="trustBadge">等待</span>
-          <span class="usage-meta"><span id="todayLabel">今</span> <strong id="todayTokens">--</strong></span>
-          <span class="usage-meta"><span id="recentLabel">1h</span> <strong id="recentTokens">--</strong></span>
+          <span class="usage-quota"><span id="quotaLabel">余</span> <strong id="quotaValue">--</strong></span>
+          <span class="usage-meta usage-meta-today"><span id="todayLabel">今</span> <strong id="todayTokens">--</strong></span>
+          <span class="usage-meta usage-meta-recent"><span id="recentLabel">1h</span> <strong id="recentTokens">--</strong></span>
+          <span class="usage-reset" id="usageReset">等数据</span>
         </div>
         <div class="metric" id="fiveHourMetric">
           <span class="label">
@@ -52,6 +55,10 @@
             <span id="secondaryMetricLabel">一周</span>
           </span>
           <span class="metric-value" id="weekRemaining">--</span>
+        </div>
+        <div class="token-generator" id="tokenGenerator" title="token 发生器" aria-label="token 发生器">
+          <span class="token-generator-art" aria-hidden="true"></span>
+          <span class="token-generator-port" aria-hidden="true"></span>
         </div>
         <div class="mini-chart" id="miniChart" title="余量小图表" aria-label="余量小图表">
           <span class="chart-column chart-five" title="5小时余量">
@@ -79,8 +86,19 @@
         </div>
         <button class="icon-button" id="close" title="退出">×</button>
       </section>
+      <div class="roaming-mascot" id="roamingMascot" data-scene="wait" data-anchor="generator-below" data-phase="visible" aria-hidden="true">
+        <span class="roaming-mascot-image" id="roamingMascotImage"></span>
+      </div>
+      <div class="token-flow" id="tokenFlow" data-phase="visible" aria-hidden="true">
+        <span class="token-particle token-a"></span>
+        <span class="token-particle token-b"></span>
+        <span class="token-particle token-c"></span>
+      </div>
       <section class="details" id="details" aria-hidden="true"></section>
     </main>
+    <script src="./shared/format.js"></script>
+    <script src="./shared/quota-view-model.js"></script>
+    <script src="./shared/trust-popover.js"></script>
     <script src="./app.js"></script>
   </body>
 </html>

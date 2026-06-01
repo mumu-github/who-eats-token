@@ -1,4 +1,5 @@
 const { getQuotaDelight } = require("./quota-delight.cjs");
+const { isTokenAccuracyEstimated, mergeTokenAccuracies, normalizeTokenAccuracy } = require("./token-accuracy.cjs");
 
 function summarizeProviderHealth(snapshot = {}) {
   const providers = Array.isArray(snapshot.providers) ? snapshot.providers : [];
@@ -43,6 +44,16 @@ function summarizeProvider(registered, provider, snapshot) {
   const secondaryRemainingPercent = remainingPercent(provider?.latest?.rateLimits?.secondary);
   const tokenPlanRemainingPercent = numericOrNull(provider?.latest?.tokenPlan?.remainingPercent);
   const contextRemainingPercent = numericOrNull(provider?.latest?.context?.remainingPercent);
+  const displayMode = getDisplayMode(provider);
+  const tokenAccuracy = getProviderTokenAccuracy(provider);
+  const tokenEstimated = isTokenAccuracyEstimated(tokenAccuracy);
+  const remainingStandardPercent = getRemainingStandardPercent({
+    displayMode,
+    primaryRemainingPercent,
+    secondaryRemainingPercent,
+    tokenPlanRemainingPercent,
+    contextRemainingPercent
+  });
   const remainingValues = [
     primaryRemainingPercent,
     secondaryRemainingPercent,
@@ -55,21 +66,26 @@ function summarizeProvider(registered, provider, snapshot) {
   const dataAgeMs = Number.isFinite(collectedMs) && Number.isFinite(latestMs)
     ? Math.max(0, collectedMs - latestMs)
     : null;
-  const statusInfo = getHealthStatus({ registered, provider, enabled, remainingValues });
-  const trust = getTrustInfo({ registered, provider, statusInfo, dataAgeMs, latestTimestamp });
+  const statusInfo = getHealthStatus({ registered, provider, enabled, remainingValues, displayMode, tokenEstimated });
+  const trust = getTrustInfo({ registered, provider, statusInfo, dataAgeMs, latestTimestamp, tokenAccuracy, tokenEstimated });
 
   const entry = {
     id: provider?.id || registered?.id || "unknown",
     name: provider?.name || registered?.name || "Unknown",
     enabled,
+    sourceId: provider?.sourceId || null,
     source: provider?.source || registered?.source || null,
+    sources: compactProviderSources(provider?.sources),
+    usageAggregation: provider?.usageAggregation || null,
     status: statusInfo.status,
     statusLabel: statusInfo.label,
     reason: statusInfo.reason,
     providerStatus: provider?.status || null,
     confidence: provider?.confidence || null,
+    tokenAccuracy,
+    tokenEstimated,
     latestModel: provider?.latest?.model || null,
-    displayMode: getDisplayMode(provider),
+    displayMode,
     syncStatus: provider?.latest?.rateLimitsTrust?.status || null,
     syncLabel: provider?.latest?.rateLimitsTrust?.label || null,
     syncReason: provider?.latest?.rateLimitsTrust?.reason || null,
@@ -77,6 +93,8 @@ function summarizeProvider(registered, provider, snapshot) {
     secondaryRemainingPercent,
     tokenPlanRemainingPercent,
     contextRemainingPercent,
+    remainingStandardPercent,
+    remainingStandardLabel: getRemainingStandardLabel(displayMode),
     lowestRemainingPercent: remainingValues.length ? Math.min(...remainingValues) : null,
     dataAgeMs,
     latestTimestamp,
@@ -88,11 +106,38 @@ function summarizeProvider(registered, provider, snapshot) {
   };
   return {
     ...entry,
-    delight: getQuotaDelight(entry)
+    delight: getQuotaDelight({
+      ...entry,
+      lowestRemainingPercent: remainingStandardPercent
+    })
   };
 }
 
-function getTrustInfo({ registered, provider, statusInfo, dataAgeMs, latestTimestamp }) {
+function compactProviderSources(sources) {
+  if (!Array.isArray(sources)) return [];
+  return sources.slice(0, 12).map((source) => {
+    const tokenAccuracy = normalizeTokenAccuracy(source.tokenAccuracy, {
+      confidence: source.confidence,
+      source: source.source || source.sourceId,
+      estimated: source.tokenEstimated
+    });
+    return {
+      sourceId: source.sourceId || null,
+      source: source.source || null,
+      status: source.status || null,
+      confidence: source.confidence || null,
+      tokenAccuracy,
+      tokenEstimated: Boolean(source.tokenEstimated || tokenAccuracy.estimated),
+      todayTokens: source.todayTokens || 0,
+      recentTokens: source.recentTokens || 0,
+      todayCostUsd: source.todayCostUsd || 0,
+      eventCount: source.eventCount ?? null,
+      latestTimestamp: source.latestTimestamp || null
+    };
+  });
+}
+
+function getTrustInfo({ registered, provider, statusInfo, dataAgeMs, latestTimestamp, tokenAccuracy, tokenEstimated }) {
   const displayMode = getDisplayMode(provider);
   const tokenPlanSource = provider?.latest?.tokenPlan?.source || null;
   const sourceLabel = provider?.source || registered?.source || "unknown";
@@ -136,7 +181,11 @@ function getTrustInfo({ registered, provider, statusInfo, dataAgeMs, latestTimes
     };
   }
 
-  if (statusInfo.status === "estimated" || syncStatus === "estimated" || provider.confidence === "estimated") {
+  if (
+    statusInfo.status === "estimated" ||
+    syncStatus === "estimated" ||
+    shouldSurfaceTokenEstimateAsStatus({ provider, displayMode, tokenEstimated })
+  ) {
     return {
       level: "estimated",
       label: "估算",
@@ -144,7 +193,7 @@ function getTrustInfo({ registered, provider, statusInfo, dataAgeMs, latestTimes
       updatedAt: latestTimestamp || null,
       ageMs: dataAgeMs,
       freshness,
-      explain: syncReason || statusInfo.reason || "Provider data is estimated from local usage or model context."
+      explain: syncReason || statusInfo.reason || tokenAccuracy?.reason || "Provider data is estimated from local usage or model context."
     };
   }
 
@@ -209,7 +258,30 @@ function summarizeEntries(entries) {
   return summary;
 }
 
-function getHealthStatus({ registered, provider, enabled, remainingValues }) {
+function getProviderTokenAccuracy(provider) {
+  if (!provider) return normalizeTokenAccuracy("unknown");
+  const providerAccuracy = normalizeTokenAccuracy(provider.tokenAccuracy, {
+    confidence: provider.confidence,
+    source: provider.source,
+    estimated: provider.tokenEstimated
+  });
+  return mergeTokenAccuracies([
+    providerAccuracy,
+    provider.latest?.tokenAccuracy,
+    provider.latest?.context?.tokenAccuracy,
+    ...(Array.isArray(provider.sources) ? provider.sources.map((source) => source.tokenAccuracy) : [])
+  ]);
+}
+
+function shouldSurfaceTokenEstimateAsStatus({ provider, displayMode, tokenEstimated }) {
+  if (!provider || !tokenEstimated) return false;
+  const tokenPlanStatus = provider.latest?.tokenPlan?.platformStatus || provider.latest?.tokenPlan?.status || null;
+  if (displayMode === "token-plan" && tokenPlanStatus === "live") return false;
+  if (displayMode === "capacity" && (provider.latest?.rateLimits?.primary || provider.latest?.rateLimits?.secondary)) return false;
+  return true;
+}
+
+function getHealthStatus({ registered, provider, enabled, remainingValues, displayMode, tokenEstimated }) {
   if (!enabled) {
     return {
       status: "disabled",
@@ -251,7 +323,7 @@ function getHealthStatus({ registered, provider, enabled, remainingValues }) {
     };
   }
 
-  if (syncStatus === "estimated" || provider.confidence === "estimated") {
+  if (syncStatus === "estimated" || shouldSurfaceTokenEstimateAsStatus({ provider, displayMode, tokenEstimated })) {
     return {
       status: "estimated",
       label: provider.latest?.rateLimitsTrust?.label || "估算",
@@ -286,6 +358,27 @@ function getDisplayMode(provider) {
   if (provider.latest?.context) return "context";
   if (provider.latest) return "usage";
   return "missing";
+}
+
+function getRemainingStandardPercent({
+  displayMode,
+  primaryRemainingPercent,
+  secondaryRemainingPercent,
+  tokenPlanRemainingPercent,
+  contextRemainingPercent
+}) {
+  if (displayMode === "token-plan") return tokenPlanRemainingPercent;
+  if (displayMode === "context") return contextRemainingPercent;
+  if (displayMode === "capacity") return primaryRemainingPercent ?? secondaryRemainingPercent;
+  return null;
+}
+
+function getRemainingStandardLabel(displayMode) {
+  if (displayMode === "token-plan") return "Token Plan 剩余 / 总量";
+  if (displayMode === "context") return "上下文剩余 / 上下文上限";
+  if (displayMode === "capacity") return "当前 5 小时窗口余量";
+  if (displayMode === "usage") return "仅用量节奏，无余量口径";
+  return "等待可用余量口径";
 }
 
 function getLatestTimestamp(provider) {

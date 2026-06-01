@@ -1,14 +1,18 @@
 const http = require("node:http");
 const { summarizeProviderHealth } = require("../protocol/provider-health.cjs");
+const { mergeTokenAccuracies } = require("../protocol/token-accuracy.cjs");
 const { normalizeOverlayReport, normalizeUsageEvent } = require("../protocol/usage-event.cjs");
 
 const MAX_EVENTS = 5000;
+const MAX_OVERLAY_REPORTS = 128;
 const RECENT_MS = 60 * 60 * 1000;
-const OVERLAY_RECENT_MS = 3000;
+const OVERLAY_FRESH_MS = 3000;
+const OVERLAY_RECENT_MS = 15 * 1000;
 
-function createIngestServer({ port, accessToken = null, getSnapshot = null } = {}) {
+function createIngestServer({ port, accessToken = null, getSnapshot = null, security = {} } = {}) {
   const events = [];
   const overlayReports = new Map();
+  const allowUnauthenticatedNoOrigin = security.allowUnauthenticatedNoOrigin === true;
   let listening = false;
   let listenError = null;
 
@@ -26,7 +30,7 @@ function createIngestServer({ port, accessToken = null, getSnapshot = null } = {
       return;
     }
 
-    if (!isAuthorizedRequest(req, accessToken)) {
+    if (!isAuthorizedRequest(req, accessToken, { allowUnauthenticatedNoOrigin })) {
       writeJson(res, { ok: false, error: "Missing or invalid local access token" }, 401);
       return;
     }
@@ -91,9 +95,7 @@ function createIngestServer({ port, accessToken = null, getSnapshot = null } = {
   function getSummary() {
     const now = Date.now();
     const todayKey = localDateKey(new Date());
-    const recentEvents = events.filter(
-      (event) => now - new Date(event.timestamp).getTime() <= RECENT_MS
-    );
+    let recentEventCount = 0;
 
     const grouped = new Map();
     for (const event of events) {
@@ -101,28 +103,61 @@ function createIngestServer({ port, accessToken = null, getSnapshot = null } = {
       if (!grouped.has(key)) {
         grouped.set(key, {
           id: key,
+          sourceId: "http-ingest",
           name: displayName(key),
           status: "live",
           source: "local ingest API",
           confidence: event.confidence || "reported",
+          tokenAccuracy: event.tokenAccuracy || null,
+          tokenEstimated: Boolean(event.tokenAccuracy?.estimated),
           note: "Posted to http://127.0.0.1:17667/events.",
           collectedAt: new Date().toISOString(),
           todayTokens: 0,
           recentTokens: 0,
           todayCostUsd: 0,
           latest: null,
-          models: new Map()
+          models: new Map(),
+          sources: new Map()
         });
       }
 
       const provider = grouped.get(key);
-      const eventDateKey = localDateKey(new Date(event.timestamp));
+      const sourceId = event.source || "http-ingest";
+      const eventMs = new Date(event.timestamp).getTime();
+      const eventDate = new Date(event.timestamp);
+      const eventDateKey = localDateKey(eventDate);
       const eventTokens = event.inputTokens + event.outputTokens;
+      const source = provider.sources.get(sourceId) || {
+        sourceId,
+        source: sourceId,
+        todayTokens: 0,
+        recentTokens: 0,
+        todayCostUsd: 0,
+        tokenAccuracy: event.tokenAccuracy || null,
+        tokenEstimated: Boolean(event.tokenAccuracy?.estimated),
+        eventCount: 0,
+        latestTimestamp: null
+      };
+      source.tokenAccuracy = mergeTokenAccuracies([source.tokenAccuracy, event.tokenAccuracy]);
+      source.tokenEstimated = Boolean(source.tokenAccuracy?.estimated);
+      provider.tokenAccuracy = mergeTokenAccuracies([provider.tokenAccuracy, event.tokenAccuracy]);
+      provider.tokenEstimated = Boolean(provider.tokenAccuracy?.estimated);
+      source.eventCount += 1;
+      if (!source.latestTimestamp || event.timestamp > source.latestTimestamp) {
+        source.latestTimestamp = event.timestamp;
+      }
       if (eventDateKey === todayKey) {
         provider.todayTokens += eventTokens;
         provider.todayCostUsd += event.costUsd;
+        source.todayTokens += eventTokens;
+        source.todayCostUsd += event.costUsd;
       }
-      if (recentEvents.includes(event)) provider.recentTokens += eventTokens;
+      if (Number.isFinite(eventMs) && now - eventMs <= RECENT_MS) {
+        recentEventCount += 1;
+        provider.recentTokens += eventTokens;
+        source.recentTokens += eventTokens;
+      }
+      provider.sources.set(sourceId, source);
 
       const modelKey = event.model || "unknown";
       const model = provider.models.get(modelKey) || {
@@ -139,10 +174,12 @@ function createIngestServer({ port, accessToken = null, getSnapshot = null } = {
       provider.models.set(modelKey, model);
 
       if (!provider.latest || event.timestamp > provider.latest.timestamp) {
+        provider.confidence = event.confidence || provider.confidence;
         provider.latest = {
           timestamp: event.timestamp,
           model: event.model,
           lastTurnTokens: eventTokens,
+          tokenAccuracy: event.tokenAccuracy,
           rateLimits: event.rateLimits || null,
           context: event.context || null,
           rateLimitsTrust: event.rateLimits
@@ -167,14 +204,19 @@ function createIngestServer({ port, accessToken = null, getSnapshot = null } = {
       listening,
       error: listenError ? listenError.message : null,
       eventCount: events.length,
-      recentEventCount: recentEvents.length,
+      recentEventCount,
       overlayCount: getOverlayHints().length,
-      providers: Array.from(grouped.values()).map((provider) => ({
-        ...provider,
-        models: Array.from(provider.models.values()).sort(
-          (a, b) => b.todayTokens - a.todayTokens
-        )
-      }))
+      providers: Array.from(grouped.values()).map((provider) => {
+        const sources = Array.from(provider.sources.values()).sort((a, b) => b.todayTokens - a.todayTokens);
+        return {
+          ...provider,
+          sources,
+          usageAggregation: getUsageAggregation(sources),
+          models: Array.from(provider.models.values()).sort(
+            (a, b) => b.todayTokens - a.todayTokens
+          )
+        };
+      })
     };
   }
 
@@ -223,7 +265,8 @@ function createIngestServer({ port, accessToken = null, getSnapshot = null } = {
 
   function getOverlayReports() {
     pruneOverlayReports();
-    return Array.from(overlayReports.values());
+    const now = Date.now();
+    return Array.from(overlayReports.values()).map((report) => annotateOverlayReport(report, now));
   }
 
   function getOverlayHints() {
@@ -233,7 +276,10 @@ function createIngestServer({ port, accessToken = null, getSnapshot = null } = {
         source: report.source,
         url: report.url,
         title: report.title,
-        timestamp: report.timestamp
+        timestamp: report.timestamp,
+        freshness: report.freshness,
+        stale: report.stale,
+        expiresAt: report.expiresAt
       })));
   }
 
@@ -244,7 +290,55 @@ function createIngestServer({ port, accessToken = null, getSnapshot = null } = {
         overlayReports.delete(key);
       }
     }
+    while (overlayReports.size > MAX_OVERLAY_REPORTS) {
+      let oldestKey = null;
+      let oldestMs = Infinity;
+      for (const [key, report] of overlayReports) {
+        const reportMs = new Date(report.timestamp).getTime();
+        const comparableMs = Number.isFinite(reportMs) ? reportMs : -Infinity;
+        if (comparableMs < oldestMs) {
+          oldestMs = comparableMs;
+          oldestKey = key;
+        }
+      }
+      if (oldestKey === null) break;
+      overlayReports.delete(oldestKey);
+    }
   }
+}
+
+function annotateOverlayReport(report, now = Date.now()) {
+  const timestampMs = new Date(report.timestamp).getTime();
+  const ageMs = Number.isFinite(timestampMs) ? Math.max(0, now - timestampMs) : OVERLAY_RECENT_MS;
+  const stale = ageMs > OVERLAY_FRESH_MS;
+  return {
+    ...report,
+    ageMs,
+    freshness: stale ? "stale" : "fresh",
+    stale,
+    expiresAt: Number.isFinite(timestampMs)
+      ? new Date(timestampMs + OVERLAY_RECENT_MS).toISOString()
+      : new Date(now).toISOString()
+  };
+}
+
+function getUsageAggregation(sources = []) {
+  const tokenAccuracy = mergeTokenAccuracies(sources.map((source) => source.tokenAccuracy));
+  return {
+    strategy: sources.length > 1 ? "sum-by-source-id" : "single-source",
+    dedupeKey: "sourceId",
+    sourceIds: sources.map((source) => source.sourceId),
+    tokenAccuracy,
+    tokenEstimated: Boolean(tokenAccuracy?.estimated),
+    todayTokens: sources.reduce((sum, source) => sum + numberOrZero(source.todayTokens), 0),
+    recentTokens: sources.reduce((sum, source) => sum + numberOrZero(source.recentTokens), 0),
+    todayCostUsd: sources.reduce((sum, source) => sum + numberOrZero(source.todayCostUsd), 0)
+  };
+}
+
+function numberOrZero(value) {
+  const number = Number(value);
+  return Number.isFinite(number) ? number : 0;
 }
 
 function compactProviderHealth(providerHealth = {}) {
@@ -282,11 +376,16 @@ function compactProvider(provider) {
     id: provider.id,
     name: provider.name,
     enabled: provider.enabled,
+    sourceId: provider.sourceId || null,
     source: provider.source || null,
+    sources: Array.isArray(provider.sources) ? provider.sources.slice(0, 12) : [],
+    usageAggregation: provider.usageAggregation || null,
     status: provider.status,
     statusLabel: provider.statusLabel || null,
     reason: provider.reason || null,
     confidence: provider.confidence || null,
+    tokenAccuracy: provider.tokenAccuracy || null,
+    tokenEstimated: Boolean(provider.tokenEstimated),
     latestModel: provider.latestModel || null,
     displayMode: provider.displayMode || "missing",
     syncStatus: provider.syncStatus || null,
@@ -392,10 +491,11 @@ function isAllowedLocalOrigin(origin) {
     /^moz-extension:\/\/[0-9a-f-]+$/i.test(origin);
 }
 
-function isAuthorizedRequest(req, accessToken) {
+function isAuthorizedRequest(req, accessToken, { allowUnauthenticatedNoOrigin = false } = {}) {
   if (!accessToken) return true;
-  if (!req.headers.origin) return true;
-  return safeEqual(readRequestToken(req), accessToken);
+  const requestToken = readRequestToken(req);
+  if (requestToken) return safeEqual(requestToken, accessToken);
+  return !req.headers.origin && allowUnauthenticatedNoOrigin;
 }
 
 function readRequestToken(req) {

@@ -6,9 +6,9 @@ Who Eats Token should stay boring in the background: visible enough to help, qui
 
 | Area | Budget | Reason |
 | --- | --- | --- |
-| Snapshot/provider refresh | default `>= 15s`, minimum `>= 5s` | Provider and file reads should be cached, not tight-polled. |
-| Active-window HUD refresh | default `>= 15s`, minimum `>= 3s` | Foreground detection can touch OS APIs; keep it bounded. |
-| Desktop top-bar foreground check | `>= 1s` | Desktop/window switching needs responsiveness without spinning. |
+| Desktop snapshot/provider refresh | default `>= 15s`, minimum `>= 15s` | The desktop top bar follows the user's data refresh setting without allowing sub-15s provider polling. |
+| Tool HUD steady snapshot refresh | `>= 5min` after foreground entry | Returning to a supported tool refreshes immediately, then avoids steady provider polling. |
+| Overlay foreground coordinator | `200ms`, window-state only, no provider reads | Desktop/window switching needs near-immediate response without tightening quota collection. |
 | System metrics | `>= 2s` | CPU/memory numbers are useful but not worth per-frame updates. |
 | Browser extension DOM scan | event-driven, no `setInterval` | Avoid wakeups on every page while the user works. |
 | Hermes Web UI overlay script | opt-in and event-driven, no `setInterval` | DOM scanning is the highest-risk lag source. |
@@ -117,5 +117,6 @@ npm run test:performance-summary
 - unrelated browser tabs must not trigger the Hermes HUD
 - content overlays only hide or move the HUD when they overlap the HUD rectangle
 - mini charts and warning pills must be driven by the same remaining quota values shown as text
-- switching to unsupported foreground windows uses the existing 1s desktop foreground check to retire stale HUDs; it must not add a second active-window polling loop
+- switching to desktop, shell popups, or unsupported foreground windows uses the unified 200ms overlay coordinator to retire stale HUDs; it must stay window-state-only and must not add a provider polling loop
+- the desktop top bar requires the real desktop foreground; desktop blockers are diagnostic only under the positive desktop-state model, while shell/tray previews remain explicit non-desktop foregrounds
 - terminal window titles that are only filesystem paths must not be treated as Codex/Claude/Gemini sessions

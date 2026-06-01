@@ -18,6 +18,7 @@ npm run test:delight-contract
 ## Contract
 
 - Numeric quota values stay primary; cute labels only annotate them.
+- The quota band uses the provider-specific remaining standard: capacity tools use the current 5-hour window when present; token-plan tools use remaining over total; context tools use context remaining.
 - Low-quota alert begins below `20%` remaining.
 - Below `10%` remaining uses the urgent `快见底` state.
 - Estimated data keeps the same quota band but carries `estimated: true`.
@@ -38,7 +39,8 @@ npm run test:delight-contract
 | live 10-19% | `省着点` | warning / small-bites / alert | Low-quota warning. |
 | live below 10% | `快见底` | empty-bowl / panic / alert | Urgent warning. |
 | estimated quota | quota band + estimate marker | same band | Same visual band, with estimate trust. |
-| delayed/stale | `慢半拍` | clock / blink / breathe | Data is not fresh. |
+| delayed/stale with known quota | `慢半拍` | quota band mascot + caution tone | Data is not fresh, but the pose still matches the visible remaining quota. |
+| delayed/stale without quota | `慢半拍` | clock / blink / breathe | Data is not fresh and no quota band is known. |
 | auth expired | `要登录` | key / locked / alert | User action is required. |
 | missing | `等开饭` | bowl / peek / quiet | Quiet waiting state. |
 | disabled | `睡觉中` | moon / nap / quiet | Explicitly disabled. |
@@ -50,6 +52,7 @@ npm run test:delight-contract
 - Tool HUD reads provider `delight` from the active provider.
 - Mini charts use existing provider snapshot values, not a separate timer.
 - Warning pills use the same remaining value as the numbers.
+- Data trust popovers must disclose the quota basis that drives mascot and frame state.
 - `prefers-reduced-motion: reduce` must stop decorative animation.
 
 ## Checks

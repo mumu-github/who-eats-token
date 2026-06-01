@@ -68,10 +68,10 @@ assert.deepEqual(
 );
 
 assert.deepEqual(
-  pick(getQuotaDelight({ status: "delayed", lowestRemainingPercent: 70, freshness: "warm" })),
+  pick(getQuotaDelight({ status: "delayed", lowestRemainingPercent: 82, freshness: "warm" })),
   {
-    id: "lagging",
-    mood: "lagging",
+    id: "comfy",
+    mood: "comfy",
     shortLabel: "慢半拍",
     tone: "caution",
     motion: "breathe",
@@ -79,13 +79,19 @@ assert.deepEqual(
     priority: 2,
     attention: true,
     cue: {
-      icon: "clock",
-      mascot: "blink",
-      chart: "breathe",
+      icon: "spark",
+      mascot: "stretch",
+      chart: "soft",
       reducedMotion: "static"
     }
   },
-  "Delayed data must be visibly distinct from live quota."
+  "Delayed high quota should keep the relaxed mascot while warning that data is late."
+);
+
+assert.equal(
+  getQuotaDelight({ status: "delayed", lowestRemainingPercent: 17, freshness: "warm" }).cue.mascot,
+  "small-bites",
+  "Delayed low quota should still use the low-quota mascot."
 );
 
 assert.deepEqual(

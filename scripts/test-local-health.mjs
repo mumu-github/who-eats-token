@@ -109,6 +109,77 @@ const denied = await requestJson({
 });
 assert.equal(denied.statusCode, 401);
 
+const noOriginDenied = await requestJson({
+  port: primaryPort,
+  route: "/health",
+  method: "GET",
+  allowError: true
+});
+assert.equal(noOriginDenied.statusCode, 401);
+
+const overlayNow = Date.now();
+await requestJson({
+  port: primaryPort,
+  route: "/overlays",
+  method: "POST",
+  accessToken: token,
+  origin: localOrigin(primaryPort),
+  body: {
+    source: "overlay-stale-window",
+    timestamp: new Date(overlayNow - 5000).toISOString(),
+    url: "http://127.0.0.1/demo",
+    title: "Demo overlay",
+    overlays: [
+      {
+        type: "modal-overlay",
+        label: "Modal overlay",
+        bounds: { x: 20, y: 20, width: 120, height: 80 }
+      }
+    ]
+  }
+});
+
+const staleOverlayState = await requestJson({
+  port: primaryPort,
+  route: "/overlays",
+  method: "GET",
+  accessToken: token,
+  origin: localOrigin(primaryPort)
+});
+const staleReport = staleOverlayState.reports.find((report) => report.source === "overlay-stale-window");
+assert.equal(staleReport.freshness, "stale");
+assert.equal(staleReport.stale, true);
+assert.ok(Date.parse(staleReport.expiresAt) > overlayNow);
+assert.equal(staleOverlayState.overlays.find((overlay) => overlay.source === "overlay-stale-window").stale, true);
+
+await requestJson({
+  port: primaryPort,
+  route: "/overlays",
+  method: "POST",
+  accessToken: token,
+  origin: localOrigin(primaryPort),
+  body: {
+    source: "overlay-expired-window",
+    timestamp: new Date(overlayNow - 16000).toISOString(),
+    overlays: [
+      {
+        type: "modal-overlay",
+        label: "Expired modal",
+        bounds: { x: 30, y: 30, width: 120, height: 80 }
+      }
+    ]
+  }
+});
+
+const prunedOverlayState = await requestJson({
+  port: primaryPort,
+  route: "/overlays",
+  method: "GET",
+  accessToken: token,
+  origin: localOrigin(primaryPort)
+});
+assert.equal(prunedOverlayState.reports.some((report) => report.source === "overlay-expired-window"), false);
+
 await closeIngest(primary);
 
 const fallbackPort = await getFreePort();

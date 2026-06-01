@@ -69,12 +69,8 @@ const TOOL_RULES = [
     id: "hermes-web-ui",
     name: "Hermes",
     providerIds: ["hermes"],
-    hud: {
-      bottomOffset: 115
-    },
     match: ({ processName, title, path, url }) =>
       processName === "hermes-web-ui" ||
-      (!BROWSER_PROCESSES.has(processName) && /hermes\s*(agent|web|ui)?/i.test(title)) ||
       (BROWSER_PROCESSES.has(processName) && isHermesBrowserWindow(title, path, url))
   },
   {
@@ -212,6 +208,7 @@ function normalizeWindowInfo(windowInfo = {}) {
 }
 
 function normalizeBounds(bounds = {}) {
+  if (!bounds || typeof bounds !== "object") return null;
   const x = Number(bounds.x);
   const y = Number(bounds.y);
   const width = Number(bounds.width);

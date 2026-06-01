@@ -6,6 +6,8 @@ import { fileURLToPath } from "node:url";
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const keyDocs = [
   "README.md",
+  "docs/getting-started.md",
+  "docs/agent-getting-started.md",
   "docs/open-source-form-strategy.md",
   "docs/open-source-landscape.md",
   "docs/compatibility-matrix.md",
@@ -66,6 +68,8 @@ assertIncludes(readme, "npm run lag:triage");
 assertIncludes(readme, "docs/support-bundle.md");
 assertIncludes(readme, "npm run support:bundle");
 assertIncludes(readme, "docs/delight-contract.md");
+assertIncludes(readme, "docs/getting-started.md");
+assertIncludes(readme, "docs/agent-getting-started.md");
 assertIncludes(readme, "npm run compatibility:matrix");
 assertIncludes(readme, "npm run soak:packaged-win");
 assertIncludes(readme, "npm run secret:scan");
@@ -93,6 +97,21 @@ assertIncludes(lessons, "TokenTracker");
 assertIncludes(lessons, "ambient token companion");
 assertIncludes(lessons, "No animation may require a new polling loop");
 assertIncludes(lessons, "delight-contract.md");
+
+const gettingStarted = read("docs/getting-started.md");
+assertIncludes(gettingStarted, "第一次使用");
+assertIncludes(gettingStarted, "displayMode");
+assertIncludes(gettingStarted, "remainingStandardPercent");
+assertIncludes(gettingStarted, "npm run status");
+assertIncludes(gettingStarted, "不会用 GIF");
+
+const agentGettingStarted = read("docs/agent-getting-started.md");
+assertIncludes(agentGettingStarted, "Agent 接入指南");
+assertIncludes(agentGettingStarted, "不要读取");
+assertIncludes(agentGettingStarted, "/health");
+assertIncludes(agentGettingStarted, "/snapshot");
+assertIncludes(agentGettingStarted, "/events");
+assertIncludes(agentGettingStarted, "displayMode");
 
 const delightContract = read("docs/delight-contract.md");
 assertIncludes(delightContract, "Delight Contract");

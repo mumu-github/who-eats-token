@@ -6,8 +6,8 @@ Who Eats Token exposes a localhost protocol for adapters. The protocol is intent
 
 - Base URL: `http://127.0.0.1:17667`
 - Browser-origin requests must come from `localhost`, `127.0.0.1`, or an installed extension origin such as `chrome-extension://...`.
-- Browser-origin requests must include `X-Who-Eats-Token`.
-- CLI/SDK requests without an `Origin` header are accepted for local compatibility, but adapters should still send the token.
+- Requests must include `X-Who-Eats-Token` by default, including CLI/SDK calls without an `Origin` header.
+- Legacy no-`Origin` local compatibility is only available through the explicit `security.allowUnauthenticatedNoOrigin` setting and should stay disabled for normal use.
 - Do not send provider API keys, cookies, prompts, completions, or full chat content.
 - The ingest normalizer drops sensitive metadata keys and obvious secret-looking values as a safety net, but adapters should still avoid collecting them in the first place.
 
@@ -87,6 +87,8 @@ Field rules:
 | `input_tokens` / `output_tokens` | recommended | Non-negative numbers. |
 | `total_tokens` | optional | If only total and output are known, input is inferred as `total - output`. |
 | `confidence` | optional | One of `reported`, `estimated`, `derived`, `manual`, `unknown`. |
+| `token_accuracy` / `tokenAccuracy` | optional | One of `official-usage`, `tokenizer`, `heuristic`, `unknown`, or an object with `level`, `source`, `estimated`, and `reason`. Heuristic counts are always surfaced as estimated in health/UI. |
+| `token_source` / `tokenSource` | optional | Short source label for the token count method when it differs from the event `source`. |
 | `rate_limits` | optional | Use when provider returns quota windows. |
 | `context` | optional | Use when the useful limit is context-window capacity, not account quota. |
 | `metadata` | optional | Small scalar values only; no prompts or secrets. |
@@ -146,8 +148,10 @@ Returns the desktop app's current aggregate snapshot when served by the packaged
   - `tone`, `severity`, and `priority`: styling and alert urgency without each adapter inventing its own thresholds
   - `motion` and `cue`: event-driven hints for CSS-only charts or optional mascot poses; `cue.reducedMotion` must stay `static`
   - `alert`/`attention`: true only for states that deserve user attention, such as low quota, stale quota, or expired auth
+  - delayed/stale data with a known remaining percentage keeps the mascot pose aligned to that quota band while using caution tone/labeling for freshness
 - remaining percentages for 5-hour, weekly, token-plan, and context signals when available
-- freshness, reason, source, confidence, and the latest model when available
+- `remainingStandardPercent` / `remainingStandardLabel`: the provider-specific quota basis used for mascot, frame, and alert banding. Capacity tools such as Codex use the current 5-hour window; token-plan tools such as Hermes/Xiaomi use `remainingCredits / totalCredits`; context tools use context remaining.
+- freshness, reason, source, confidence, `tokenAccuracy` / `tokenEstimated`, and the latest model when available
 
 If the ingest server is embedded without a desktop snapshot callback, it falls back to the local `/events` summary only.
 
@@ -176,6 +180,7 @@ Adapters should prefer `/health` for startup checks and only call `/snapshot` wh
 - Batch events when possible, but keep each payload under 1 MB.
 - Do not poll provider APIs aggressively; respect provider cache windows.
 - Use `confidence=reported` only when usage came from an official response or billing API.
-- Use `confidence=estimated` for tokenizer or local message-length estimates.
+- Prefer `token_accuracy=official-usage` for official response/billing usage, `token_accuracy=tokenizer` for tokenizer counts, and `token_accuracy=heuristic` for local text-length guesses.
+- Use `confidence=estimated` for heuristic estimates; tokenizer-derived counts may use `confidence=derived` with `token_accuracy=tokenizer`.
 - Include `source` so users can tell live data from guesses.
 - Treat secrets as write-only local config, never event metadata.

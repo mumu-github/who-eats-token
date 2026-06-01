@@ -1,6 +1,7 @@
 const fs = require("node:fs");
 const path = require("node:path");
 const { getXiaomiTokenPlan, shouldUseXiaomiTokenPlan } = require("./xiaomi-token-plan.cjs");
+const { isTokenAccuracyEstimated, normalizeTokenAccuracy } = require("../protocol/token-accuracy.cjs");
 const { getHermesDataPath } = require("../system/paths.cjs");
 
 const RECENT_MS = 60 * 60 * 1000;
@@ -20,40 +21,24 @@ function collectHermesUsage({ localAppData = process.env.LOCALAPPDATA, hermesDat
     const { DatabaseSync } = require("node:sqlite");
     const db = new DatabaseSync(stateDbPath, { readOnly: true });
     try {
-      const sessions = db.prepare(`
-        SELECT
-          s.id,
-          s.source,
-          s.model,
-          s.model_config AS modelConfig,
-          s.system_prompt AS systemPrompt,
-          s.started_at AS startedAt,
-          s.message_count AS messageCount,
-          s.input_tokens AS inputTokens,
-          s.output_tokens AS outputTokens,
-          s.cache_read_tokens AS cacheReadTokens,
-          s.cache_write_tokens AS cacheWriteTokens,
-          s.reasoning_tokens AS reasoningTokens,
-          s.estimated_cost_usd AS estimatedCostUsd,
-          COALESCE(MAX(m.timestamp), s.started_at) AS lastMessageAt
-        FROM sessions s
-        LEFT JOIN messages m ON m.session_id = s.id
-        GROUP BY s.id
-        ORDER BY lastMessageAt DESC
-        LIMIT 80
-      `).all();
+      const capabilities = detectHermesSchemaCapabilities(db);
+      const schemaError = getHermesSchemaError(capabilities);
+      if (schemaError) {
+        return buildMissingProvider(collectedAt, schemaError, capabilities);
+      }
+
+      const sessions = readSessions(db, capabilities);
 
       if (sessions.length === 0) {
-        return buildMissingProvider(collectedAt, "Hermes has no local sessions yet.");
+        return buildMissingProvider(collectedAt, "Hermes has no local sessions yet.", capabilities);
       }
 
       const latestSession = sessions[0];
-      const latestMessages = readSessionMessages(db, latestSession.id);
+      const latestMessages = readSessionMessages(db, latestSession.id, capabilities);
       const model = latestSession.model || readModelFromConfig(latestSession.modelConfig) || "unknown";
       const contextLimit = getContextLimit(model, latestSession.modelConfig, hermesDir);
-      const sessionTokens = getSessionTokenTotal(latestSession);
-      const estimatedContextTokens = estimateSessionTokens(latestSession, latestMessages);
-      const contextUsedTokens = Math.max(sessionTokens, estimatedContextTokens);
+      const contextTokenEvidence = getContextTokenEvidence(latestSession, latestMessages);
+      const contextUsedTokens = contextTokenEvidence.tokens;
       const contextUsedPercent = percentage(contextUsedTokens, contextLimit);
       const contextRemaining = Math.max(0, Math.min(100, 100 - Math.round(contextUsedPercent)));
       const totals = summarizeSessions(sessions, collectedAt);
@@ -74,11 +59,15 @@ function collectHermesUsage({ localAppData = process.env.LOCALAPPDATA, hermesDat
 
       return {
         id: "hermes",
+        sourceId: "hermes-local",
         name: "Hermes",
         status: "live",
         source: "hermes-state-db",
-        confidence: sessionTokens > 0 ? "reported-local" : "estimated-local",
-        note: getHermesNote(tokenPlan),
+        confidence: contextTokenEvidence.confidence,
+        tokenAccuracy: contextTokenEvidence.tokenAccuracy,
+        tokenEstimated: contextTokenEvidence.tokenAccuracy.estimated,
+        note: getHermesNote(tokenPlan, capabilities, contextTokenEvidence.tokenAccuracy),
+        schema: summarizeHermesCapabilities(capabilities),
         collectedAt: collectedAt.toISOString(),
         todayTokens: totals.todayTokens,
         recentTokens: totals.recentTokens,
@@ -86,9 +75,9 @@ function collectHermesUsage({ localAppData = process.env.LOCALAPPDATA, hermesDat
         latest: {
           timestamp: timestampToIso(latestSession.lastMessageAt) || collectedAt.toISOString(),
           model,
-          lastTurnTokens: estimateLastTurnTokens(latestMessages),
+          lastTurnTokens: getLastTurnTokenEvidence(latestMessages).tokens,
           rateLimits: null,
-          rateLimitsTrust: getHermesTrust(tokenPlan, latestSession, collectedAt),
+          rateLimitsTrust: getHermesTrust(tokenPlan, latestSession, collectedAt, contextTokenEvidence.tokenAccuracy),
           tokenPlan,
           context: {
             sessionId: latestSession.id,
@@ -96,7 +85,9 @@ function collectHermesUsage({ localAppData = process.env.LOCALAPPDATA, hermesDat
             limitTokens: contextLimit,
             usedPercent: contextUsedPercent,
             remainingPercent: contextRemaining,
-            source: sessionTokens > 0 ? "session-tokens" : "message-estimate"
+            source: contextTokenEvidence.source,
+            estimated: contextTokenEvidence.tokenAccuracy.estimated,
+            tokenAccuracy: contextTokenEvidence.tokenAccuracy
           }
         },
         models: [
@@ -116,21 +107,30 @@ function collectHermesUsage({ localAppData = process.env.LOCALAPPDATA, hermesDat
   }
 }
 
-function getHermesNote(tokenPlan) {
+function getHermesNote(tokenPlan, capabilities = null, tokenAccuracy = null) {
+  const schemaNote = capabilities?.warnings?.length
+    ? ` Schema fallback: ${capabilities.warnings.slice(0, 3).join("; ")}.`
+    : "";
+  const accuracy = normalizeTokenAccuracy(tokenAccuracy);
+  const accuracyNote = accuracy.estimated
+    ? " Token usage is heuristic estimated; health/UI must mark it estimated."
+    : "";
   if (!tokenPlan) {
-    return "Read local Hermes session usage and context. Provider-specific quota is not configured.";
+    return `Read local Hermes session usage and context. Provider-specific quota is not configured.${schemaNote}${accuracyNote}`;
   }
   return tokenPlan.status === "live"
-    ? "Xiaomi Token Plan quota is read from the Xiaomi platform session."
-    : "Xiaomi Token Plan usage is estimated from local Hermes sessions until a Xiaomi platform login cookie is configured.";
+    ? `Xiaomi Token Plan quota is read from the Xiaomi platform session.${schemaNote}${accuracyNote}`
+    : `Xiaomi Token Plan usage is estimated from local Hermes sessions until a Xiaomi platform login cookie is configured.${schemaNote}${accuracyNote}`;
 }
 
-function getHermesTrust(tokenPlan, latestSession, collectedAt) {
+function getHermesTrust(tokenPlan, latestSession, collectedAt, tokenAccuracy = null) {
   if (!tokenPlan) {
+    const accuracy = normalizeTokenAccuracy(tokenAccuracy);
+    const estimated = isTokenAccuracyEstimated(accuracy);
     return {
-      status: "live",
-      label: "本地",
-      reason: null,
+      status: estimated ? "estimated" : "live",
+      label: estimated ? "估算" : "本地",
+      reason: estimated ? accuracy.reason : null,
       ageMs: ageMs(latestSession.lastMessageAt, collectedAt)
     };
   }
@@ -144,20 +144,127 @@ function getHermesTrust(tokenPlan, latestSession, collectedAt) {
   };
 }
 
-function readSessionMessages(db, sessionId) {
+function detectHermesSchemaCapabilities(db) {
+  const sessions = getTableCapabilities(db, "sessions");
+  const messages = getTableCapabilities(db, "messages");
+  const warnings = [];
+  for (const column of [
+    "source",
+    "model",
+    "model_config",
+    "system_prompt",
+    "message_count",
+    "input_tokens",
+    "output_tokens",
+    "cache_read_tokens",
+    "cache_write_tokens",
+    "reasoning_tokens",
+    "estimated_cost_usd"
+  ]) {
+    if (sessions.exists && !sessions.columns.has(column)) warnings.push(`missing sessions.${column}`);
+  }
+  for (const column of [
+    "role",
+    "content",
+    "reasoning",
+    "reasoning_content",
+    "codex_reasoning_items",
+    "codex_message_items",
+    "token_count",
+    "timestamp",
+    "session_id"
+  ]) {
+    if (messages.exists && !messages.columns.has(column)) warnings.push(`missing messages.${column}`);
+  }
+  if (!messages.exists) warnings.push("missing messages table");
+  return { sessions, messages, warnings };
+}
+
+function getTableCapabilities(db, tableName) {
+  const rows = db.prepare(`PRAGMA table_info(${tableName})`).all();
+  return {
+    exists: rows.length > 0,
+    columns: new Set(rows.map((row) => row.name))
+  };
+}
+
+function getHermesSchemaError(capabilities) {
+  if (!capabilities.sessions.exists) {
+    return "Hermes 数据库存在，但 schema 不兼容：缺少 sessions 表。";
+  }
+  const missing = [];
+  for (const column of ["id", "started_at"]) {
+    if (!capabilities.sessions.columns.has(column)) missing.push(`sessions.${column}`);
+  }
+  if (missing.length > 0) {
+    return `Hermes 数据库存在，但 schema 不兼容：缺少 ${missing.join(", ")}。`;
+  }
+  return null;
+}
+
+function summarizeHermesCapabilities(capabilities) {
+  return {
+    status: capabilities.warnings.length ? "compatible-with-fallbacks" : "compatible",
+    sessionsColumns: Array.from(capabilities.sessions.columns).sort(),
+    messagesColumns: Array.from(capabilities.messages.columns).sort(),
+    warnings: capabilities.warnings
+  };
+}
+
+function readSessions(db, capabilities) {
+  const sessionColumn = (column, alias, fallback = "NULL") =>
+    capabilities.sessions.columns.has(column) ? `s.${column} AS ${alias}` : `${fallback} AS ${alias}`;
+  const canJoinMessages =
+    capabilities.messages.exists &&
+    capabilities.messages.columns.has("session_id") &&
+    capabilities.messages.columns.has("timestamp");
+  const lastMessageAt = canJoinMessages
+    ? "COALESCE(MAX(m.timestamp), s.started_at) AS lastMessageAt"
+    : "s.started_at AS lastMessageAt";
+  const join = canJoinMessages ? "LEFT JOIN messages m ON m.session_id = s.id" : "";
+
   return db.prepare(`
     SELECT
-      role,
-      content,
-      reasoning,
-      reasoning_content AS reasoningContent,
-      codex_reasoning_items AS codexReasoningItems,
-      codex_message_items AS codexMessageItems,
-      token_count AS tokenCount,
-      timestamp
+      s.id,
+      ${sessionColumn("source", "source")},
+      ${sessionColumn("model", "model")},
+      ${sessionColumn("model_config", "modelConfig")},
+      ${sessionColumn("system_prompt", "systemPrompt")},
+      ${sessionColumn("started_at", "startedAt")},
+      ${sessionColumn("message_count", "messageCount", "0")},
+      ${sessionColumn("input_tokens", "inputTokens", "0")},
+      ${sessionColumn("output_tokens", "outputTokens", "0")},
+      ${sessionColumn("cache_read_tokens", "cacheReadTokens", "0")},
+      ${sessionColumn("cache_write_tokens", "cacheWriteTokens", "0")},
+      ${sessionColumn("reasoning_tokens", "reasoningTokens", "0")},
+      ${sessionColumn("estimated_cost_usd", "estimatedCostUsd", "0")},
+      ${lastMessageAt}
+    FROM sessions s
+    ${join}
+    GROUP BY s.id
+    ORDER BY lastMessageAt DESC
+    LIMIT 80
+  `).all();
+}
+
+function readSessionMessages(db, sessionId, capabilities) {
+  if (!capabilities.messages.exists || !capabilities.messages.columns.has("session_id")) return [];
+  const messageColumn = (column, alias) =>
+    capabilities.messages.columns.has(column) ? column === alias ? column : `${column} AS ${alias}` : `NULL AS ${alias}`;
+  const orderBy = capabilities.messages.columns.has("timestamp") ? "timestamp ASC" : "rowid ASC";
+  return db.prepare(`
+    SELECT
+      ${messageColumn("role", "role")},
+      ${messageColumn("content", "content")},
+      ${messageColumn("reasoning", "reasoning")},
+      ${messageColumn("reasoning_content", "reasoningContent")},
+      ${messageColumn("codex_reasoning_items", "codexReasoningItems")},
+      ${messageColumn("codex_message_items", "codexMessageItems")},
+      ${messageColumn("token_count", "tokenCount")},
+      ${messageColumn("timestamp", "timestamp")}
     FROM messages
     WHERE session_id = ?
-    ORDER BY timestamp ASC
+    ORDER BY ${orderBy}
   `).all(sessionId);
 }
 
@@ -192,26 +299,102 @@ function getSessionTokenTotal(session) {
   );
 }
 
-function estimateSessionTokens(session, messages) {
-  const promptTokens = estimateTokens(session.systemPrompt || "");
-  return messages.reduce((total, message) => total + getMessageTokens(message), promptTokens);
+function getContextTokenEvidence(session, messages) {
+  const sessionTokens = getSessionTokenTotal(session);
+  if (sessionTokens > 0) {
+    return {
+      tokens: sessionTokens,
+      confidence: "reported",
+      source: "session-token-columns",
+      tokenAccuracy: normalizeTokenAccuracy("official-usage", {
+        source: "session-token-columns",
+        estimated: false,
+        reason: "Hermes session token columns include explicit local usage counters."
+      })
+    };
+  }
+
+  const fallback = getMessageTokenEvidenceSummary(session, messages);
+  return {
+    tokens: fallback.tokens,
+    confidence: fallback.tokenAccuracy.estimated ? "estimated" : "derived",
+    source: fallback.source,
+    tokenAccuracy: fallback.tokenAccuracy
+  };
 }
 
-function estimateLastTurnTokens(messages) {
+function getMessageTokenEvidenceSummary(session, messages) {
+  const promptText = session.systemPrompt || "";
+  let tokens = promptText ? estimateTokens(promptText) : 0;
+  let usedTokenizer = false;
+  let usedHeuristic = Boolean(promptText);
+
+  for (const message of messages) {
+    const evidence = getMessageTokenEvidence(message);
+    tokens += evidence.tokens;
+    usedTokenizer = usedTokenizer || evidence.tokenAccuracy.level === "tokenizer";
+    usedHeuristic = usedHeuristic || evidence.tokenAccuracy.level === "heuristic";
+  }
+
+  if (usedHeuristic || !usedTokenizer) {
+    return {
+      tokens,
+      source: "message-length-heuristic",
+      tokenAccuracy: normalizeTokenAccuracy("heuristic", {
+        source: "message-length-heuristic",
+        estimated: true,
+        reason: "Hermes session token columns were unavailable; local text length was used."
+      })
+    };
+  }
+
+  return {
+    tokens,
+    source: "message-token-count",
+    tokenAccuracy: normalizeTokenAccuracy("tokenizer", {
+      source: "message-token-count",
+      estimated: false,
+      reason: "Hermes message token_count fields were used because session totals were unavailable."
+    })
+  };
+}
+
+function getLastTurnTokenEvidence(messages) {
   const last = [...messages].reverse().find((message) => message.role !== "session_meta");
-  return last ? getMessageTokens(last) : 0;
+  return last ? getMessageTokenEvidence(last) : {
+    tokens: 0,
+    tokenAccuracy: normalizeTokenAccuracy("heuristic", {
+      source: "message-length-heuristic",
+      estimated: true
+    })
+  };
 }
 
-function getMessageTokens(message) {
+function getMessageTokenEvidence(message) {
   const reported = numberOrZero(message.tokenCount);
-  if (reported > 0) return reported;
-  return estimateTokens([
+  if (reported > 0) {
+    return {
+      tokens: reported,
+      tokenAccuracy: normalizeTokenAccuracy("tokenizer", {
+        source: "message-token-count",
+        estimated: false
+      })
+    };
+  }
+  const tokens = estimateTokens([
     message.content,
     message.reasoning,
     message.reasoningContent,
     message.codexReasoningItems,
     message.codexMessageItems
   ].filter(Boolean).join("\n"));
+  return {
+    tokens,
+    tokenAccuracy: normalizeTokenAccuracy("heuristic", {
+      source: "message-length-heuristic",
+      estimated: true
+    })
+  };
 }
 
 function estimateTokens(text) {
@@ -349,14 +532,18 @@ function numberOrZero(value) {
   return Number.isFinite(number) ? number : 0;
 }
 
-function buildMissingProvider(collectedAt, reason) {
+function buildMissingProvider(collectedAt, reason, capabilities = null) {
   return {
     id: "hermes",
+    sourceId: "hermes-local",
     name: "Hermes",
     status: "missing",
     source: "hermes-state-db",
     confidence: "missing",
+    tokenAccuracy: normalizeTokenAccuracy("unknown", { source: "hermes-state-db" }),
+    tokenEstimated: false,
     note: reason,
+    schema: capabilities ? summarizeHermesCapabilities(capabilities) : null,
     collectedAt: collectedAt.toISOString(),
     todayTokens: 0,
     recentTokens: 0,

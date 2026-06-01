@@ -1,19 +1,37 @@
-const { app, BrowserWindow, ipcMain, screen, Notification, Tray, Menu, nativeImage } = require("electron");
+const { app, BrowserWindow, ipcMain, screen, Notification, Tray, Menu, nativeImage, shell } = require("electron");
+const { spawn } = require("node:child_process");
 const fs = require("node:fs");
 const os = require("node:os");
 const path = require("node:path");
 const { collectCodexUsage } = require("./collectors/codex.cjs");
-const { createHermesBridgeServer } = require("./collectors/hermes-bridge.cjs");
 const { collectHermesUsage } = require("./collectors/hermes-local.cjs");
-const { createIngestServer } = require("./collectors/ingest-server.cjs");
 const { getProviderRegistry } = require("./config/providers.cjs");
 const { loadSettings, saveSettings, sanitizeSettings } = require("./config/settings.cjs");
 const { ensureHermesOverlayInstalled } = require("./integrations/hermes-overlay-installer.cjs");
-const { summarizeProviderHealth } = require("./protocol/provider-health.cjs");
+const {
+  boundsOverlap,
+  clampNumber,
+  getWindowArea,
+  normalizeBounds
+} = require("./main/geometry-service.cjs");
+const {
+  guardBooleanPayload,
+  guardHudTrustPopoverPayload,
+  guardHudTrustPopoverSize,
+  guardSettingsPayload
+} = require("./main/ipc-guards.cjs");
+const {
+  closeServer,
+  restartHermesBridge: restartHermesBridgeServer,
+  restartIngestServer: restartIngestLocalServer
+} = require("./main/server-manager.cjs");
+const { createOverlayController, SURFACES } = require("./main/overlay-controller.cjs");
+const { createSnapshotService } = require("./main/snapshot-service.cjs");
+const { safeSend } = require("./main/window-safe-send.cjs");
 const { getLocalApiAccess } = require("./security/local-token.cjs");
-const { getActiveWindow } = require("./system/active-window.cjs");
+const { getActiveWindow, isDesktopForegroundWindow } = require("./system/active-window.cjs");
 const { collectSystemMetrics } = require("./system/system-metrics.cjs");
-const { detectTool, getHudCoveringDialog, isDialogWindow } = require("./system/tool-detector.cjs");
+const { detectTool, isDialogWindow } = require("./system/tool-detector.cjs");
 
 if (process.env.WHO_EATS_TOKEN_DISABLE_GPU === "1") {
   app.disableHardwareAcceleration();
@@ -21,12 +39,32 @@ if (process.env.WHO_EATS_TOKEN_DISABLE_GPU === "1") {
   app.commandLine.appendSwitch("disable-gpu-compositing");
 }
 
-const BAR_HEIGHT = 64;
-const HUD_WIDTH = 396;
-const HUD_HEIGHT = 136;
+const DEFAULT_BAR_HEIGHT = 64;
+const DEFAULT_HUD_WIDTH = 396;
+const DEFAULT_HUD_HEIGHT = 136;
+const HUD_TRUST_POPOVER_WIDTH = 440;
+const HUD_TRUST_POPOVER_MIN_HEIGHT = 336;
+const HUD_TRUST_POPOVER_MAX_HEIGHT = 480;
+const TOOL_HUD_HITBOX_WIDTH = 164;
+const TOOL_HUD_HITBOX_HEIGHT = 30;
+const DESKTOP_BAR_STAGE_MIN_SIDE_PAD = 42;
+const DESKTOP_BAR_STAGE_MAX_SIDE_PAD = 88;
+const DESKTOP_BAR_STAGE_MIN_TOP_PAD = 0;
+const DESKTOP_BAR_STAGE_MAX_TOP_PAD = 4;
+const DESKTOP_BAR_STAGE_MIN_BOTTOM_PAD = 82;
+const DESKTOP_BAR_STAGE_MAX_BOTTOM_PAD = 130;
 const SYSTEM_REFRESH_MS = 2000;
-const DESKTOP_BAR_REFRESH_MS = 1000;
-const HUD_TRANSIENT_MISS_MS = 5000;
+const OVERLAY_COORDINATOR_REFRESH_MS = 200;
+const OVERLAY_DEFERRED_RETRY_MS = 75;
+const OVERLAY_DEFERRED_RETRY_MAX_MS = 600;
+const OVERLAY_ACTIVE_WINDOW_TIMEOUT_MS = 1000;
+const TOOL_DESKTOP_WAKE_MS = 75;
+const TOOL_DESKTOP_WAKE_TIMEOUT_MS = 120;
+const TOOL_DESKTOP_WAKE_PROBE_INTERVAL_MS = 50;
+const WINDOW_BOUNDS_JITTER_TOLERANCE_PX = 2;
+const TOOL_TRANSITION_SNAPSHOT_DELAY_MS = OVERLAY_COORDINATOR_REFRESH_MS;
+const TOOL_HUD_STEADY_REFRESH_MS = 5 * 60 * 1000;
+const HIDDEN_SNAPSHOT_REFRESH_MS = 5 * 60 * 1000;
 const ACTIVE_TOOL_TTL_MS = 10 * 60 * 1000;
 const HUD_DEBUG_LOG_MAX_BYTES = 1 * 1024 * 1024;
 const CODEX_SESSION_WATCH_DEBOUNCE_MS = 750;
@@ -36,10 +74,126 @@ const TREND_WINDOW_MS = 15 * 60 * 1000;
 const TREND_MIN_SAMPLE_MS = 2 * 60 * 1000;
 const INGEST_PORT = readPortEnv("WHO_EATS_TOKEN_INGEST_PORT", 17667);
 const HERMES_BRIDGE_PORT = readPortEnv("WHO_EATS_TOKEN_HERMES_BRIDGE_PORT", 17668);
+const GUIDE_DOCUMENTS = {
+  user: "docs/getting-started.md",
+  agent: "docs/agent-getting-started.md"
+};
+const TOOL_DESKTOP_WAKE_POWERSHELL_SCRIPT = `
+$OutputEncoding = [System.Text.Encoding]::UTF8
+[Console]::OutputEncoding = [System.Text.Encoding]::UTF8
+Add-Type @"
+using System;
+using System.Runtime.InteropServices;
+using System.Text;
+public class ToolDesktopWakeProbe {
+  [DllImport("user32.dll")]
+  public static extern IntPtr GetForegroundWindow();
+  [DllImport("user32.dll", SetLastError=true)]
+  public static extern IntPtr GetShellWindow();
+  [DllImport("user32.dll")]
+  public static extern bool IsIconic(IntPtr hWnd);
+  [DllImport("user32.dll", SetLastError=true)]
+  public static extern int GetWindowText(IntPtr hWnd, StringBuilder text, int count);
+  [DllImport("user32.dll", SetLastError=true)]
+  public static extern int GetClassName(IntPtr hWnd, StringBuilder text, int count);
+  [DllImport("user32.dll")]
+  public static extern uint GetWindowThreadProcessId(IntPtr hWnd, out int processId);
+  [DllImport("user32.dll")]
+  public static extern bool GetWindowRect(IntPtr hWnd, out RECT rect);
+  public struct RECT {
+    public int Left;
+    public int Top;
+    public int Right;
+    public int Bottom;
+  }
+}
+"@
+function Get-TextValue([IntPtr]$window) {
+  $text = New-Object System.Text.StringBuilder 1024
+  [ToolDesktopWakeProbe]::GetWindowText($window, $text, $text.Capacity) | Out-Null
+  return $text.ToString()
+}
+function Get-ClassValue([IntPtr]$window) {
+  $class = New-Object System.Text.StringBuilder 256
+  [ToolDesktopWakeProbe]::GetClassName($window, $class, $class.Capacity) | Out-Null
+  return $class.ToString()
+}
+function Write-WindowPayload([IntPtr]$window, [string]$source) {
+  if ($window -eq [IntPtr]::Zero) { return }
+  $processId = 0
+  [ToolDesktopWakeProbe]::GetWindowThreadProcessId($window, [ref]$processId) | Out-Null
+  $process = Get-Process -Id $processId -ErrorAction SilentlyContinue
+  $path = ""
+  try {
+    if ($process -and $process.Path) { $path = $process.Path }
+  } catch {}
+  $rect = New-Object ToolDesktopWakeProbe+RECT
+  [ToolDesktopWakeProbe]::GetWindowRect($window, [ref]$rect) | Out-Null
+  [pscustomobject]@{
+    hwnd = "$($window.ToInt64())"
+    processName = if ($process) { $process.ProcessName } else { "" }
+    path = $path
+    title = Get-TextValue $window
+    className = Get-ClassValue $window
+    bounds = @{
+      x = $rect.Left
+      y = $rect.Top
+      width = $rect.Right - $rect.Left
+      height = $rect.Bottom - $rect.Top
+    }
+    source = $source
+    desktop = @{
+      clear = $true
+      blockerCount = 0
+      blockers = @()
+    }
+  } | ConvertTo-Json -Compress -Depth 4
+  [Console]::Out.Flush()
+}
+while ($true) {
+  $window = [ToolDesktopWakeProbe]::GetForegroundWindow()
+  if ($window -ne [IntPtr]::Zero) {
+    $processId = 0
+    [ToolDesktopWakeProbe]::GetWindowThreadProcessId($window, [ref]$processId) | Out-Null
+    $process = Get-Process -Id $processId -ErrorAction SilentlyContinue
+    $path = ""
+    try {
+      if ($process -and $process.Path) { $path = $process.Path }
+    } catch {}
+    $processName = if ($process) { $process.ProcessName } else { "" }
+    $title = Get-TextValue $window
+    $className = Get-ClassValue $window
+    $rect = New-Object ToolDesktopWakeProbe+RECT
+    [ToolDesktopWakeProbe]::GetWindowRect($window, [ref]$rect) | Out-Null
+    $processLower = $processName.ToLowerInvariant()
+    $pathLower = $path.ToLowerInvariant()
+    $titleLower = $title.Trim().ToLowerInvariant()
+    $classLower = $className.Trim().ToLowerInvariant()
+    $isOffscreenForeground = [ToolDesktopWakeProbe]::IsIconic($window) -or $rect.Left -le -30000 -or $rect.Top -le -30000
+    $isExplorer = $processLower -eq "explorer" -or $pathLower.EndsWith("\\explorer.exe")
+    $isDesktop = $isExplorer -and (
+      $classLower -eq "progman" -or
+      $classLower -eq "workerw" -or
+      $titleLower -eq "program manager" -or
+      $titleLower -eq "desktop"
+    )
+    if ($isDesktop) {
+      Write-WindowPayload $window "tool-desktop-wake-probe"
+    } elseif ($isOffscreenForeground) {
+      Write-WindowPayload ([ToolDesktopWakeProbe]::GetShellWindow()) "tool-desktop-wake-offscreen-probe"
+    }
+  }
+  Start-Sleep -Milliseconds ${TOOL_DESKTOP_WAKE_PROBE_INTERVAL_MS}
+}
+`;
 
 let desktopBarWindow;
 let toolHudWindow;
+let toolHudHitboxWindow;
+let hudTrustPopoverWindow;
 let settingsWindow;
+let settingsOverlayOwner = null;
+let settingsPreservedOverlayDecision = null;
 let tray;
 let ingestServer;
 let hermesBridgeServer;
@@ -47,25 +201,66 @@ let localApiAccess = null;
 let latestSnapshot = null;
 let latestSystemMetrics = null;
 let latestHudPayload = { visible: false };
+let latestHudTrustPopoverPayload = null;
+let latestHudTrustPopoverOwner = null;
+let latestHudTrustPopoverSourceWindow = null;
+let latestHudTrustPopoverSize = {
+  width: HUD_TRUST_POPOVER_WIDTH,
+  height: HUD_TRUST_POPOVER_MIN_HEIGHT
+};
 let latestActiveTool = null;
 let latestActiveToolAt = 0;
 let latestActiveToolWindow = null;
 let lastVisibleHudPayload = null;
 let lastVisibleHudBounds = null;
 let lastVisibleHudAt = 0;
+let warmToolHudPayload = null;
+let warmToolHudBounds = null;
+let warmToolHudAt = 0;
+let latestOverlayDecision = { mode: "hidden", reason: "startup" };
+let latestOverlayDecisionVersion = 0;
+let overlaySampleSequence = 0;
+const overlayController = createOverlayController({
+  noiseGraceMs: 300,
+  confirmedLatencyMs: 400
+});
 let snapshotInFlight = false;
 let hudRefreshInFlight = false;
+let overlayCoordinatorInFlight = false;
+let overlayCoordinatorPriorityInFlight = false;
+let overlayCoordinatorPending = false;
+let overlayCoordinatorGeneration = 0;
 let hudDebugSequence = 0;
 let capacityAlertKeys = new Set();
 let capacityHistory = new Map();
 let settings = sanitizeSettings();
 let snapshotTimer = null;
 let desktopBarTimer = null;
-let hudTimer = null;
+let toolDecisionSnapshotTimer = null;
+let overlayDeferredRetryTimer = null;
+let overlayDeferredRetryDelayMs = OVERLAY_DEFERRED_RETRY_MS;
+let toolDesktopWakeTimer = null;
+let toolDesktopWakeInFlight = false;
+let toolDesktopWakeProbeProcess = null;
+let toolDesktopWakeProbeBuffer = "";
 let systemTimer = null;
 let codexSessionWatcher = null;
 let codexSessionWatchTimer = null;
 let isQuitting = false;
+let desktopBarMouseInteractive = null;
+let toolHudHitboxMouseInteractive = null;
+
+const snapshotService = createSnapshotService({
+  collectCodexUsage,
+  collectHermesUsage,
+  getIngestServer: () => ingestServer,
+  getHermesBridgeServer: () => hermesBridgeServer,
+  getSystemMetrics: () => latestSystemMetrics || refreshSystemMetrics(),
+  getPublicSettings,
+  isProviderEnabled,
+  annotateCapacityTrends,
+  summarizeProviders
+});
 
 applyUserDataOverride();
 const gotSingleInstanceLock = app.requestSingleInstanceLock();
@@ -85,13 +280,13 @@ app.on("second-instance", () => {
 });
 
 function createDesktopBarWindow() {
-  const bounds = getDesktopBarBounds();
+  const bounds = getDesktopBarWindowBounds();
 
   desktopBarWindow = new BrowserWindow({
     x: bounds.x,
     y: bounds.y,
     width: bounds.width,
-    height: BAR_HEIGHT,
+    height: bounds.height,
     frame: false,
     resizable: false,
     maximizable: false,
@@ -100,7 +295,9 @@ function createDesktopBarWindow() {
     alwaysOnTop: false,
     skipTaskbar: true,
     show: false,
+    focusable: false,
     transparent: true,
+    title: "谁在吃 token",
     backgroundColor: "#00000000",
     webPreferences: {
       preload: path.join(__dirname, "preload.cjs"),
@@ -109,47 +306,260 @@ function createDesktopBarWindow() {
     }
   });
 
+  desktopBarWindow.setFocusable(false);
+  desktopBarMouseInteractive = null;
+  setDesktopBarMouseRegion(false);
+  desktopBarWindow.on("focus", () => {
+    desktopBarWindow?.blur();
+  });
+  desktopBarWindow.on("show", () => {
+    desktopBarWindow?.setFocusable(false);
+  });
   desktopBarWindow.loadFile(path.join(__dirname, "renderer", "index.html"));
   desktopBarWindow.once("ready-to-show", () => {
-    desktopBarWindow.webContents.send("settings:update", getPublicSettings());
+    safeSend(desktopBarWindow, "settings:update", getPublicSettings());
     sendSnapshot();
     sendSystemMetrics();
     refreshDesktopBarFromForeground();
   });
 }
 
-function getDesktopBarBounds() {
-  const primary = screen.getPrimaryDisplay();
-  const ratio = settings.windows.desktopWidthRatio;
-  const width = Math.round(primary.workAreaSize.width * ratio);
+function getDesktopBarBounds(sourceSettings = settings) {
+  return getDesktopBarVisualBounds(sourceSettings);
+}
+
+function getDesktopBarWindowBounds(sourceSettings = settings) {
+  return getDesktopBarStageLayout(sourceSettings).windowBounds;
+}
+
+function getDesktopBarVisualBounds(sourceSettings = settings) {
+  return getDesktopBarStageLayout(sourceSettings).barBounds;
+}
+
+function getDesktopBarRendererLayout(sourceSettings = settings) {
+  const layout = getDesktopBarStageLayout(sourceSettings);
   return {
-    x: primary.workArea.x + Math.round((primary.workAreaSize.width - width) / 2),
-    y: primary.bounds.y + 12,
-    width,
-    height: BAR_HEIGHT
+    barX: layout.barBounds.x - layout.windowBounds.x,
+    barY: layout.barBounds.y - layout.windowBounds.y,
+    barWidth: layout.barBounds.width,
+    barHeight: layout.barBounds.height,
+    stageWidth: layout.windowBounds.width,
+    stageHeight: layout.windowBounds.height
   };
 }
 
-function resizeDesktopBar() {
+function getDesktopBarStageLayout(sourceSettings = settings) {
+  const primary = screen.getPrimaryDisplay();
+  const ratio = sourceSettings.windows.desktopWidthRatio;
+  const barHeight = getDesktopBarHeight(sourceSettings);
+  const padding = getDesktopBarStagePadding(sourceSettings);
+  const desiredBarWidth = Math.round(primary.workAreaSize.width * ratio);
+  const stageWidth = Math.min(primary.workAreaSize.width, desiredBarWidth + padding.x * 2);
+  const availableBarWidth = Math.max(320, stageWidth - padding.x * 2);
+  const barWidth = Math.min(desiredBarWidth, availableBarWidth);
+  const stageHeight = Math.min(primary.workAreaSize.height, padding.top + barHeight + padding.bottom);
+  const localBarX = Math.round((stageWidth - barWidth) / 2);
+  const localBarY = Math.min(padding.top, Math.max(0, stageHeight - barHeight - padding.bottom));
+  const stageX = primary.workArea.x + Math.round((primary.workAreaSize.width - stageWidth) / 2);
+  const stageY = primary.workArea.y + 4;
+  return {
+    windowBounds: {
+      x: stageX,
+      y: stageY,
+      width: stageWidth,
+      height: stageHeight
+    },
+    barBounds: {
+      x: stageX + localBarX,
+      y: stageY + localBarY,
+      width: barWidth,
+      height: barHeight
+    }
+  };
+}
+
+function getDesktopBarStagePadding(sourceSettings = settings) {
+  const barHeight = getDesktopBarHeight(sourceSettings);
+  return {
+    x: clampNumber(Math.round(barHeight * 1.12), DESKTOP_BAR_STAGE_MIN_SIDE_PAD, DESKTOP_BAR_STAGE_MAX_SIDE_PAD),
+    top: clampNumber(Math.round(barHeight * 0.06), DESKTOP_BAR_STAGE_MIN_TOP_PAD, DESKTOP_BAR_STAGE_MAX_TOP_PAD),
+    bottom: clampNumber(Math.round(barHeight * 1.46), DESKTOP_BAR_STAGE_MIN_BOTTOM_PAD, DESKTOP_BAR_STAGE_MAX_BOTTOM_PAD)
+  };
+}
+
+function resizeDesktopBar(sourceSettings = settings) {
   if (!desktopBarWindow || desktopBarWindow.isDestroyed()) return;
-  desktopBarWindow.setBounds(getDesktopBarBounds());
+  setWindowBoundsIfChanged(desktopBarWindow, getDesktopBarWindowBounds(sourceSettings));
+  setDesktopBarMouseRegion(false);
+}
+
+function setDesktopBarMouseRegion(interactive) {
+  if (!desktopBarWindow || desktopBarWindow.isDestroyed()) return false;
+  const nextInteractive = Boolean(interactive);
+  if (desktopBarMouseInteractive === nextInteractive) return true;
+  desktopBarMouseInteractive = nextInteractive;
+  desktopBarWindow.setIgnoreMouseEvents(!nextInteractive, { forward: true });
+  return true;
+}
+
+function setToolHudMouseRegion(interactive) {
+  if (!toolHudWindow || toolHudWindow.isDestroyed()) return false;
+  toolHudWindow.setIgnoreMouseEvents(true, { forward: true });
+  return true;
+}
+
+function setToolHudHitboxMouseRegion(interactive) {
+  if (!toolHudHitboxWindow || toolHudHitboxWindow.isDestroyed()) return false;
+  const nextInteractive = Boolean(interactive);
+  if (toolHudHitboxMouseInteractive === nextInteractive) return true;
+  toolHudHitboxMouseInteractive = nextInteractive;
+  reinforceNonActivatingWindow(toolHudHitboxWindow);
+  toolHudHitboxWindow.setIgnoreMouseEvents(!nextInteractive, { forward: true });
+  reinforceNonActivatingWindow(toolHudHitboxWindow);
+  return true;
+}
+
+function getDesktopBarHeight(sourceSettings = settings) {
+  const height = Number(sourceSettings?.windows?.desktopBarHeight);
+  return Number.isFinite(height) ? Math.round(height) : DEFAULT_BAR_HEIGHT;
+}
+
+function resizeToolHud(sourceSettings = settings, previousSettings = settings) {
+  if (!toolHudWindow || toolHudWindow.isDestroyed()) return;
+  const current = toolHudWindow.getBounds();
+  if (latestHudPayload?.visible && latestHudPayload.activeWindow) {
+    const display = getDisplayForActiveWindow(latestHudPayload.activeWindow);
+    const bounds = getHudBounds(display, latestHudPayload.tool, latestHudPayload.activeWindow, sourceSettings);
+    setWindowBoundsIfChanged(toolHudWindow, bounds);
+    showToolHudHitbox(bounds);
+    lastVisibleHudBounds = bounds;
+    return;
+  }
+  const size = getToolHudSize(sourceSettings);
+  const previousOffset = getToolHudOffset(previousSettings);
+  const nextOffset = getToolHudOffset(sourceSettings);
+  const deltaX = nextOffset.x - previousOffset.x;
+  const deltaY = nextOffset.y - previousOffset.y;
+  const display = screen.getDisplayMatching(current);
+  const rightGap = 12;
+  const bottomGap = 12;
+  const bounds = {
+    x: clampNumber(current.x + current.width - size.width - deltaX, display.workArea.x + 12, display.workArea.x + display.workArea.width - size.width - rightGap),
+    y: clampNumber(current.y + current.height - size.height - deltaY, display.workArea.y + 12, display.workArea.y + display.workArea.height - size.height - bottomGap),
+    width: size.width,
+    height: size.height
+  };
+  setWindowBoundsIfChanged(toolHudWindow, bounds);
+  if (latestHudPayload?.visible) showToolHudHitbox(bounds);
+  if (lastVisibleHudBounds) {
+    lastVisibleHudBounds = bounds;
+  }
+}
+
+function getToolHudSize(sourceSettings = settings) {
+  const width = Number(sourceSettings?.windows?.toolHudWidth);
+  const height = Number(sourceSettings?.windows?.toolHudHeight);
+  return {
+    width: Number.isFinite(width) ? Math.round(width) : DEFAULT_HUD_WIDTH,
+    height: Number.isFinite(height) ? Math.round(height) : DEFAULT_HUD_HEIGHT
+  };
+}
+
+function getToolHudOffset(sourceSettings = settings) {
+  const offsetX = Number(sourceSettings?.windows?.toolHudOffsetX);
+  const offsetY = Number(sourceSettings?.windows?.toolHudOffsetY);
+  return {
+    x: Number.isFinite(offsetX) ? Math.round(offsetX) : 0,
+    y: Number.isFinite(offsetY) ? Math.round(offsetY) : 0
+  };
+}
+
+function boundsCloseEnough(first, second, tolerancePx = WINDOW_BOUNDS_JITTER_TOLERANCE_PX) {
+  const left = normalizeBounds(first);
+  const right = normalizeBounds(second);
+  if (!left || !right) return false;
+  return (
+    Math.abs(left.x - right.x) <= tolerancePx &&
+    Math.abs(left.y - right.y) <= tolerancePx &&
+    Math.abs(left.width - right.width) <= tolerancePx &&
+    Math.abs(left.height - right.height) <= tolerancePx
+  );
+}
+
+function hudAnchorBoundsCloseEnough(first, second) {
+  if (boundsCloseEnough(first, second)) return true;
+  return scaledHudAnchorBoundsCloseEnough(first, second);
+}
+
+function scaledHudAnchorBoundsCloseEnough(first, second) {
+  const left = normalizeBounds(first);
+  const right = normalizeBounds(second);
+  if (!left || !right) return false;
+
+  for (const scale of [0.5, 2]) {
+    const scaledLeft = scaleBounds(left, scale);
+    if (boundsCloseEnough(scaledLeft, right, WINDOW_BOUNDS_JITTER_TOLERANCE_PX * 2) &&
+        isDisplayFillingBounds(scaledLeft) &&
+        isDisplayFillingBounds(right)) {
+      return true;
+    }
+
+    const scaledRight = scaleBounds(right, scale);
+    if (boundsCloseEnough(left, scaledRight, WINDOW_BOUNDS_JITTER_TOLERANCE_PX * 2) &&
+        isDisplayFillingBounds(left) &&
+        isDisplayFillingBounds(scaledRight)) {
+      return true;
+    }
+  }
+
+  return false;
+}
+
+function scaleBounds(bounds, scale) {
+  return {
+    x: Math.round(bounds.x * scale),
+    y: Math.round(bounds.y * scale),
+    width: Math.round(bounds.width * scale),
+    height: Math.round(bounds.height * scale)
+  };
+}
+
+function isDisplayFillingBounds(bounds) {
+  const normalized = normalizeBounds(bounds);
+  if (!normalized) return false;
+  const display = screen.getDisplayMatching(normalized);
+  const area = display?.bounds || screen.getPrimaryDisplay().bounds;
+  if (!area?.width || !area?.height) return false;
+  const horizontalCoverage = normalized.width / area.width;
+  const verticalCoverage = normalized.height / area.height;
+  const leftAligned = normalized.x <= area.x + 16;
+  const topAligned = normalized.y <= area.y + 16;
+  return horizontalCoverage >= 0.9 && verticalCoverage >= 0.9 && leftAligned && topAligned;
+}
+
+function setWindowBoundsIfChanged(window, bounds) {
+  if (!window || window.isDestroyed()) return;
+  const current = window.getBounds();
+  if (boundsCloseEnough(current, bounds)) return;
+  window.setBounds(bounds);
 }
 
 function createToolHudWindow() {
   const primary = screen.getPrimaryDisplay();
   const { x, y } = getHudPosition(primary);
+  const size = getToolHudSize();
 
   toolHudWindow = new BrowserWindow({
     x,
     y,
-    width: HUD_WIDTH,
-    height: HUD_HEIGHT,
+    width: size.width,
+    height: size.height,
     frame: false,
     resizable: false,
     maximizable: false,
     minimizable: false,
     fullscreenable: false,
-    alwaysOnTop: true,
+    alwaysOnTop: false,
     focusable: false,
     skipTaskbar: true,
     show: false,
@@ -162,19 +572,241 @@ function createToolHudWindow() {
     }
   });
 
-  toolHudWindow.setAlwaysOnTop(true, "pop-up-menu");
+  toolHudWindow.setAlwaysOnTop(true, "floating");
   toolHudWindow.setFocusable(false);
-  toolHudWindow.setIgnoreMouseEvents(true, { forward: true });
+  setToolHudMouseRegion(false);
   toolHudWindow.on("focus", () => {
     toolHudWindow?.blur();
   });
+  toolHudWindow.on("show", () => {
+    toolHudWindow?.setFocusable(false);
+    setToolHudMouseRegion(false);
+  });
   toolHudWindow.loadFile(path.join(__dirname, "renderer", "hud.html"));
   toolHudWindow.webContents.once("did-finish-load", () => {
-    toolHudWindow.webContents.send("settings:update", getPublicSettings());
+    safeSend(toolHudWindow, "settings:update", getPublicSettings());
+    safeSend(toolHudWindow, "hud:update", latestHudPayload);
+  });
+  createToolHudHitboxWindow();
+}
+
+function createToolHudHitboxWindow() {
+  if (toolHudHitboxWindow && !toolHudHitboxWindow.isDestroyed()) return;
+
+  toolHudHitboxWindow = new BrowserWindow({
+    x: 0,
+    y: 0,
+    width: TOOL_HUD_HITBOX_WIDTH,
+    height: TOOL_HUD_HITBOX_HEIGHT,
+    frame: false,
+    resizable: false,
+    maximizable: false,
+    minimizable: false,
+    fullscreenable: false,
+    alwaysOnTop: false,
+    focusable: false,
+    skipTaskbar: true,
+    show: false,
+    transparent: true,
+    title: "LLM HUD Controls",
+    backgroundColor: "#00000000",
+    webPreferences: {
+      preload: path.join(__dirname, "preload.cjs"),
+      contextIsolation: true,
+      nodeIntegration: false
+    }
+  });
+
+  toolHudHitboxWindow.setAlwaysOnTop(true, "floating");
+  toolHudHitboxWindow.setFocusable(false);
+  toolHudHitboxMouseInteractive = null;
+  setToolHudHitboxMouseRegion(false);
+  toolHudHitboxWindow.on("focus", () => {
+    toolHudHitboxWindow?.blur();
+  });
+  toolHudHitboxWindow.on("show", () => {
+    toolHudHitboxWindow?.setFocusable(false);
+    setToolHudHitboxMouseRegion(false);
+  });
+  toolHudHitboxWindow.on("closed", () => {
+    toolHudHitboxMouseInteractive = null;
+    toolHudHitboxWindow = null;
+  });
+  toolHudHitboxWindow.loadFile(path.join(__dirname, "renderer", "hud-hitbox.html"));
+  toolHudHitboxWindow.webContents.once("did-finish-load", () => {
+    safeSend(toolHudHitboxWindow, "settings:update", getPublicSettings());
+    safeSend(toolHudHitboxWindow, "hud:update", latestHudPayload);
   });
 }
 
-function openSettingsWindow() {
+function createHudTrustPopoverWindow() {
+  if (hudTrustPopoverWindow && !hudTrustPopoverWindow.isDestroyed()) return;
+
+  hudTrustPopoverWindow = new BrowserWindow({
+    width: HUD_TRUST_POPOVER_WIDTH,
+    height: HUD_TRUST_POPOVER_MIN_HEIGHT,
+    frame: false,
+    resizable: false,
+    maximizable: false,
+    minimizable: false,
+    fullscreenable: false,
+    alwaysOnTop: false,
+    focusable: false,
+    skipTaskbar: true,
+    show: false,
+    transparent: true,
+    backgroundColor: "#00000000",
+    webPreferences: {
+      preload: path.join(__dirname, "preload.cjs"),
+      contextIsolation: true,
+      nodeIntegration: false
+    }
+  });
+
+  hudTrustPopoverWindow.setAlwaysOnTop(true, "floating");
+  hudTrustPopoverWindow.setFocusable(false);
+  hudTrustPopoverWindow.setIgnoreMouseEvents(true, { forward: true });
+  hudTrustPopoverWindow.on("focus", () => {
+    hudTrustPopoverWindow?.blur();
+  });
+  hudTrustPopoverWindow.on("closed", () => {
+    hudTrustPopoverWindow = null;
+  });
+  hudTrustPopoverWindow.loadFile(path.join(__dirname, "renderer", "hud-trust-popover.html"));
+  hudTrustPopoverWindow.webContents.once("did-finish-load", () => {
+    safeSend(hudTrustPopoverWindow, "settings:update", getPublicSettings());
+    if (latestHudTrustPopoverPayload) {
+      safeSend(hudTrustPopoverWindow, "hud-trust-popover:update", latestHudTrustPopoverPayload.details || null);
+    }
+  });
+}
+
+function showHudTrustPopover(payload = {}, sourceWindow = null) {
+  const anchorWindow = sourceWindow && !sourceWindow.isDestroyed()
+    ? sourceWindow
+    : toolHudWindow;
+  if (!anchorWindow || anchorWindow.isDestroyed() || !anchorWindow.isVisible()) return false;
+  latestHudTrustPopoverPayload = payload;
+  latestHudTrustPopoverOwner = getHudTrustPopoverOwner(anchorWindow);
+  latestHudTrustPopoverSourceWindow = anchorWindow;
+  createHudTrustPopoverWindow();
+  if (!hudTrustPopoverWindow || hudTrustPopoverWindow.isDestroyed()) return false;
+
+  const bounds = getHudTrustPopoverBounds(payload.anchor || {}, anchorWindow, latestHudTrustPopoverSize);
+  reinforceNonActivatingWindow(hudTrustPopoverWindow);
+  setWindowBoundsIfChanged(hudTrustPopoverWindow, bounds);
+  if (!hudTrustPopoverWindow.webContents.isLoading()) {
+    safeSend(hudTrustPopoverWindow, "hud-trust-popover:update", payload.details || null);
+  }
+  if (!hudTrustPopoverWindow.isVisible()) {
+    hudTrustPopoverWindow.showInactive();
+  }
+  reinforceNonActivatingWindow(hudTrustPopoverWindow);
+  return true;
+}
+
+function hideHudTrustPopover(owner = null) {
+  if (owner && latestHudTrustPopoverOwner && latestHudTrustPopoverOwner !== owner) return false;
+  if (hudTrustPopoverWindow && !hudTrustPopoverWindow.isDestroyed() && hudTrustPopoverWindow.isVisible()) {
+    hudTrustPopoverWindow.hide();
+  }
+  latestHudTrustPopoverOwner = null;
+  latestHudTrustPopoverSourceWindow = null;
+  return true;
+}
+
+function getHudTrustPopoverOwner(sourceWindow) {
+  if (sourceWindow === desktopBarWindow) return "desktop";
+  if (sourceWindow === toolHudWindow || sourceWindow === toolHudHitboxWindow) return "hud";
+  return "other";
+}
+
+function resizeHudTrustPopover(size = {}) {
+  if (!hudTrustPopoverWindow || hudTrustPopoverWindow.isDestroyed()) return false;
+  const height = clampNumber(
+    Math.ceil(Number(size.height) || HUD_TRUST_POPOVER_MIN_HEIGHT),
+    HUD_TRUST_POPOVER_MIN_HEIGHT,
+    HUD_TRUST_POPOVER_MAX_HEIGHT
+  );
+  latestHudTrustPopoverSize = {
+    width: HUD_TRUST_POPOVER_WIDTH,
+    height
+  };
+  const sourceWindow = latestHudTrustPopoverSourceWindow && !latestHudTrustPopoverSourceWindow.isDestroyed()
+    ? latestHudTrustPopoverSourceWindow
+    : null;
+  if (sourceWindow && latestHudTrustPopoverPayload) {
+    setWindowBoundsIfChanged(
+      hudTrustPopoverWindow,
+      getHudTrustPopoverBounds(latestHudTrustPopoverPayload.anchor || {}, sourceWindow, latestHudTrustPopoverSize)
+    );
+  } else {
+    const current = hudTrustPopoverWindow.getBounds();
+    setWindowBoundsIfChanged(hudTrustPopoverWindow, {
+      ...current,
+      width: latestHudTrustPopoverSize.width,
+      height: latestHudTrustPopoverSize.height
+    });
+  }
+  return true;
+}
+
+function getHudTrustPopoverBounds(anchor = {}, anchorWindow = toolHudWindow, size = latestHudTrustPopoverSize) {
+  const sourceBounds = anchorWindow.getBounds();
+  const display = screen.getDisplayMatching(sourceBounds);
+  const workArea = display.workArea;
+  const width = Number(size?.width) || HUD_TRUST_POPOVER_WIDTH;
+  const height = Number(size?.height) || HUD_TRUST_POPOVER_MIN_HEIGHT;
+  const anchorX = Number(anchor.x) || 0;
+  const anchorY = Number(anchor.y) || 0;
+  const anchorWidth = Number(anchor.width) || 0;
+  const anchorHeight = Number(anchor.height) || 0;
+  const anchorCenterX = sourceBounds.x + anchorX + anchorWidth / 2;
+  const gap = 10;
+  let x = Math.round(anchorCenterX - width / 2);
+  let y = Math.round(sourceBounds.y + anchorY + anchorHeight + gap);
+
+  if (y + height > workArea.y + workArea.height - 8) {
+    y = Math.round(sourceBounds.y + anchorY - height - gap);
+  }
+
+  return {
+    x: clampNumber(x, workArea.x + 8, workArea.x + workArea.width - width - 8),
+    y: clampNumber(y, workArea.y + 8, workArea.y + workArea.height - height - 8),
+    width,
+    height
+  };
+}
+
+function normalizeSettingsOverlayOwner(owner) {
+  return ["desktop", "hud", "tray"].includes(owner) ? owner : "unknown";
+}
+
+function getSettingsOverlayOwnerFromWindow(sourceWindow) {
+  if (!sourceWindow || sourceWindow.isDestroyed()) return "unknown";
+  if (sourceWindow === desktopBarWindow) return "desktop";
+  if (sourceWindow === toolHudWindow || sourceWindow === toolHudHitboxWindow || sourceWindow === hudTrustPopoverWindow) return "hud";
+  return "unknown";
+}
+
+function rememberSettingsOverlayOwner(owner = "unknown") {
+  settingsOverlayOwner = normalizeSettingsOverlayOwner(owner);
+  if (latestOverlayDecision?.mode !== "settings-overlay") {
+    settingsPreservedOverlayDecision = latestOverlayDecision;
+  }
+}
+
+function clearSettingsOverlayOwner() {
+  settingsOverlayOwner = null;
+  settingsPreservedOverlayDecision = null;
+}
+
+function isSettingsWindowVisible() {
+  return Boolean(settingsWindow && !settingsWindow.isDestroyed() && (settingsWindow.isVisible() || settingsOverlayOwner));
+}
+
+function openSettingsWindow(owner = "unknown") {
+  rememberSettingsOverlayOwner(owner);
   if (settingsWindow && !settingsWindow.isDestroyed()) {
     settingsWindow.show();
     settingsWindow.focus();
@@ -199,6 +831,7 @@ function openSettingsWindow() {
     skipTaskbar: false,
     show: false,
     transparent: true,
+    title: "谁在吃 token 设置",
     backgroundColor: "#00000000",
     webPreferences: {
       preload: path.join(__dirname, "preload.cjs"),
@@ -210,10 +843,12 @@ function openSettingsWindow() {
   settingsWindow.loadFile(path.join(__dirname, "renderer", "settings.html"));
   settingsWindow.once("ready-to-show", () => {
     settingsWindow.show();
-    settingsWindow.webContents.send("settings:update", getPublicSettings());
+    safeSend(settingsWindow, "settings:update", getPublicSettings());
   });
   settingsWindow.on("closed", () => {
     settingsWindow = null;
+    clearSettingsOverlayOwner();
+    setTimeout(refreshOverlayCoordinator, 0);
   });
 }
 
@@ -227,7 +862,7 @@ function createTray() {
   if (tray) return;
   tray = new Tray(createTrayIcon());
   tray.setIgnoreDoubleClickEvents(true);
-  tray.on("click", () => openSettingsWindow());
+  tray.on("click", () => openSettingsWindow("tray"));
   updateTray();
 }
 
@@ -250,7 +885,7 @@ function getTrayMenuTemplate() {
     { type: "separator" },
     {
       label: "打开设置",
-      click: () => openSettingsWindow()
+      click: () => openSettingsWindow("tray")
     },
     {
       label: "桌面顶部条",
@@ -305,7 +940,7 @@ function getTrayMenuTemplate() {
       label: "立即刷新",
       click: () => {
         sendSnapshot();
-        refreshToolHud();
+        refreshOverlayCoordinator();
       }
     },
     {
@@ -341,34 +976,38 @@ function createTrayIcon() {
   return nativeImage.createFromPath(path.join(__dirname, "assets", "tray.ico"));
 }
 
-function getHudPosition(display, tool = null, activeWindow = null) {
+function getHudPosition(display, tool = null, activeWindow = null, sourceSettings = settings) {
   const workArea = display.workArea;
   const rightGap = 12;
   const bottomOffset = getHudBottomOffset(tool);
-  const targetArea = getHudTargetArea(display, activeWindow);
+  const targetArea = getHudTargetArea(display, activeWindow, sourceSettings);
+  const size = getToolHudSize(sourceSettings);
+  const offset = getToolHudOffset(sourceSettings);
   const minX = workArea.x + 12;
-  const maxX = workArea.x + workArea.width - HUD_WIDTH - rightGap;
+  const maxX = workArea.x + workArea.width - size.width - rightGap;
   const minY = workArea.y + 12;
-  const maxY = workArea.y + workArea.height - HUD_HEIGHT - rightGap;
-  const x = targetArea.x + targetArea.width - HUD_WIDTH - rightGap;
-  const y = targetArea.y + targetArea.height - HUD_HEIGHT - bottomOffset;
+  const maxY = workArea.y + workArea.height - size.height - rightGap;
+  const x = targetArea.x + targetArea.width - size.width - rightGap - offset.x;
+  const y = targetArea.y + targetArea.height - size.height - bottomOffset - offset.y;
   return {
     x: clampNumber(x, minX, maxX),
     y: clampNumber(y, minY, maxY)
   };
 }
 
-function getHudBounds(display, tool = null, activeWindow = null) {
+function getHudBounds(display, tool = null, activeWindow = null, sourceSettings = settings) {
+  const size = getToolHudSize(sourceSettings);
   return {
-    ...getHudPosition(display, tool, activeWindow),
-    width: HUD_WIDTH,
-    height: HUD_HEIGHT
+    ...getHudPosition(display, tool, activeWindow, sourceSettings),
+    width: size.width,
+    height: size.height
   };
 }
 
-function getHudTargetArea(display, activeWindow) {
+function getHudTargetArea(display, activeWindow, sourceSettings = settings) {
   const bounds = activeWindow?.bounds;
-  if (!bounds || bounds.width <= HUD_WIDTH || bounds.height <= HUD_HEIGHT) {
+  const size = getToolHudSize(sourceSettings);
+  if (!bounds || bounds.width <= size.width || bounds.height <= size.height) {
     return display.workArea;
   }
   return bounds;
@@ -380,16 +1019,620 @@ function getHudBottomOffset(tool) {
   return offset;
 }
 
-function clampNumber(value, min, max) {
-  if (max < min) return min;
-  return Math.min(max, Math.max(min, value));
+async function refreshDesktopBarFromForeground() {
+  return refreshOverlayCoordinator();
 }
 
-async function refreshDesktopBarFromForeground() {
-  const activeWindow = await getActiveWindow(getFastWindowInspectionOptions());
-  const foregroundTool = updateActiveToolFromWindow(activeWindow);
-  updateDesktopBarVisibility(activeWindow);
-  hideToolHudForUnsupportedForeground(activeWindow, foregroundTool);
+async function refreshOverlayCoordinator() {
+  return runOverlayCoordinatorPass(getOverlayActiveWindow);
+}
+
+async function runOverlayCoordinatorPass(getActiveWindowForPass, options = {}) {
+  if (isQuitting) return;
+  const priority = options.priority === true;
+  if (!priority && (overlayCoordinatorInFlight || overlayCoordinatorPriorityInFlight)) {
+    overlayCoordinatorPending = true;
+    return;
+  }
+  const generation = priority ? ++overlayCoordinatorGeneration : overlayCoordinatorGeneration;
+  if (priority) {
+    overlayCoordinatorPriorityInFlight = true;
+  } else {
+    overlayCoordinatorInFlight = true;
+  }
+  try {
+    const activeWindow = enrichActiveWindowWithOverlayReports(
+      await getActiveWindowForPass()
+    );
+    if (!priority && generation !== overlayCoordinatorGeneration) return;
+    const decision = await resolveOverlayDecision(activeWindow);
+    if (!priority && generation !== overlayCoordinatorGeneration) return;
+    await applyOverlayDecision(decision);
+  } finally {
+    if (priority) {
+      overlayCoordinatorPriorityInFlight = false;
+    } else {
+      overlayCoordinatorInFlight = false;
+    }
+    if (!overlayCoordinatorInFlight && !overlayCoordinatorPriorityInFlight && overlayCoordinatorPending && !isQuitting) {
+      overlayCoordinatorPending = false;
+      setTimeout(refreshOverlayCoordinator, 0);
+    }
+  }
+}
+
+async function getOverlayActiveWindow() {
+  return withOverlayActiveWindowTimeout(
+    getActiveWindow(getFastWindowInspectionOptions())
+  );
+}
+
+async function getToolDesktopWakeActiveWindow() {
+  return withToolDesktopWakeTimeout(
+    getActiveWindow(getToolDesktopWakeInspectionOptions())
+  );
+}
+
+async function withOverlayActiveWindowTimeout(activeWindowPromise) {
+  let timeoutId = null;
+  const timeoutPromise = new Promise((resolve) => {
+    timeoutId = setTimeout(() => {
+      resolve(createOverlayActiveWindowTimeoutSample());
+    }, OVERLAY_ACTIVE_WINDOW_TIMEOUT_MS);
+    timeoutId.unref?.();
+  });
+
+  try {
+    return await Promise.race([activeWindowPromise, timeoutPromise]);
+  } finally {
+    if (timeoutId) clearTimeout(timeoutId);
+  }
+}
+
+function createOverlayActiveWindowTimeoutSample() {
+  return {
+    source: "overlay-active-window-timeout",
+    title: "",
+    processName: "",
+    path: "",
+    className: "",
+    bounds: null,
+    foregroundFallbackMiss: true,
+    foregroundFallbackReason: "active-window-timeout",
+    samplingNoise: true,
+    desktop: {
+      clear: false,
+      blockerCount: 0,
+      blockers: []
+    }
+  };
+}
+
+async function withToolDesktopWakeTimeout(activeWindowPromise) {
+  let timeoutId = null;
+  const timeoutPromise = new Promise((resolve) => {
+    timeoutId = setTimeout(() => resolve(null), TOOL_DESKTOP_WAKE_TIMEOUT_MS);
+    timeoutId.unref?.();
+  });
+
+  try {
+    return await Promise.race([activeWindowPromise, timeoutPromise]);
+  } finally {
+    if (timeoutId) clearTimeout(timeoutId);
+  }
+}
+
+async function resolveOverlayDecision(activeWindow) {
+  const sampleId = ++overlaySampleSequence;
+  const settingsDecision = resolveSettingsOverlayDecision(activeWindow);
+  const toolContext = settingsDecision?.preserveMode === SURFACES.TOOL
+    ? settingsDecision.preservedDecision?.toolContext || latestOverlayDecision?.toolContext || null
+    : getForegroundToolContext(activeWindow);
+  const decision = overlayController.resolve({
+    sampleId,
+    activeWindow,
+    toolContext,
+    settingsSurface: settingsDecision?.preserveMode || null,
+    samplingNoise: !settingsDecision && isForegroundSamplingNoise(activeWindow),
+    noiseReason: activeWindow?.foregroundFallbackReason || "foreground-sampling-noise",
+    desktopVisible: !settingsDecision && shouldShowDesktopBar(activeWindow),
+    fullscreenForeground: !settingsDecision && isForegroundFullscreen(activeWindow),
+    desktopBarEnabled: settings.windows.desktopBarEnabled,
+    toolHudEnabled: settings.windows.toolHudEnabled
+  });
+
+  return {
+    ...decision,
+    activeWindow,
+    suppressDesktopBar: decision.mode !== SURFACES.DESKTOP,
+    suppressHud: decision.mode !== SURFACES.TOOL,
+    settingsOverlay: Boolean(settingsDecision),
+    preserveMode: settingsDecision?.preserveMode || null,
+    preservedDecision: settingsDecision?.preservedDecision || null,
+    owner: settingsDecision?.owner || null
+  };
+}
+
+function resolveSettingsOverlayDecision(activeWindow) {
+  if (!isSettingsWindowVisible()) return null;
+
+  const preservedDecision = settingsPreservedOverlayDecision || latestOverlayDecision || { mode: "hidden" };
+  const owner = normalizeSettingsOverlayOwner(settingsOverlayOwner);
+  const preserveMode = owner === "desktop" || owner === "hud"
+    ? (owner === "desktop" ? "desktop-topbar" : "tool-hud")
+    : preservedDecision.mode;
+
+  if (!preserveMode || preserveMode === "hidden" || preserveMode === "settings-overlay") return null;
+
+  return {
+    mode: "settings-overlay",
+    reason: isOwnSettingsWindow(activeWindow) ? "settings-window" : "settings-window-visible",
+    preserveOverlay: true,
+    preserveMode,
+    owner,
+    preservedDecision,
+    activeWindow
+  };
+}
+
+async function applyOverlayDecision(decision) {
+  const previousDecision = latestOverlayDecision || { mode: "hidden" };
+  clearOverlayDeferredRetry();
+  latestOverlayDecision = {
+    ...decision,
+    version: ++latestOverlayDecisionVersion
+  };
+  await applyOverlayTransition(latestOverlayDecision, previousDecision);
+}
+
+async function applyOverlayTransition(decision, previousDecision) {
+  if (decision.noise && decision.preserveOverlay) {
+    if (decision.mode === SURFACES.TOOL) {
+      scheduleToolDesktopWake();
+    }
+    scheduleOverlayDeferredRetry();
+    writeOverlayDecisionDebug(decision, previousDecision);
+    return;
+  }
+
+  if (decision.mode === SURFACES.DESKTOP) {
+    clearToolDesktopWake();
+    clearToolDecisionSnapshotRefresh();
+    hideToolHudForDesktop(decision.activeWindow);
+    showDesktopBarForTransition(decision);
+    scheduleNextSnapshotRefresh();
+    writeOverlayDecisionDebug(decision, previousDecision);
+    return;
+  }
+
+  if (decision.mode === SURFACES.TOOL) {
+    if (shouldRefreshSnapshotForToolDecision(decision, previousDecision)) {
+      scheduleToolDecisionSnapshotRefresh(decision);
+    }
+    if (decision.settingsOverlay && !decision.toolContext) {
+      clearToolDesktopWake();
+      preserveSettingsOverlaySurface(decision);
+      hideDesktopBarWindow("tool-hud");
+    } else {
+      hideDesktopBarWindow("tool-hud");
+      if (shouldWarmShowToolHudForDecision(decision, previousDecision)) {
+        warmShowToolHudForTransition(decision);
+      }
+      const shouldRefreshHud = shouldRefreshToolHudForDecision(decision, previousDecision);
+      const shown = shouldRefreshHud
+        ? await refreshToolHud({
+            activeWindow: decision.activeWindow,
+            toolContext: decision.toolContext,
+            decisionVersion: decision.version
+          })
+        : true;
+      if (!isOverlayDecisionCurrent(decision, SURFACES.TOOL)) {
+        writeHudDebugLog({
+          event: "overlay-transition",
+          outcome: "stale-tool-transition",
+          sampleId: decision.sampleId || null,
+          decisionVersion: decision.version || null,
+          currentVersion: latestOverlayDecision?.version || null,
+          currentMode: latestOverlayDecision?.mode || null
+        });
+        return;
+      }
+      if (decision.toolContext) {
+        rememberActiveTool(decision.toolContext.tool, decision.toolContext.window);
+      }
+      if (!shown) {
+        hideToolHudForUnsupportedForeground(decision.activeWindow, null);
+      }
+      scheduleToolDesktopWake();
+    }
+    scheduleNextSnapshotRefresh();
+    writeOverlayDecisionDebug(decision, previousDecision);
+    return;
+  }
+
+  clearToolDesktopWake();
+  clearToolDecisionSnapshotRefresh();
+  hideDesktopBarWindow(decision.reason);
+  if (isDesktopOverlayForeground(decision.activeWindow)) {
+    hideToolHudForDesktop(decision.activeWindow);
+  } else {
+    hideToolHudForUnsupportedForeground(decision.activeWindow, null);
+  }
+  scheduleNextSnapshotRefresh();
+  writeOverlayDecisionDebug(decision, previousDecision);
+}
+
+function shouldWarmShowToolHudForDecision(decision, previousDecision) {
+  if (!decision?.toolContext?.tool) return false;
+  if (previousDecision?.mode !== SURFACES.TOOL) return true;
+  if (!toolHudWindow || toolHudWindow.isDestroyed()) return true;
+  if (!toolHudWindow.isVisible()) return true;
+  if (typeof toolHudWindow.isMinimized === "function" && toolHudWindow.isMinimized()) return true;
+  return false;
+}
+
+function warmShowToolHudForTransition(decision) {
+  if (!settings.windows.toolHudEnabled) return false;
+  if (!toolHudWindow || toolHudWindow.isDestroyed()) return false;
+  if (!decision?.toolContext?.tool || !isOverlayDecisionCurrent(decision, SURFACES.TOOL)) return false;
+  const payload = warmToolHudPayload;
+  if (!payload?.visible || !payload.tool?.id || !payload.activeWindow?.hwnd) return false;
+  if (payload.tool.id !== decision.toolContext.tool.id) return false;
+
+  const expectedHwnd = String(decision.toolContext.window?.hwnd || decision.activeWindow?.hwnd || "");
+  const payloadHwnd = String(payload.activeWindow.hwnd || "");
+  if (!expectedHwnd || expectedHwnd !== payloadHwnd) return false;
+
+  const anchorWindow = decision.toolContext.window || decision.activeWindow || payload.activeWindow;
+  const display = getDisplayForActiveWindow(anchorWindow);
+  const hudBounds = getHudBounds(display, decision.toolContext.tool, anchorWindow) || warmToolHudBounds;
+  if (!hudBounds) return false;
+
+  latestHudPayload = payload;
+  setWindowBoundsIfChanged(toolHudWindow, hudBounds);
+  sendHudUpdate(latestHudPayload);
+  showToolHudWindow(hudBounds);
+  writeHudDebugLog({
+    event: "overlay-transition",
+    outcome: "warm-tool-hud",
+    sampleId: decision.sampleId || null,
+    decisionVersion: decision.version || null,
+    tool: summarizeHudTool(decision.toolContext.tool),
+    activeWindow: summarizeHudWindow(anchorWindow),
+    payloadAgeMs: warmToolHudAt ? Date.now() - warmToolHudAt : null,
+    hudWindowVisible: toolHudWindow.isVisible()
+  });
+  return true;
+}
+
+function isOverlayDecisionCurrent(decision, expectedMode = null) {
+  if (!decision || latestOverlayDecision?.version !== decision.version) return false;
+  if (expectedMode && latestOverlayDecision?.mode !== expectedMode) return false;
+  return true;
+}
+
+function preserveSettingsOverlaySurface(decision) {
+  const preserveMode = decision.preserveMode || decision.preservedDecision?.mode;
+  if (preserveMode === "desktop-topbar") {
+    if (settings.windows.desktopBarEnabled) {
+      showDesktopBarForTransition(decision);
+    }
+    return;
+  }
+
+  if (preserveMode === "tool-hud") {
+    const payload = lastVisibleHudPayload?.visible
+      ? lastVisibleHudPayload
+      : (latestHudPayload?.visible ? latestHudPayload : null);
+    if (!payload) return;
+    latestHudPayload = payload;
+    sendHudUpdate(latestHudPayload);
+    if (!toolHudWindow || toolHudWindow.isDestroyed()) return;
+    if (!toolHudWindow.isVisible() || (typeof toolHudWindow.isMinimized === "function" && toolHudWindow.isMinimized())) {
+      showToolHudWindow(lastVisibleHudBounds);
+    }
+  }
+}
+
+function isDesktopOverlayForeground(activeWindow) {
+  return isDesktopForeground(activeWindow) || isDesktopShellTransientForeground(activeWindow);
+}
+
+function isForegroundSamplingNoise(activeWindow) {
+  return !activeWindow ||
+    Boolean(activeWindow.foregroundFallbackMiss || activeWindow.samplingNoise) ||
+    isZeroSizedExplorerForeground(activeWindow);
+}
+
+function isZeroSizedExplorerForeground(activeWindow) {
+  const processName = String(activeWindow?.processName || "").toLowerCase();
+  const pathText = String(activeWindow?.path || "").toLowerCase();
+  const title = String(activeWindow?.title || "").trim();
+  const bounds = normalizeBounds(activeWindow?.bounds);
+  const isExplorer = processName === "explorer" ||
+    processName === "windows 资源管理器" ||
+    pathText.endsWith("\\explorer.exe") ||
+    pathText.endsWith("/explorer.exe");
+  return isExplorer &&
+    !title &&
+    Boolean(bounds) &&
+    (bounds.width <= 0 || bounds.height <= 0);
+}
+
+function isDesktopShellTransientForeground(activeWindow) {
+  const processName = String(activeWindow?.processName || "").toLowerCase();
+  const path = String(activeWindow?.path || "").toLowerCase();
+  const className = String(activeWindow?.className || "").trim().toLowerCase();
+  const title = String(activeWindow?.title || "").trim().toLowerCase();
+  const bounds = activeWindow?.bounds || {};
+  const isExplorer = processName === "explorer" || path.endsWith("\\explorer.exe") || path.endsWith("/explorer.exe");
+  if (!isExplorer) return false;
+  if (className === "tasklistthumbnailwnd" || className === "notifyiconoverflowwindow") return false;
+  if (/notifyicon|overflow|hidden icons|隐藏.*图标|通知区域|系统托盘|任务栏/.test(title)) return false;
+  if (className === "#32768") return true;
+  const width = Number(bounds.width);
+  const height = Number(bounds.height);
+  return Number.isFinite(width) && Number.isFinite(height) && width > 0 && height > 0 && width <= 720 && height <= 520;
+}
+
+function scheduleOverlayDeferredRetry() {
+  if (isQuitting || overlayDeferredRetryTimer) return;
+  const delayMs = overlayDeferredRetryDelayMs;
+  overlayDeferredRetryDelayMs = Math.min(overlayDeferredRetryDelayMs * 2, OVERLAY_DEFERRED_RETRY_MAX_MS);
+  overlayDeferredRetryTimer = setTimeout(() => {
+    overlayDeferredRetryTimer = null;
+    refreshOverlayCoordinator();
+  }, delayMs);
+}
+
+function clearOverlayDeferredRetry() {
+  overlayDeferredRetryDelayMs = OVERLAY_DEFERRED_RETRY_MS;
+  if (!overlayDeferredRetryTimer) return;
+  clearTimeout(overlayDeferredRetryTimer);
+  overlayDeferredRetryTimer = null;
+}
+
+function scheduleToolDesktopWake() {
+  if (isQuitting || toolDesktopWakeTimer || toolDesktopWakeInFlight) return;
+  if (!shouldRunToolDesktopWake()) return;
+  if (startToolDesktopWakeProbe()) return;
+  toolDesktopWakeTimer = setTimeout(runToolDesktopWake, TOOL_DESKTOP_WAKE_MS);
+  toolDesktopWakeTimer.unref?.();
+}
+
+function clearToolDesktopWake() {
+  if (toolDesktopWakeTimer) {
+    clearTimeout(toolDesktopWakeTimer);
+    toolDesktopWakeTimer = null;
+  }
+  stopToolDesktopWakeProbe();
+}
+
+function shouldRunToolDesktopWake() {
+  return latestOverlayDecision?.mode === SURFACES.TOOL &&
+    !latestOverlayDecision.settingsOverlay &&
+    settings.windows.toolHudEnabled &&
+    toolHudWindow &&
+    !toolHudWindow.isDestroyed() &&
+    toolHudWindow.isVisible();
+}
+
+async function runToolDesktopWake() {
+  toolDesktopWakeTimer = null;
+  if (!shouldRunToolDesktopWake()) return;
+  if (overlayCoordinatorInFlight) {
+    scheduleToolDesktopWake();
+    return;
+  }
+
+  toolDesktopWakeInFlight = true;
+  try {
+    const activeWindow = enrichActiveWindowWithOverlayReports(
+      await getToolDesktopWakeActiveWindow()
+    );
+    if (!activeWindow || !shouldShowDesktopBar(activeWindow)) return;
+    await runOverlayCoordinatorPass(() => activeWindow);
+  } finally {
+    toolDesktopWakeInFlight = false;
+    if (shouldRunToolDesktopWake()) {
+      scheduleToolDesktopWake();
+    }
+  }
+}
+
+function startToolDesktopWakeProbe() {
+  if (process.platform !== "win32") return false;
+  if (toolDesktopWakeProbeProcess && !toolDesktopWakeProbeProcess.killed) return true;
+  toolDesktopWakeProbeBuffer = "";
+  const child = spawn("powershell.exe", [
+    "-NoProfile",
+    "-ExecutionPolicy",
+    "Bypass",
+    "-Command",
+    TOOL_DESKTOP_WAKE_POWERSHELL_SCRIPT
+  ], {
+    windowsHide: true,
+    stdio: ["ignore", "pipe", "pipe"]
+  });
+  toolDesktopWakeProbeProcess = child;
+  child.stdout.setEncoding("utf8");
+  child.stdout.on("data", handleToolDesktopWakeProbeData);
+  child.stderr?.setEncoding?.("utf8");
+  child.stderr?.on("data", (chunk) => {
+    writeHudDebugLog({
+      event: "tool-desktop-wake",
+      outcome: "probe-stderr",
+      message: String(chunk || "").trim().slice(0, 500)
+    });
+  });
+  child.on("error", (error) => {
+    writeHudDebugLog({
+      event: "tool-desktop-wake",
+      outcome: "probe-error",
+      error: error?.message || String(error)
+    });
+  });
+  child.on("exit", () => {
+    if (toolDesktopWakeProbeProcess === child) {
+      toolDesktopWakeProbeProcess = null;
+      toolDesktopWakeProbeBuffer = "";
+    }
+  });
+  return true;
+}
+
+function stopToolDesktopWakeProbe() {
+  const child = toolDesktopWakeProbeProcess;
+  toolDesktopWakeProbeProcess = null;
+  toolDesktopWakeProbeBuffer = "";
+  if (!child || child.killed) return;
+  try {
+    child.kill();
+  } catch {
+    // The helper may already be gone when the overlay transitions away from tool-hud.
+  }
+}
+
+function handleToolDesktopWakeProbeData(chunk) {
+  toolDesktopWakeProbeBuffer += String(chunk || "");
+  let newlineIndex = toolDesktopWakeProbeBuffer.indexOf("\n");
+  while (newlineIndex >= 0) {
+    const line = toolDesktopWakeProbeBuffer.slice(0, newlineIndex).trim();
+    toolDesktopWakeProbeBuffer = toolDesktopWakeProbeBuffer.slice(newlineIndex + 1);
+    if (line) handleToolDesktopWakeProbeLine(line);
+    newlineIndex = toolDesktopWakeProbeBuffer.indexOf("\n");
+  }
+}
+
+function handleToolDesktopWakeProbeLine(line) {
+  if (!shouldRunToolDesktopWake() || toolDesktopWakeInFlight) return;
+  let activeWindow = null;
+  try {
+    activeWindow = normalizeToolDesktopWakeProbeWindow(JSON.parse(line));
+  } catch {
+    writeHudDebugLog({
+      event: "tool-desktop-wake",
+      outcome: "probe-parse-error"
+    });
+    return;
+  }
+  if (!shouldShowDesktopBar(activeWindow)) return;
+  toolDesktopWakeInFlight = true;
+  runOverlayCoordinatorPass(() => activeWindow, { priority: true })
+    .catch((error) => {
+      writeHudDebugLog({
+        event: "tool-desktop-wake",
+        outcome: "wake-failed",
+        error: error?.message || String(error)
+      });
+    })
+    .finally(() => {
+      toolDesktopWakeInFlight = false;
+    });
+}
+
+function normalizeToolDesktopWakeProbeWindow(payload) {
+  return {
+    hwnd: String(payload?.hwnd || ""),
+    processName: payload?.processName || "",
+    path: payload?.path || "",
+    title: payload?.title || "",
+    className: payload?.className || "",
+    bounds: normalizeBounds(payload?.bounds),
+    source: payload?.source || "tool-desktop-wake-probe",
+    desktop: {
+      clear: true,
+      blockerCount: 0,
+      blockers: []
+    }
+  };
+}
+
+function showDesktopBarForTransition(decision) {
+  if (!desktopBarWindow || desktopBarWindow.isDestroyed()) return;
+  if (!settings.windows.desktopBarEnabled || !shouldShowDesktopBar(decision.activeWindow)) {
+    hideDesktopBarWindow("desktop-not-active");
+    return;
+  }
+  const state = getOverlayWindowState(desktopBarWindow);
+  const needsRestore = !state?.visible || state.minimized;
+  if (decision.transition?.changed || needsRestore) {
+    showDesktopBarWindow({ promoteVisible: Boolean(decision.transition?.changed) });
+  }
+}
+
+function hideDesktopBarWindow(reason = "hidden") {
+  if (!desktopBarWindow || desktopBarWindow.isDestroyed()) return;
+  if (desktopBarWindow.isVisible()) {
+    desktopBarWindow.setAlwaysOnTop(false);
+    desktopBarWindow.hide();
+    hideHudTrustPopover("desktop");
+    writeHudDebugLog({
+      event: "desktop-bar",
+      outcome: "hidden",
+      reason
+    });
+  }
+}
+
+function restoreOverlayWindowIfMinimized(window) {
+  if (!window || window.isDestroyed()) return;
+  if (typeof window.isMinimized === "function" && window.isMinimized()) {
+    window.restore();
+  }
+}
+
+function shouldRefreshSnapshotForToolDecision(decision, previousDecision) {
+  if (!latestSnapshot) return true;
+  if (previousDecision?.mode !== "tool-hud") return true;
+  const previousToolId = previousDecision?.toolContext?.tool?.id || null;
+  const nextToolId = decision?.toolContext?.tool?.id || null;
+  return previousToolId !== nextToolId;
+}
+
+function shouldRefreshToolHudForDecision(decision, previousDecision) {
+  if (!toolHudWindow || toolHudWindow.isDestroyed()) return false;
+  if (previousDecision?.mode !== "tool-hud") return true;
+  if (!latestHudPayload?.visible || latestHudPayload.transient) return true;
+  if (!toolHudWindow.isVisible()) return true;
+
+  const previousToolId = previousDecision?.toolContext?.tool?.id || latestHudPayload.tool?.id || null;
+  const nextToolId = decision?.toolContext?.tool?.id || null;
+  if (previousToolId !== nextToolId) return true;
+
+  const previousWindow = latestHudPayload.activeWindow || {};
+  const nextWindow = decision.toolContext?.window || decision.activeWindow || {};
+  if (String(previousWindow.hwnd || "") !== String(nextWindow.hwnd || "")) return true;
+  return !hudAnchorBoundsCloseEnough(previousWindow.bounds, nextWindow.bounds);
+}
+
+function getSnapshotAgeMs(snapshot, now = Date.now()) {
+  const collectedAt = Date.parse(snapshot?.collectedAt || "");
+  if (!Number.isFinite(collectedAt)) return null;
+  return Math.max(0, now - collectedAt);
+}
+
+function writeOverlayDecisionDebug(decision, previousDecision) {
+  if (!isHudDebugEnabled()) return;
+  if (
+    previousDecision?.mode === decision.mode &&
+    previousDecision?.reason === decision.reason &&
+    previousDecision?.toolContext?.tool?.id === decision.toolContext?.tool?.id &&
+    !decision.transition?.changed
+  ) {
+    return;
+  }
+  writeHudDebugLog({
+    event: "overlay-decision",
+    sampleId: decision.sampleId || null,
+    mode: decision.mode,
+    reason: decision.reason,
+    suppressHud: Boolean(decision.suppressHud),
+    activeWindow: summarizeHudWindow(decision.activeWindow),
+    tool: summarizeHudTool(decision.toolContext?.tool || null),
+    transition: decision.transition || null,
+    stalePreserveMs: decision.stalePreserveMs || 0
+  });
 }
 
 function updateActiveToolFromWindow(activeWindow) {
@@ -413,20 +1656,99 @@ function getDetectedToolContext(activeWindow) {
   return null;
 }
 
+function getForegroundToolContext(activeWindow) {
+  const candidates = [];
+  addWindowCandidate(candidates, activeWindow);
+  addWindowCandidate(candidates, getHudAnchorWindow(activeWindow));
+
+  for (const candidateWindow of candidates) {
+    const anchorWindow = getHudAnchorWindow(candidateWindow);
+    const tool = detectTool(candidateWindow) || detectTool(anchorWindow);
+    if (tool) {
+      return {
+        tool,
+        window: anchorWindow || candidateWindow
+      };
+    }
+  }
+  return null;
+}
+
 function getToolDetectionCandidates(activeWindow) {
   const candidates = [];
   addWindowCandidate(candidates, activeWindow);
   addWindowCandidate(candidates, getHudAnchorWindow(activeWindow));
 
-  const blockers = Array.isArray(activeWindow?.desktop?.blockers)
-    ? activeWindow.desktop.blockers
-    : [];
-  for (const blocker of blockers) {
+  if (!shouldInspectDesktopBlockersForToolDetection(activeWindow)) {
+    return candidates;
+  }
+
+  for (const blocker of getToolDetectionBlockers(activeWindow)) {
     addWindowCandidate(candidates, blocker);
     addWindowCandidate(candidates, getHudAnchorWindow(blocker));
   }
 
   return candidates;
+}
+
+function getToolDetectionBlockers(activeWindow) {
+  if (!shouldInspectDesktopBlockersForToolDetection(activeWindow)) return [];
+  const blockers = Array.isArray(activeWindow?.desktop?.blockers)
+    ? activeWindow.desktop.blockers
+    : [];
+  if (!isDialogWindow(activeWindow)) return blockers;
+  return blockers.filter((blocker) => isPotentialDialogParentWindow(activeWindow, blocker));
+}
+
+function isPotentialDialogParentWindow(activeWindow, blocker) {
+  const activePid = Number(activeWindow?.pid) || null;
+  const blockerPid = Number(blocker?.pid) || null;
+  if (activePid && blockerPid && activePid === blockerPid) return true;
+  return boundsOverlap(normalizeBounds(activeWindow?.bounds), normalizeBounds(blocker?.bounds));
+}
+
+function shouldInspectDesktopBlockersForToolDetection(activeWindow) {
+  if (!activeWindow) return false;
+  if (isDialogWindow(activeWindow)) return true;
+  return hasDesktopForegroundBlocker(activeWindow);
+}
+
+function isShellForegroundWindow(activeWindow) {
+  const processName = String(activeWindow?.processName || "").toLowerCase();
+  const className = String(activeWindow?.className || "").toLowerCase();
+  const title = String(activeWindow?.title || "").trim().toLowerCase();
+  const path = String(activeWindow?.path || "").toLowerCase();
+  const shellClasses = [
+    "shell_traywnd",
+    "shell_secondarytraywnd",
+    "progman",
+    "workerw",
+    "#32768",
+    "dv2controlhost",
+    "notifyiconoverflowwindow",
+    "toplevelwindowforoverflowxamlisland",
+    "tasklistthumbnailwnd",
+    "taskswitcherwnd",
+    "mstasklistwclass",
+    "windows.ui.core.corewindow",
+    "xaml_hosting_windowedpopupclass",
+    "xaml_hosting_windowed_popup_class"
+  ];
+  if (shellClasses.includes(className)) return true;
+  const shellProcesses = [
+    "shellexperiencehost",
+    "shellexperiencehost.exe",
+    "startmenuexperiencehost",
+    "startmenuexperiencehost.exe",
+    "searchhost",
+    "searchhost.exe"
+  ];
+  if (shellProcesses.includes(processName)) return true;
+
+  const isExplorer = processName === "explorer" || path.endsWith("\\explorer.exe") || path.endsWith("/explorer.exe");
+  if (!isExplorer) return false;
+  if (!title || title === "program manager" || title === "desktop" || title === "桌面") return true;
+  return /notifyicon|overflow|hidden icons|隐藏.*图标|通知区域|系统托盘|任务栏/.test(title);
 }
 
 function addWindowCandidate(candidates, windowInfo) {
@@ -474,33 +1796,110 @@ function getSnapshotForRenderer(snapshot) {
 
 function sendActiveToolSnapshot() {
   if (!desktopBarWindow || desktopBarWindow.isDestroyed()) return;
-  desktopBarWindow.webContents.send("metrics:update", getSnapshotForRenderer(latestSnapshot));
+  safeSend(desktopBarWindow, "metrics:update", getSnapshotForRenderer(latestSnapshot));
 }
 
-function updateDesktopBarVisibility(activeWindow) {
+function sendHudUpdate(payload) {
+  if (toolHudWindow && !toolHudWindow.isDestroyed()) {
+    safeSend(toolHudWindow, "hud:update", payload);
+  }
+  if (toolHudHitboxWindow && !toolHudHitboxWindow.isDestroyed()) {
+    safeSend(toolHudHitboxWindow, "hud:update", payload);
+  }
+}
+
+function showDesktopBarWindow(options = {}) {
   if (!desktopBarWindow || desktopBarWindow.isDestroyed()) return;
-
-  if (!settings.windows.desktopBarEnabled) {
-    desktopBarWindow.setAlwaysOnTop(false);
-    if (desktopBarWindow.isVisible()) desktopBarWindow.hide();
-    return;
-  }
-
-  if (!isDesktopAvailable(activeWindow)) {
-    desktopBarWindow.setAlwaysOnTop(false);
-    if (desktopBarWindow.isVisible()) {
-      desktopBarWindow.hide();
-    }
-    return;
-  }
-
-  hideToolHudForDesktop(activeWindow);
+  const promoteVisible = options.promoteVisible !== false;
+  const before = getOverlayWindowState(desktopBarWindow);
+  restoreOverlayWindowIfMinimized(desktopBarWindow);
+  reinforceNonActivatingWindow(desktopBarWindow);
   desktopBarWindow.setAlwaysOnTop(true, "floating");
-  desktopBarWindow.show();
+  let action = "already-visible";
+  if (!desktopBarWindow.isVisible()) {
+    action = "show-inactive";
+    desktopBarWindow.showInactive();
+  } else if (promoteVisible && typeof desktopBarWindow.moveTop === "function") {
+    action = "move-top";
+    desktopBarWindow.moveTop();
+  }
+  reinforceNonActivatingWindow(desktopBarWindow);
+  writeHudDebugLog({
+    event: "desktop-bar",
+    outcome: "shown",
+    action,
+    before,
+    after: getOverlayWindowState(desktopBarWindow)
+  });
+}
+
+function getOverlayWindowState(window) {
+  if (!window || window.isDestroyed()) return null;
+  const state = {};
+  try {
+    state.visible = window.isVisible();
+  } catch {
+    state.visible = null;
+  }
+  try {
+    state.minimized = typeof window.isMinimized === "function" ? window.isMinimized() : null;
+  } catch {
+    state.minimized = null;
+  }
+  try {
+    state.bounds = typeof window.getBounds === "function" ? window.getBounds() : null;
+  } catch {
+    state.bounds = null;
+  }
+  return state;
+}
+
+function getToolHudHitboxBounds(hudBounds = null) {
+  const bounds = hudBounds || lastVisibleHudBounds || toolHudWindow?.getBounds?.();
+  if (!bounds) return null;
+  const width = Math.min(TOOL_HUD_HITBOX_WIDTH, Math.max(116, bounds.width - 20));
+  const height = TOOL_HUD_HITBOX_HEIGHT;
+  return {
+    x: Math.round(bounds.x + bounds.width - width - 8),
+    y: Math.round(bounds.y + 4),
+    width,
+    height
+  };
+}
+
+function showToolHudHitbox(hudBounds = null, options = {}) {
+  if (!latestHudPayload?.visible) return;
+  const promoteVisible = options.promoteVisible !== false;
+  createToolHudHitboxWindow();
+  if (!toolHudHitboxWindow || toolHudHitboxWindow.isDestroyed()) return;
+  const bounds = getToolHudHitboxBounds(hudBounds);
+  if (!bounds) return;
+  setWindowBoundsIfChanged(toolHudHitboxWindow, bounds);
+  restoreOverlayWindowIfMinimized(toolHudHitboxWindow);
+  reinforceNonActivatingWindow(toolHudHitboxWindow);
+  toolHudHitboxWindow.setAlwaysOnTop(true, "floating");
+  setToolHudHitboxMouseRegion(false);
+  if (!toolHudHitboxWindow.isVisible()) {
+    toolHudHitboxWindow.showInactive();
+  } else if (promoteVisible && typeof toolHudHitboxWindow.moveTop === "function") {
+    toolHudHitboxWindow.moveTop();
+  }
+  reinforceNonActivatingWindow(toolHudHitboxWindow);
+  sendHudUpdate(latestHudPayload);
+}
+
+function hideToolHudHitbox() {
+  setToolHudHitboxMouseRegion(false);
+  if (toolHudHitboxWindow && !toolHudHitboxWindow.isDestroyed() && toolHudHitboxWindow.isVisible()) {
+    toolHudHitboxWindow.hide();
+  }
 }
 
 function hideToolHudForDesktop(activeWindow) {
   if (!toolHudWindow || toolHudWindow.isDestroyed()) return;
+  hideHudTrustPopover("hud");
+  setToolHudMouseRegion(false);
+  hideToolHudHitbox();
 
   const shouldLog =
     Boolean(latestHudPayload?.visible) ||
@@ -512,6 +1911,7 @@ function hideToolHudForDesktop(activeWindow) {
     hiddenReason: "desktop",
     activeWindow
   };
+  cacheWarmToolHudPayload();
   lastVisibleHudPayload = null;
   lastVisibleHudBounds = null;
   lastVisibleHudAt = 0;
@@ -519,7 +1919,7 @@ function hideToolHudForDesktop(activeWindow) {
   if (toolHudWindow.isVisible()) {
     toolHudWindow.hide();
   }
-  toolHudWindow.webContents.send("hud:update", latestHudPayload);
+  sendHudUpdate(latestHudPayload);
 
   if (shouldLog) {
     writeHudDebugLog({
@@ -534,9 +1934,14 @@ function hideToolHudForDesktop(activeWindow) {
 
 function hideToolHudForUnsupportedForeground(activeWindow, foregroundTool) {
   if (!toolHudWindow || toolHudWindow.isDestroyed()) return;
-  if (!settings.windows.toolHudEnabled) return;
-  if (!activeWindow || foregroundTool) return;
-  if (isDesktopAvailable(activeWindow)) return;
+  if (foregroundTool) return;
+  if (shouldHideToolHudForDesktopForeground(activeWindow)) {
+    hideToolHudForDesktop(activeWindow);
+    return;
+  }
+  hideHudTrustPopover("hud");
+  setToolHudMouseRegion(false);
+  hideToolHudHitbox();
 
   const shouldLog =
     Boolean(latestHudPayload?.visible) ||
@@ -548,6 +1953,7 @@ function hideToolHudForUnsupportedForeground(activeWindow, foregroundTool) {
     hiddenReason: "unsupported-foreground",
     activeWindow
   };
+  clearWarmToolHudPayload();
   lastVisibleHudPayload = null;
   lastVisibleHudBounds = null;
   lastVisibleHudAt = 0;
@@ -555,7 +1961,7 @@ function hideToolHudForUnsupportedForeground(activeWindow, foregroundTool) {
   if (toolHudWindow.isVisible()) {
     toolHudWindow.hide();
   }
-  toolHudWindow.webContents.send("hud:update", latestHudPayload);
+  sendHudUpdate(latestHudPayload);
 
   if (shouldLog) {
     writeHudDebugLog({
@@ -568,27 +1974,56 @@ function hideToolHudForUnsupportedForeground(activeWindow, foregroundTool) {
   }
 }
 
-function isDesktopAvailable(activeWindow) {
-  if (activeWindow?.desktop?.clear === true) return true;
-  return isDesktopForeground(activeWindow);
+function shouldHideToolHudForDesktopForeground(activeWindow) {
+  return shouldShowDesktopBar(activeWindow);
+}
+
+function shouldShowDesktopBar(activeWindow) {
+  if (!activeWindow) return false;
+  if (isOwnDesktopBar(activeWindow)) return false;
+  if (hasDesktopForegroundBlocker(activeWindow)) return false;
+  return isDesktopOverlayForeground(activeWindow);
+}
+
+function hasDesktopForegroundBlocker(activeWindow) {
+  const desktop = activeWindow?.desktop;
+  if (!desktop || desktop.clear !== false) return false;
+  const blockerCount = Number(desktop.blockerCount);
+  return Number.isFinite(blockerCount) && blockerCount > 0;
+}
+
+function isForegroundFullscreen(activeWindow) {
+  const bounds = normalizeBounds(activeWindow?.bounds);
+  if (!bounds || bounds.width <= 0 || bounds.height <= 0) return false;
+  const display = getDisplayForActiveWindow(activeWindow);
+  const displayBounds = normalizeBounds(display?.bounds);
+  if (!displayBounds || displayBounds.width <= 0 || displayBounds.height <= 0) return false;
+
+  const horizontalCoverage = bounds.width / displayBounds.width;
+  const verticalCoverage = bounds.height / displayBounds.height;
+  const leftAligned = bounds.x <= displayBounds.x + 8;
+  const topAligned = bounds.y <= displayBounds.y + 8;
+  return horizontalCoverage >= 0.98 && verticalCoverage >= 0.98 && leftAligned && topAligned;
+}
+
+function reinforceNonActivatingWindow(window) {
+  if (!window || window.isDestroyed()) return;
+  window.setFocusable(false);
+  if (window.isFocused()) {
+    window.blur();
+  }
 }
 
 function isDesktopForeground(activeWindow) {
   if (!activeWindow) return false;
+  return isDesktopForegroundWindow(activeWindow, process.platform);
+}
 
-  const processName = String(activeWindow.processName || "").toLowerCase();
-  const title = String(activeWindow.title || "").trim().toLowerCase();
-  const bundleId = String(activeWindow.bundleId || "").toLowerCase();
-
-  if (isOwnDesktopBar(activeWindow)) return true;
-  if (process.platform === "darwin") {
-    return (processName === "finder" || bundleId === "com.apple.finder") &&
-      (title === "" || title === "desktop" || title === "桌面");
-  }
-
-  if (processName !== "explorer") return false;
-
-  return title === "" || title === "program manager" || title === "desktop" || title === "桌面";
+function doesWindowOverlapDesktopBar(windowInfo) {
+  if (!windowInfo || isOwnDesktopBar(windowInfo)) return false;
+  const bounds = normalizeBounds(windowInfo.bounds);
+  if (!bounds || bounds.width <= 0 || bounds.height <= 0) return false;
+  return boundsOverlap(bounds, getDesktopBarVisualBounds());
 }
 
 function getWindowInspectionOptions() {
@@ -602,7 +2037,16 @@ function getWindowInspectionOptions() {
 function getFastWindowInspectionOptions() {
   return {
     ...getWindowInspectionOptions(),
-    fast: "desktop"
+    fast: "desktop",
+    probeDesktopForeground: latestOverlayDecision?.mode === SURFACES.TOOL
+  };
+}
+
+function getToolDesktopWakeInspectionOptions() {
+  return {
+    ...getFastWindowInspectionOptions(),
+    nativeDesktopFallbackOnly: true,
+    probeDesktopForeground: false
   };
 }
 
@@ -616,7 +2060,7 @@ function getHudWindowInspectionOptions() {
 }
 
 function getOwnedWindowHwnds() {
-  return [desktopBarWindow, toolHudWindow]
+  return [desktopBarWindow, toolHudWindow, toolHudHitboxWindow, hudTrustPopoverWindow, settingsWindow]
     .filter((window) => window && !window.isDestroyed())
     .map(getWindowHwnd)
     .filter(Boolean);
@@ -634,97 +2078,15 @@ function isOwnDesktopBar(activeWindow) {
   return activeHwnd === getWindowHwnd(desktopBarWindow);
 }
 
+function isOwnSettingsWindow(activeWindow) {
+  if (!settingsWindow || settingsWindow.isDestroyed()) return false;
+  const activeHwnd = String(activeWindow?.hwnd || "");
+  if (!activeHwnd) return false;
+  return activeHwnd === getWindowHwnd(settingsWindow);
+}
+
 function collectSnapshot() {
-  const collectedAt = new Date();
-  const codex = isProviderEnabled("codex") ? collectCodexUsage() : null;
-  const hermes = isProviderEnabled("hermes") ? collectHermesUsage() : null;
-  const ingest = ingestServer ? ingestServer.getSummary() : null;
-  const providers = annotateCapacityTrends(
-    mergeProviders([
-      codex,
-      hermes,
-      ...(isProviderEnabled("ingest") ? ingest?.providers || [] : [])
-    ].filter(Boolean)),
-    collectedAt
-  );
-  const publicSettings = getPublicSettings();
-  const baseSnapshot = {
-    collectedAt: collectedAt.toISOString(),
-    ingest: ingest
-      ? {
-          port: ingest.port,
-        listening: ingest.listening,
-        error: ingest.error,
-        eventCount: ingest.eventCount,
-        recentEventCount: ingest.recentEventCount,
-        overlayCount: ingest.overlayCount
-      }
-      : null,
-    bridges: {
-      hermes: hermesBridgeServer ? hermesBridgeServer.getStatus() : null
-    },
-    system: latestSystemMetrics || refreshSystemMetrics(),
-    totals: summarizeProviders(providers),
-    providers,
-    settings: publicSettings
-  };
-
-  return {
-    ...baseSnapshot,
-    providerHealth: summarizeProviderHealth(baseSnapshot)
-  };
-}
-
-function mergeProviders(providers) {
-  const byId = new Map();
-  for (const provider of providers) {
-    const current = byId.get(provider.id);
-    byId.set(provider.id, current ? mergeProvider(current, provider) : provider);
-  }
-  return Array.from(byId.values());
-}
-
-function mergeProvider(base, incoming) {
-  const baseTimestamp = Date.parse(base.latest?.timestamp || "");
-  const incomingTimestamp = Date.parse(incoming.latest?.timestamp || "");
-  const preferred = Number.isFinite(baseTimestamp) && Number.isFinite(incomingTimestamp)
-    ? incomingTimestamp >= baseTimestamp
-      ? incoming
-      : base
-    : incoming.latest
-      ? incoming
-      : base;
-  const other = preferred === incoming ? base : incoming;
-
-  return {
-    ...other,
-    ...preferred,
-    status: preferred.status === "live" || other.status === "live" ? "live" : preferred.status,
-    confidence: preferred.confidence || other.confidence,
-    todayTokens: Math.max(numberOrZero(base.todayTokens), numberOrZero(incoming.todayTokens)),
-    recentTokens: Math.max(numberOrZero(base.recentTokens), numberOrZero(incoming.recentTokens)),
-    todayCostUsd: Math.max(numberOrZero(base.todayCostUsd), numberOrZero(incoming.todayCostUsd)),
-    latest: mergeLatestState(base.latest, incoming.latest, preferred.latest),
-    models: preferred.models?.length ? preferred.models : other.models || []
-  };
-}
-
-function mergeLatestState(baseLatest, incomingLatest, preferredLatest) {
-  if (!baseLatest && !incomingLatest && !preferredLatest) return null;
-  const preferred = preferredLatest || incomingLatest || baseLatest;
-  return {
-    ...baseLatest,
-    ...incomingLatest,
-    ...preferred,
-    rateLimits: incomingLatest?.rateLimits || baseLatest?.rateLimits || preferred?.rateLimits || null,
-    rateLimitsTrust:
-      incomingLatest?.rateLimitsTrust ||
-      baseLatest?.rateLimitsTrust ||
-      preferred?.rateLimitsTrust ||
-      null,
-    context: incomingLatest?.context || baseLatest?.context || preferred?.context || null,
-    tokenPlan: incomingLatest?.tokenPlan || baseLatest?.tokenPlan || preferred?.tokenPlan || null
-  };
+  return snapshotService.collectSnapshot();
 }
 
 function isProviderEnabled(providerId) {
@@ -965,7 +2327,7 @@ function refreshSystemMetrics() {
 function sendSystemMetrics() {
   const system = refreshSystemMetrics();
   if (desktopBarWindow && !desktopBarWindow.isDestroyed()) {
-    desktopBarWindow.webContents.send("system:update", system);
+    safeSend(desktopBarWindow, "system:update", system);
   }
 }
 
@@ -974,25 +2336,88 @@ function sendSnapshot() {
   snapshotInFlight = true;
   try {
     latestSnapshot = collectSnapshot();
+    refreshVisibleHudPayloadFromSnapshot(latestSnapshot);
     maybeSendLowCapacityAlerts(latestSnapshot);
     updateTray();
     if (desktopBarWindow && !desktopBarWindow.isDestroyed()) {
-      desktopBarWindow.webContents.send("metrics:update", getSnapshotForRenderer(latestSnapshot));
+      safeSend(desktopBarWindow, "metrics:update", getSnapshotForRenderer(latestSnapshot));
     }
     if (toolHudWindow && !toolHudWindow.isDestroyed()) {
-      toolHudWindow.webContents.send("hud:update", latestHudPayload);
+      sendHudUpdate(latestHudPayload);
     }
   } finally {
     snapshotInFlight = false;
+    scheduleNextSnapshotRefresh();
   }
 }
 
-async function refreshToolHud() {
-  if (hudRefreshInFlight) return;
-  if (!toolHudWindow || toolHudWindow.isDestroyed()) return;
+function scheduleToolDecisionSnapshotRefresh(decision) {
+  clearToolDecisionSnapshotRefresh();
+  if (isQuitting || !decision?.version) return;
+  const decisionVersion = decision.version;
+  toolDecisionSnapshotTimer = setTimeout(() => {
+    toolDecisionSnapshotTimer = null;
+    if (latestOverlayDecision?.version !== decisionVersion || latestOverlayDecision?.mode !== SURFACES.TOOL) {
+      return;
+    }
+    sendSnapshot();
+  }, TOOL_TRANSITION_SNAPSHOT_DELAY_MS);
+  toolDecisionSnapshotTimer.unref?.();
+}
+
+function clearToolDecisionSnapshotRefresh() {
+  if (!toolDecisionSnapshotTimer) return;
+  clearTimeout(toolDecisionSnapshotTimer);
+  toolDecisionSnapshotTimer = null;
+}
+
+function scheduleNextSnapshotRefresh(delayMs = getSnapshotRefreshDelayMs()) {
+  if (isQuitting) return;
+  if (snapshotTimer) {
+    clearTimeout(snapshotTimer);
+    snapshotTimer = null;
+  }
+  const delay = clampNumber(delayMs, settings.behavior.refreshMs, TOOL_HUD_STEADY_REFRESH_MS);
+  snapshotTimer = setTimeout(() => {
+    snapshotTimer = null;
+    sendSnapshot();
+  }, delay);
+  snapshotTimer.unref?.();
+}
+
+function getSnapshotRefreshDelayMs() {
+  if (latestOverlayDecision?.mode === "desktop-topbar") {
+    return settings.behavior.refreshMs;
+  }
+  if (latestOverlayDecision?.mode === "tool-hud") {
+    return TOOL_HUD_STEADY_REFRESH_MS;
+  }
+  return HIDDEN_SNAPSHOT_REFRESH_MS;
+}
+
+function refreshVisibleHudPayloadFromSnapshot(snapshot) {
+  if (!snapshot) return;
+  if (!latestHudPayload?.visible || !latestHudPayload.tool || latestHudPayload.transient) return;
+  const nextPayload = buildHudPayload(snapshot, latestHudPayload.activeWindow, latestHudPayload.tool);
+  latestHudPayload = {
+    ...nextPayload,
+    repositioned: latestHudPayload.repositioned,
+    repositionReason: latestHudPayload.repositionReason
+  };
+  lastVisibleHudPayload = latestHudPayload;
+  cacheWarmToolHudPayload();
+}
+
+async function refreshToolHud(options = {}) {
+  if (hudRefreshInFlight) return false;
+  if (!toolHudWindow || toolHudWindow.isDestroyed()) return false;
   if (!settings.windows.toolHudEnabled) {
+    setToolHudMouseRegion(false);
+    hideToolHudHitbox();
     if (toolHudWindow.isVisible()) toolHudWindow.hide();
+    hideHudTrustPopover("hud");
     latestHudPayload = { visible: false };
+    clearWarmToolHudPayload();
     lastVisibleHudPayload = null;
     lastVisibleHudBounds = null;
     lastVisibleHudAt = 0;
@@ -1000,27 +2425,39 @@ async function refreshToolHud() {
       event: "hud-refresh",
       outcome: "disabled"
     });
-    return;
+    return false;
+  }
+  if (!options.toolContext?.tool) {
+    writeHudDebugLog({
+      event: "hud-refresh",
+      outcome: "skipped-no-tool-context",
+      activeWindow: summarizeHudWindow(options.activeWindow),
+      hudWindowVisible: toolHudWindow.isVisible()
+    });
+    return false;
   }
   hudRefreshInFlight = true;
   const debugId = ++hudDebugSequence;
   try {
-    const snapshot = latestSnapshot || collectSnapshot();
-    let activeWindow = enrichActiveWindowWithOverlayReports(
-      await getActiveWindow(getHudWindowInspectionOptions())
-    );
-    let toolContext = getDetectedToolContext(activeWindow);
-    if (!toolContext) {
-      const fastActiveWindow = await getActiveWindow(getFastWindowInspectionOptions());
-      const fastToolContext = getDetectedToolContext(fastActiveWindow);
-      if (fastToolContext) {
-        activeWindow = fastActiveWindow;
-        toolContext = fastToolContext;
-      }
+    const activeWindow = enrichActiveWindowWithOverlayReports(options.activeWindow || {});
+    const toolContext = options.toolContext;
+    if (isStaleToolHudRefresh(options, toolContext)) {
+      retireStaleToolHudRefresh(activeWindow);
+      writeHudDebugLog({
+        event: "hud-refresh",
+        id: debugId,
+        outcome: "stale-decision",
+        decisionVersion: options.decisionVersion || null,
+        currentVersion: latestOverlayDecision?.version || null,
+        currentMode: latestOverlayDecision?.mode || null,
+        activeWindow: summarizeHudWindow(activeWindow),
+        detectedTool: summarizeHudTool(toolContext?.tool || null)
+      });
+      return false;
     }
+    const snapshot = latestSnapshot || collectSnapshot();
     const anchorWindow = toolContext?.window || getHudAnchorWindow(activeWindow);
     const tool = toolContext?.tool || null;
-    rememberActiveTool(tool, anchorWindow || activeWindow);
     const payloadWindow = tool ? anchorWindow || activeWindow : activeWindow;
     latestHudPayload = buildHudPayload(snapshot, payloadWindow, tool);
     const debugBase = isHudDebugEnabled()
@@ -1035,104 +2472,102 @@ async function refreshToolHud() {
       : null;
 
     if (!latestHudPayload.visible) {
-      if (shouldKeepHudDuringTransientMiss(activeWindow, lastVisibleHudPayload, lastVisibleHudAt)) {
-        latestHudPayload = {
-          ...lastVisibleHudPayload,
-          transient: true,
-          transientReason: "active-window-miss"
-        };
-        if (lastVisibleHudBounds) {
-          toolHudWindow.setBounds(lastVisibleHudBounds);
-        }
-        toolHudWindow.webContents.send("hud:update", latestHudPayload);
-        showToolHudWindow();
-        writeHudDebugLog({
-          ...(debugBase || {}),
-          payload: summarizeHudPayload(latestHudPayload),
-          outcome: "transient-keep",
-          hudWindowVisible: toolHudWindow.isVisible(),
-          lastVisibleAgeMs: Date.now() - lastVisibleHudAt
-        });
-        return;
-      }
+      setToolHudMouseRegion(false);
+      hideToolHudHitbox();
       toolHudWindow.hide();
+      hideHudTrustPopover("hud");
+      clearWarmToolHudPayload();
       writeHudDebugLog({
         ...(debugBase || {}),
         outcome: "hidden-no-tool",
         hudWindowVisible: false
       });
-      return;
+      return false;
     }
 
     const display = getDisplayForActiveWindow(anchorWindow || activeWindow);
     const hudBounds = getHudBounds(display, tool, anchorWindow || activeWindow);
-    const coveringDialog = getHudCoveringDialog(activeWindow, hudBounds, anchorWindow);
-    if (coveringDialog) {
-      const alternativeHudBounds = getAlternativeHudBounds(display, tool, anchorWindow || activeWindow, activeWindow);
-      if (alternativeHudBounds) {
-        latestHudPayload = {
-          ...latestHudPayload,
-          repositioned: true,
-          repositionReason: "avoid-content"
-        };
-        toolHudWindow.setBounds(alternativeHudBounds);
-        toolHudWindow.webContents.send("hud:update", latestHudPayload);
-        lastVisibleHudPayload = latestHudPayload;
-        lastVisibleHudBounds = alternativeHudBounds;
-        lastVisibleHudAt = Date.now();
-        showToolHudWindow();
-        writeHudDebugLog({
-          ...(debugBase || {}),
-          payload: summarizeHudPayload(latestHudPayload),
-          outcome: "repositioned",
-          hudBounds: alternativeHudBounds,
-          coveringDialog: summarizeHudWindow(coveringDialog),
-          hudWindowVisible: toolHudWindow.isVisible()
-        });
-        return;
-      }
-      latestHudPayload = {
-        ...latestHudPayload,
-        visible: false,
-        hiddenReason: "dialog-overlap",
-        coveringDialog
-      };
-      toolHudWindow.hide();
-      writeHudDebugLog({
-        ...(debugBase || {}),
-        payload: summarizeHudPayload(latestHudPayload),
-        outcome: "hidden-dialog-overlap",
-        hudBounds,
-        coveringDialog: summarizeHudWindow(coveringDialog),
-        hudWindowVisible: false
-      });
-      return;
-    }
-
-    toolHudWindow.setBounds(hudBounds);
-    toolHudWindow.webContents.send("hud:update", latestHudPayload);
+    setWindowBoundsIfChanged(toolHudWindow, hudBounds);
+    sendHudUpdate(latestHudPayload);
     lastVisibleHudPayload = latestHudPayload;
     lastVisibleHudBounds = hudBounds;
     lastVisibleHudAt = Date.now();
-    showToolHudWindow();
+    cacheWarmToolHudPayload();
+    if (isStaleToolHudRefresh(options, toolContext)) {
+      retireStaleToolHudRefresh(activeWindow);
+      writeHudDebugLog({
+        ...(debugBase || {}),
+        outcome: "stale-before-show",
+        decisionVersion: options.decisionVersion || null,
+        currentVersion: latestOverlayDecision?.version || null,
+        currentMode: latestOverlayDecision?.mode || null
+      });
+      return false;
+    }
+    showToolHudWindow(hudBounds);
     writeHudDebugLog({
       ...(debugBase || {}),
       outcome: "shown",
       hudBounds,
       hudWindowVisible: toolHudWindow.isVisible()
     });
+    return true;
   } finally {
     hudRefreshInFlight = false;
   }
 }
 
-function showToolHudWindow() {
+function cacheWarmToolHudPayload() {
+  if (!lastVisibleHudPayload?.visible || !lastVisibleHudPayload.tool?.id) return;
+  if (!lastVisibleHudPayload.activeWindow?.hwnd || !lastVisibleHudBounds) return;
+  warmToolHudPayload = lastVisibleHudPayload;
+  warmToolHudBounds = lastVisibleHudBounds;
+  warmToolHudAt = lastVisibleHudAt || Date.now();
+}
+
+function clearWarmToolHudPayload() {
+  warmToolHudPayload = null;
+  warmToolHudBounds = null;
+  warmToolHudAt = 0;
+}
+
+function showToolHudWindow(hudBounds = null, options = {}) {
   if (!toolHudWindow || toolHudWindow.isDestroyed()) return;
-  toolHudWindow.setAlwaysOnTop(true, "pop-up-menu");
-  toolHudWindow.setFocusable(false);
-  toolHudWindow.setIgnoreMouseEvents(true, { forward: true });
-  toolHudWindow.showInactive();
-  toolHudWindow.blur();
+  const promoteVisible = options.promoteVisible !== false;
+  restoreOverlayWindowIfMinimized(toolHudWindow);
+  reinforceNonActivatingWindow(toolHudWindow);
+  toolHudWindow.setAlwaysOnTop(true, "floating");
+  setToolHudMouseRegion(false);
+  if (!toolHudWindow.isVisible()) {
+    toolHudWindow.showInactive();
+  } else if (promoteVisible && typeof toolHudWindow.moveTop === "function") {
+    toolHudWindow.moveTop();
+  }
+  reinforceNonActivatingWindow(toolHudWindow);
+  showToolHudHitbox(hudBounds || toolHudWindow.getBounds(), { promoteVisible });
+}
+
+function isStaleToolHudRefresh(options, toolContext) {
+  if (options.decisionVersion && latestOverlayDecision?.version !== options.decisionVersion) return true;
+  if (latestOverlayDecision?.mode !== "tool-hud") return true;
+
+  const expectedToolId = latestOverlayDecision.toolContext?.tool?.id || null;
+  const nextToolId = toolContext?.tool?.id || null;
+  if (expectedToolId && nextToolId && expectedToolId !== nextToolId) return true;
+
+  const expectedHwnd = String(latestOverlayDecision.toolContext?.window?.hwnd || latestOverlayDecision.activeWindow?.hwnd || "");
+  const nextHwnd = String(toolContext?.window?.hwnd || "");
+  return Boolean(expectedHwnd && nextHwnd && expectedHwnd !== nextHwnd);
+}
+
+function retireStaleToolHudRefresh(activeWindow) {
+  if (latestOverlayDecision?.mode === "desktop-topbar" || isDesktopOverlayForeground(latestOverlayDecision?.activeWindow)) {
+    hideToolHudForDesktop(latestOverlayDecision.activeWindow || activeWindow);
+    return;
+  }
+  if (latestOverlayDecision?.suppressHud) {
+    hideToolHudForUnsupportedForeground(latestOverlayDecision.activeWindow || activeWindow, null);
+  }
 }
 
 function buildHudDebugEntry({ id, snapshot, activeWindow, anchorWindow, tool, payload }) {
@@ -1205,7 +2640,9 @@ function summarizeHudPayload(payload) {
           tokenPlanUsedCredits: provider.tokenPlanUsedCredits,
           tokenPlanTotalCredits: provider.tokenPlanTotalCredits,
           tokenPlanSource: provider.tokenPlanSource,
-          tokenPlanPlatformStatus: provider.tokenPlanPlatformStatus
+          tokenPlanPlatformStatus: provider.tokenPlanPlatformStatus,
+          tokenAccuracy: provider.tokenAccuracy || null,
+          tokenEstimated: Boolean(provider.tokenEstimated)
         }
       : null
   };
@@ -1268,53 +2705,6 @@ function trimHudDebugLog(filePath) {
   }
 }
 
-function getAlternativeHudBounds(display, tool, anchorWindow, activeWindow) {
-  const baseOffset = Number(tool?.hud?.bottomOffset);
-  const offsets = tool?.id === "hermes-web-ui" && Number.isFinite(baseOffset)
-    ? [baseOffset + 24, baseOffset + 48, baseOffset + 72, baseOffset + 96]
-    : [12, 24, 48, 72].filter((offset) => offset !== baseOffset);
-  for (const offset of offsets) {
-    const candidateTool = {
-      ...tool,
-      hud: {
-        ...(tool?.hud || {}),
-        bottomOffset: offset
-      }
-    };
-    const candidateBounds = getHudBounds(display, candidateTool, anchorWindow);
-    if (!getHudCoveringDialog(activeWindow, candidateBounds, anchorWindow)) {
-      return candidateBounds;
-    }
-  }
-  return null;
-}
-
-function shouldKeepHudDuringTransientMiss(activeWindow, previousPayload, previousVisibleAt) {
-  if (!previousPayload?.visible || !previousVisibleAt) return false;
-  if (Date.now() - previousVisibleAt > HUD_TRANSIENT_MISS_MS) return false;
-  if (!activeWindow) return true;
-
-  const previousToolId = previousPayload.tool?.id;
-  const processName = String(activeWindow.processName || "").toLowerCase();
-  const haystack = `${activeWindow.title || ""} ${activeWindow.path || ""} ${activeWindow.url || ""}`;
-
-  if (previousToolId === "codex") {
-    return processName === "codex" || /\bcodex\b/i.test(haystack);
-  }
-
-  if (previousToolId === "hermes-web-ui") {
-    return (
-      processName === "hermes-web-ui" ||
-      ["arc", "brave browser", "chrome", "firefox", "google chrome", "microsoft edge", "msedge", "browser", "safari"].includes(processName)
-    ) && (
-      /^hermes(?:\s+(?:web\s*ui|agent|chat))?(?:\s*-\s*(google chrome|microsoft edge|mozilla firefox|firefox|safari))?$/i.test(String(activeWindow.title || "").trim()) ||
-      /(127\.0\.0\.1:8648|localhost:8648|\/hermes\/chat)/i.test(haystack)
-    );
-  }
-
-  return false;
-}
-
 function enrichActiveWindowWithOverlayReports(activeWindow) {
   if (!activeWindow || !ingestServer?.getOverlayReports) return activeWindow;
 
@@ -1368,28 +2758,11 @@ function isOverlayReportForActiveWindow(activeWindow, report) {
   return titleLooksHermes && reportLooksHermes;
 }
 
-function normalizeBounds(bounds = {}) {
-  const x = Number(bounds?.x);
-  const y = Number(bounds?.y);
-  const width = Number(bounds?.width);
-  const height = Number(bounds?.height);
-  if (![x, y, width, height].every(Number.isFinite)) return null;
-  return { x, y, width, height };
-}
-
-function boundsOverlap(first, second) {
-  if (!first || !second) return false;
-  const firstRight = first.x + first.width;
-  const firstBottom = first.y + first.height;
-  const secondRight = second.x + second.width;
-  const secondBottom = second.y + second.height;
-  return firstRight > second.x && first.x < secondRight && firstBottom > second.y && first.y < secondBottom;
-}
-
 function getHudAnchorWindow(activeWindow) {
   if (!isDialogWindow(activeWindow)) return activeWindow;
 
   const activePid = Number(activeWindow?.pid) || null;
+  const size = getToolHudSize();
   const blockers = Array.isArray(activeWindow?.desktop?.blockers)
     ? activeWindow.desktop.blockers
     : [];
@@ -1401,19 +2774,11 @@ function getHudAnchorWindow(activeWindow) {
     })
     .filter((windowInfo) => {
       const bounds = windowInfo?.bounds;
-      return Number(bounds?.width) > HUD_WIDTH && Number(bounds?.height) > HUD_HEIGHT;
+      return Number(bounds?.width) > size.width && Number(bounds?.height) > size.height;
     })
     .sort((a, b) => getWindowArea(b) - getWindowArea(a));
 
   return candidates[0] || activeWindow;
-}
-
-function getWindowArea(windowInfo) {
-  const bounds = windowInfo?.bounds || {};
-  const width = Number(bounds.width);
-  const height = Number(bounds.height);
-  if (!Number.isFinite(width) || !Number.isFinite(height)) return 0;
-  return width * height;
 }
 
 function buildHudPayload(snapshot, activeWindow, tool) {
@@ -1456,7 +2821,11 @@ function buildHudPayload(snapshot, activeWindow, tool) {
           recentTokens: provider.recentTokens || 0,
           model: provider.latest?.model || null,
           usedPercent: usedPercent ?? roundedNumberOrNull(tokenPlan?.usedPercent) ?? roundedNumberOrNull(context?.usedPercent),
-          remainingPercent: fiveHourRemaining ?? tokenPlanRemaining ?? contextRemaining,
+          remainingPercent: displayMode === "token-plan"
+            ? tokenPlanRemaining
+            : displayMode === "context"
+              ? contextRemaining
+              : fiveHourRemaining ?? weekRemaining,
           fiveHourRemaining,
           weekRemaining,
           displayMode,
@@ -1477,6 +2846,8 @@ function buildHudPayload(snapshot, activeWindow, tool) {
           contextUsedTokens: numberOrNull(context?.usedTokens),
           contextLimitTokens: numberOrNull(context?.limitTokens),
           contextSource: context?.source || null,
+          tokenAccuracy: providerHealth?.tokenAccuracy || provider.tokenAccuracy || context?.tokenAccuracy || null,
+          tokenEstimated: Boolean(providerHealth?.tokenEstimated || provider.tokenEstimated || context?.estimated),
           syncStatus: provider.latest?.rateLimitsTrust?.status || "missing",
           syncLabel: provider.latest?.rateLimitsTrust?.label || "等待",
           health: providerHealth || null,
@@ -1606,22 +2977,77 @@ function getDisplayForActiveWindow(activeWindow) {
   return screen.getDisplayMatching(bounds);
 }
 
-function getPublicSettings() {
+function getPublicSettings(sourceSettings = settings) {
   return {
-    ...settings,
-    providerRegistry: getProviderRegistry(settings)
+    ...sourceSettings,
+    providerRegistry: getProviderRegistry(sourceSettings),
+    desktopBarStage: getDesktopBarRendererLayout(sourceSettings)
   };
+}
+
+function getLocalSetupInfo() {
+  return {
+    endpoint: `http://127.0.0.1:${INGEST_PORT}`,
+    tokenFile: localApiAccess?.tokenFile || null,
+    tokenSource: localApiAccess?.source === "env" ? "WHO_EATS_TOKEN_API_TOKEN" : "api-token.txt",
+    statusCommand: "npm run status"
+  };
+}
+
+async function openGuideDocument(guide) {
+  const relativePath = GUIDE_DOCUMENTS[String(guide || "")];
+  if (!relativePath) return { ok: false, error: "Unknown guide." };
+  const documentPath = path.resolve(__dirname, "..", relativePath);
+  if (!fs.existsSync(documentPath)) return { ok: false, error: "Guide document was not found." };
+  const error = await shell.openPath(documentPath);
+  return { ok: !error, error: error || null };
 }
 
 function updateSettings(nextSettings) {
   const previous = settings;
-  settings = saveSettings(app.getPath("userData"), nextSettings);
+  settings = saveSettings(app.getPath("userData"), guardSettingsPayload(nextSettings));
   applySettings(previous, settings);
   return getPublicSettings();
 }
 
+function previewSettings(nextSettings) {
+  const guardedSettings = guardSettingsPayload(nextSettings);
+  try {
+    const preview = sanitizeSettings({
+      ...settings,
+      appearance: {
+        ...settings.appearance,
+        ...(guardedSettings?.appearance || {})
+      },
+      windows: {
+        ...settings.windows,
+        desktopWidthRatio: guardedSettings?.windows?.desktopWidthRatio ?? settings.windows.desktopWidthRatio,
+        desktopBarHeight: guardedSettings?.windows?.desktopBarHeight ?? settings.windows.desktopBarHeight,
+        toolHudWidth: guardedSettings?.windows?.toolHudWidth ?? settings.windows.toolHudWidth,
+        toolHudHeight: guardedSettings?.windows?.toolHudHeight ?? settings.windows.toolHudHeight,
+        toolHudOffsetX: guardedSettings?.windows?.toolHudOffsetX ?? settings.windows.toolHudOffsetX,
+        toolHudOffsetY: guardedSettings?.windows?.toolHudOffsetY ?? settings.windows.toolHudOffsetY
+      }
+    });
+    resizeDesktopBar(preview);
+    resizeToolHud(preview, settings);
+    broadcastSettings(preview, [desktopBarWindow, toolHudWindow, toolHudHitboxWindow, hudTrustPopoverWindow]);
+    return {
+      ok: true,
+      settings: getPublicSettings(preview)
+    };
+  } catch (error) {
+    return {
+      ok: false,
+      error: error?.message || "preview failed",
+      settings: getPublicSettings()
+    };
+  }
+}
+
 function applySettings(previous, current) {
   resizeDesktopBar();
+  resizeToolHud(current, previous);
   restartIngestServerIfNeeded(previous, current);
   restartHermesBridgeIfNeeded(previous, current);
   restartCodexSessionWatcher();
@@ -1630,8 +3056,7 @@ function applySettings(previous, current) {
   scheduleTimers();
   broadcastSettings();
   updateTray();
-  refreshDesktopBarFromForeground();
-  refreshToolHud();
+  refreshOverlayCoordinator();
   sendSnapshot();
 }
 
@@ -1650,11 +3075,15 @@ function maybeInstallHermesOverlay(previous = null, current = settings) {
   }
 }
 
-function broadcastSettings() {
-  const publicSettings = getPublicSettings();
-  for (const window of [desktopBarWindow, toolHudWindow, settingsWindow]) {
+function broadcastSettings(sourceSettings = settings, targetWindows = [desktopBarWindow, toolHudWindow, toolHudHitboxWindow, hudTrustPopoverWindow, settingsWindow]) {
+  const publicSettings = getPublicSettings(sourceSettings);
+  for (const window of targetWindows) {
     if (window && !window.isDestroyed()) {
-      window.webContents.send("settings:update", publicSettings);
+      try {
+        safeSend(window, "settings:update", publicSettings);
+      } catch {
+        // A renderer can disappear while a live preview is in flight; the next settings broadcast will catch up.
+      }
     }
   }
 }
@@ -1662,45 +3091,49 @@ function broadcastSettings() {
 function restartIngestServerIfNeeded(previous, current) {
   const previousEnabled = previous?.providers?.ingest?.enabled !== false;
   const currentEnabled = current.providers?.ingest?.enabled !== false;
-  if (previousEnabled === currentEnabled && ingestServer) return;
+  const securityChanged = hasLocalApiSecurityChanged(previous, current);
+  if (previousEnabled === currentEnabled && ingestServer && !securityChanged) return;
   restartIngestServer();
 }
 
 function restartIngestServer() {
-  if (ingestServer) {
-    ingestServer.close();
-    ingestServer = null;
-  }
-  if (isProviderEnabled("ingest")) {
-    ingestServer = createIngestServer({
-      port: INGEST_PORT,
-      accessToken: localApiAccess?.token || null,
-      getSnapshot: () => collectSnapshot()
-    });
-  }
+  ingestServer = restartIngestLocalServer(ingestServer, {
+    enabled: isProviderEnabled("ingest"),
+    port: INGEST_PORT,
+    accessToken: localApiAccess?.token || null,
+    security: {
+      allowUnauthenticatedNoOrigin: settings.security?.allowUnauthenticatedNoOrigin === true
+    },
+    getSnapshot: () => collectSnapshot()
+  });
 }
 
 function restartHermesBridgeIfNeeded(previous, current) {
   const previousEnabled = previous?.providers?.hermes?.enabled !== false;
   const currentEnabled = current.providers?.hermes?.enabled !== false;
-  if (previousEnabled === currentEnabled && hermesBridgeServer) return;
+  const securityChanged = hasLocalApiSecurityChanged(previous, current);
+  if (previousEnabled === currentEnabled && hermesBridgeServer && !securityChanged) return;
   restartHermesBridge();
 }
 
+function hasLocalApiSecurityChanged(previous, current) {
+  if (!previous || !current) return false;
+  return (previous.security?.allowUnauthenticatedNoOrigin === true) !==
+    (current.security?.allowUnauthenticatedNoOrigin === true);
+}
+
 function restartHermesBridge() {
-  if (hermesBridgeServer) {
-    hermesBridgeServer.close();
-    hermesBridgeServer = null;
-  }
-  if (isProviderEnabled("hermes")) {
-    hermesBridgeServer = createHermesBridgeServer({
-      port: HERMES_BRIDGE_PORT,
-      targetBaseUrl: "http://127.0.0.1:8642",
-      ingestUrl: `http://127.0.0.1:${INGEST_PORT}/events`,
-      accessToken: localApiAccess?.token || null,
-      ingestToken: localApiAccess?.token || null
-    });
-  }
+  hermesBridgeServer = restartHermesBridgeServer(hermesBridgeServer, {
+    enabled: isProviderEnabled("hermes"),
+    port: HERMES_BRIDGE_PORT,
+    targetBaseUrl: "http://127.0.0.1:8642",
+    ingestUrl: `http://127.0.0.1:${INGEST_PORT}/events`,
+    accessToken: localApiAccess?.token || null,
+    ingestToken: localApiAccess?.token || null,
+    security: {
+      allowUnauthenticatedNoOrigin: settings.security?.allowUnauthenticatedNoOrigin === true
+    }
+  });
 }
 
 function restartCodexSessionWatcher() {
@@ -1745,7 +3178,7 @@ function scheduleCodexSessionRefresh() {
   codexSessionWatchTimer = setTimeout(() => {
     codexSessionWatchTimer = null;
     sendSnapshot();
-    refreshToolHud();
+    refreshOverlayCoordinator();
   }, CODEX_SESSION_WATCH_DEBOUNCE_MS);
   codexSessionWatchTimer.unref?.();
 }
@@ -1768,15 +3201,14 @@ function readPortEnv(name, fallback) {
 }
 
 function scheduleTimers() {
-  if (snapshotTimer) clearInterval(snapshotTimer);
+  if (snapshotTimer) clearTimeout(snapshotTimer);
   if (desktopBarTimer) clearInterval(desktopBarTimer);
-  if (hudTimer) clearInterval(hudTimer);
   if (systemTimer) clearInterval(systemTimer);
-  snapshotTimer = setInterval(sendSnapshot, settings.behavior.refreshMs);
+  snapshotTimer = null;
+  scheduleNextSnapshotRefresh();
   systemTimer = setInterval(sendSystemMetrics, SYSTEM_REFRESH_MS);
   if (isHeadlessRuntime()) return;
-  desktopBarTimer = setInterval(refreshDesktopBarFromForeground, DESKTOP_BAR_REFRESH_MS);
-  hudTimer = setInterval(refreshToolHud, settings.behavior.activeWindowMs);
+  desktopBarTimer = setInterval(refreshOverlayCoordinator, OVERLAY_COORDINATOR_REFRESH_MS);
 }
 
 function applyLoginItemSettings() {
@@ -1797,19 +3229,33 @@ function applyLoginItemSettings() {
 ipcMain.handle("metrics:snapshot", () => getSnapshotForRenderer(latestSnapshot || collectSnapshot()));
 ipcMain.handle("hud:snapshot", () => latestHudPayload);
 ipcMain.handle("settings:get", () => getPublicSettings());
+ipcMain.handle("setup:info", () => getLocalSetupInfo());
+ipcMain.handle("guide:open", (_event, guide) => openGuideDocument(guide));
 ipcMain.handle("settings:save", (_event, nextSettings) => updateSettings(nextSettings));
+ipcMain.handle("settings:preview", (_event, nextSettings) => previewSettings(nextSettings));
 ipcMain.handle("settings:reset", () => updateSettings(sanitizeSettings()));
-ipcMain.handle("settings:open", () => {
-  openSettingsWindow();
+ipcMain.handle("desktop-bar:mouse-region", (_event, interactive) => setDesktopBarMouseRegion(guardBooleanPayload(interactive)));
+ipcMain.handle("hud:mouse-region", (_event, interactive) => setToolHudMouseRegion(guardBooleanPayload(interactive)));
+ipcMain.handle("hud-hitbox:mouse-region", (_event, interactive) => setToolHudHitboxMouseRegion(guardBooleanPayload(interactive)));
+ipcMain.handle("settings:open", (event, owner) => {
+  openSettingsWindow(owner || getSettingsOverlayOwnerFromWindow(BrowserWindow.fromWebContents(event.sender)));
   return true;
 });
 ipcMain.handle("settings:close", () => {
   closeSettingsWindow();
   return true;
 });
+ipcMain.handle("hud-trust-popover:show", (event, payload) =>
+  showHudTrustPopover(guardHudTrustPopoverPayload(payload), BrowserWindow.fromWebContents(event.sender))
+);
+ipcMain.handle("hud-trust-popover:hide", (event) => {
+  hideHudTrustPopover(getHudTrustPopoverOwner(BrowserWindow.fromWebContents(event.sender)));
+  return true;
+});
+ipcMain.handle("hud-trust-popover:resize", (_event, size) => resizeHudTrustPopover(guardHudTrustPopoverSize(size)));
 
 ipcMain.handle("window:toggle-expanded", () => {
-  openSettingsWindow();
+  openSettingsWindow("desktop");
   return true;
 });
 
@@ -1839,7 +3285,7 @@ app.whenReady().then(() => {
     sendSystemMetrics();
     sendSnapshot();
   } else {
-    setTimeout(refreshToolHud, 500);
+    setTimeout(refreshOverlayCoordinator, 500);
   }
 
   app.on("activate", () => {
@@ -1859,13 +3305,15 @@ app.on("before-quit", () => {
 });
 
 app.on("will-quit", () => {
-  if (snapshotTimer) clearInterval(snapshotTimer);
+  if (snapshotTimer) clearTimeout(snapshotTimer);
   if (desktopBarTimer) clearInterval(desktopBarTimer);
-  if (hudTimer) clearInterval(hudTimer);
+  if (toolDecisionSnapshotTimer) clearTimeout(toolDecisionSnapshotTimer);
+  if (overlayDeferredRetryTimer) clearTimeout(overlayDeferredRetryTimer);
+  clearToolDesktopWake();
   if (systemTimer) clearInterval(systemTimer);
   stopCodexSessionWatcher();
-  if (ingestServer) ingestServer.close();
-  if (hermesBridgeServer) hermesBridgeServer.close();
+  closeServer(ingestServer);
+  closeServer(hermesBridgeServer);
 });
 
 app.on("window-all-closed", () => {
