@@ -306,9 +306,9 @@ function setToolHudHitboxMouseRegion(interactive) {
   const nextInteractive = Boolean(interactive);
   if (toolHudHitboxMouseInteractive === nextInteractive) return true;
   toolHudHitboxMouseInteractive = nextInteractive;
-  reinforceNonActivatingWindow(toolHudHitboxWindow);
+  reinforceNonActivatingWindow(toolHudHitboxWindow); // Pre-reinforce before Electron may reset WS_EX flags
   toolHudHitboxWindow.setIgnoreMouseEvents(!nextInteractive, { forward: true });
-  reinforceNonActivatingWindow(toolHudHitboxWindow);
+  reinforceNonActivatingWindow(toolHudHitboxWindow); // Post-reinforce to restore non-activating state
   return true;
 }
 
@@ -586,7 +586,7 @@ function showHudTrustPopover(payload = {}, sourceWindow = null) {
   if (!hudTrustPopoverWindow || hudTrustPopoverWindow.isDestroyed()) return false;
 
   const bounds = getHudTrustPopoverBounds(payload.anchor || {}, anchorWindow, latestHudTrustPopoverSize);
-  reinforceNonActivatingWindow(hudTrustPopoverWindow);
+  reinforceNonActivatingWindow(hudTrustPopoverWindow); // Pre-reinforce before bounds/content update
   setWindowBoundsIfChanged(hudTrustPopoverWindow, bounds);
   if (!hudTrustPopoverWindow.webContents.isLoading()) {
     safeSend(hudTrustPopoverWindow, "hud-trust-popover:update", payload.details || null);
@@ -594,7 +594,7 @@ function showHudTrustPopover(payload = {}, sourceWindow = null) {
   if (!hudTrustPopoverWindow.isVisible()) {
     hudTrustPopoverWindow.showInactive();
   }
-  reinforceNonActivatingWindow(hudTrustPopoverWindow);
+  reinforceNonActivatingWindow(hudTrustPopoverWindow); // Post-reinforce after showInactive may reset flags
   return true;
 }
 
@@ -1708,7 +1708,7 @@ function showDesktopBarWindow(options = {}) {
   const promoteVisible = options.promoteVisible !== false;
   const before = getOverlayWindowState(desktopBarWindow);
   restoreOverlayWindowIfMinimized(desktopBarWindow);
-  reinforceNonActivatingWindow(desktopBarWindow);
+  reinforceNonActivatingWindow(desktopBarWindow); // Pre-reinforce before alwaysOnTop + visibility changes
   desktopBarWindow.setAlwaysOnTop(true, "floating");
   let action = "already-visible";
   if (!desktopBarWindow.isVisible()) {
@@ -1718,7 +1718,7 @@ function showDesktopBarWindow(options = {}) {
     action = "move-top";
     desktopBarWindow.moveTop();
   }
-  reinforceNonActivatingWindow(desktopBarWindow);
+  reinforceNonActivatingWindow(desktopBarWindow); // Post-reinforce after showInactive/moveTop may reset flags
   writeHudDebugLog({
     event: "desktop-bar",
     outcome: "shown",
@@ -1771,7 +1771,7 @@ function showToolHudHitbox(hudBounds = null, options = {}) {
   if (!bounds) return;
   setWindowBoundsIfChanged(toolHudHitboxWindow, bounds);
   restoreOverlayWindowIfMinimized(toolHudHitboxWindow);
-  reinforceNonActivatingWindow(toolHudHitboxWindow);
+  reinforceNonActivatingWindow(toolHudHitboxWindow); // Pre-reinforce before alwaysOnTop + visibility changes
   toolHudHitboxWindow.setAlwaysOnTop(true, "floating");
   setToolHudHitboxMouseRegion(false);
   if (!toolHudHitboxWindow.isVisible()) {
@@ -1779,7 +1779,7 @@ function showToolHudHitbox(hudBounds = null, options = {}) {
   } else if (promoteVisible && typeof toolHudHitboxWindow.moveTop === "function") {
     toolHudHitboxWindow.moveTop();
   }
-  reinforceNonActivatingWindow(toolHudHitboxWindow);
+  reinforceNonActivatingWindow(toolHudHitboxWindow); // Post-reinforce after showInactive/moveTop may reset flags
   sendHudUpdate(latestHudPayload);
 }
 
@@ -2430,7 +2430,7 @@ function showToolHudWindow(hudBounds = null, options = {}) {
   if (!toolHudWindow || toolHudWindow.isDestroyed()) return;
   const promoteVisible = options.promoteVisible !== false;
   restoreOverlayWindowIfMinimized(toolHudWindow);
-  reinforceNonActivatingWindow(toolHudWindow);
+  reinforceNonActivatingWindow(toolHudWindow); // Pre-reinforce before alwaysOnTop + visibility changes
   toolHudWindow.setAlwaysOnTop(true, "floating");
   setToolHudMouseRegion(false);
   if (!toolHudWindow.isVisible()) {
@@ -2438,7 +2438,7 @@ function showToolHudWindow(hudBounds = null, options = {}) {
   } else if (promoteVisible && typeof toolHudWindow.moveTop === "function") {
     toolHudWindow.moveTop();
   }
-  reinforceNonActivatingWindow(toolHudWindow);
+  reinforceNonActivatingWindow(toolHudWindow); // Post-reinforce after showInactive/moveTop may reset flags
   showToolHudHitbox(hudBounds || toolHudWindow.getBounds(), { promoteVisible });
 }
 
