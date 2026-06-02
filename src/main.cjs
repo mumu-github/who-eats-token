@@ -2260,7 +2260,7 @@ async function refreshToolHud(options = {}) {
     }
 
     const display = getDisplayForActiveWindow(anchorWindow || activeWindow);
-    const hudBounds = getHudBounds(display, tool, anchorWindow || activeWindow);
+    const hudBounds = getHudBounds(display, tool, anchorWindow || activeWindow, settings);
     setWindowBoundsIfChanged(toolHudWindow, hudBounds);
     sendHudUpdate(latestHudPayload);
     lastVisibleHudPayload = latestHudPayload;

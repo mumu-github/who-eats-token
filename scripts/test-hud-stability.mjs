@@ -871,7 +871,7 @@ function testHudWindowLifecycleGuards() {
   );
   assert.match(
     mainSource,
-    /function refreshToolHud\(options = \{\}\) \{[\s\S]*?const hudBounds = getHudBounds\(display, tool, anchorWindow \|\| activeWindow\);[\s\S]*?setWindowBoundsIfChanged\(toolHudWindow, hudBounds\)/,
+    /function refreshToolHud\(options = \{\}\) \{[\s\S]*?const hudBounds = getHudBounds\(display, tool, anchorWindow \|\| activeWindow, settings\);[\s\S]*?setWindowBoundsIfChanged\(toolHudWindow, hudBounds\)/,
     "The HUD render path should position from the state-controller tool bounds without dialog-overlap arbitration."
   );
   assert.match(
