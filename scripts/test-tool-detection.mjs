@@ -318,6 +318,7 @@ console.log("\n[Test 8] shouldInspectDesktopBlockersForToolDetection");
 assert.strictEqual(td.shouldInspectDesktopBlockersForToolDetection(fixtures.dialogWindow), true, "dialog → true");
 assert.strictEqual(td.shouldInspectDesktopBlockersForToolDetection(fixtures.normalWindow), false, "normal → false");
 assert.strictEqual(td.shouldInspectDesktopBlockersForToolDetection(null), false, "null → false");
+assert.strictEqual(td.shouldInspectDesktopBlockersForToolDetection(fixtures.blockerWindow), true, "non-dialog with blocker → true (OR second operand)");
 
 console.log("  ✅ shouldInspectDesktopBlockersForToolDetection correct");
 
