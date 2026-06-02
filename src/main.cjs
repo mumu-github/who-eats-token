@@ -38,6 +38,10 @@ const {
   boundsCloseEnough,
   getDesktopBarHeight,
   getDesktopBarStagePadding,
+  getDesktopBarStageLayout,
+  getDesktopBarWindowBounds,
+  getDesktopBarVisualBounds,
+  getDesktopBarRendererLayout,
   getHudBottomOffset,
   getHudBounds,
   getHudPosition,
@@ -102,7 +106,7 @@ const {
   isDesktopForegroundWindow,
   isDialogWindow,
   getDisplayBounds,
-  getDesktopBarVisualBounds: () => getDesktopBarVisualBounds(settings),
+  getDesktopBarVisualBounds: () => getDesktopBarVisualBounds(settings, screen.getPrimaryDisplay()),
   isOwnDesktopBar
 });
 
@@ -234,7 +238,7 @@ app.on("second-instance", () => {
 });
 
 function createDesktopBarWindow() {
-  const bounds = getDesktopBarWindowBounds();
+  const bounds = getDesktopBarWindowBounds(settings, screen.getPrimaryDisplay());
 
   desktopBarWindow = new BrowserWindow({
     x: bounds.x,
@@ -278,63 +282,9 @@ function createDesktopBarWindow() {
   });
 }
 
-function getDesktopBarBounds(sourceSettings = settings) {
-  return getDesktopBarVisualBounds(sourceSettings);
-}
-
-function getDesktopBarWindowBounds(sourceSettings = settings) {
-  return getDesktopBarStageLayout(sourceSettings).windowBounds;
-}
-
-function getDesktopBarVisualBounds(sourceSettings = settings) {
-  return getDesktopBarStageLayout(sourceSettings).barBounds;
-}
-
-function getDesktopBarRendererLayout(sourceSettings = settings) {
-  const layout = getDesktopBarStageLayout(sourceSettings);
-  return {
-    barX: layout.barBounds.x - layout.windowBounds.x,
-    barY: layout.barBounds.y - layout.windowBounds.y,
-    barWidth: layout.barBounds.width,
-    barHeight: layout.barBounds.height,
-    stageWidth: layout.windowBounds.width,
-    stageHeight: layout.windowBounds.height
-  };
-}
-
-function getDesktopBarStageLayout(sourceSettings = settings) {
-  const primary = screen.getPrimaryDisplay();
-  const ratio = sourceSettings.windows.desktopWidthRatio;
-  const barHeight = getDesktopBarHeight(sourceSettings);
-  const padding = getDesktopBarStagePadding(sourceSettings);
-  const desiredBarWidth = Math.round(primary.workAreaSize.width * ratio);
-  const stageWidth = Math.min(primary.workAreaSize.width, desiredBarWidth + padding.x * 2);
-  const availableBarWidth = Math.max(320, stageWidth - padding.x * 2);
-  const barWidth = Math.min(desiredBarWidth, availableBarWidth);
-  const stageHeight = Math.min(primary.workAreaSize.height, padding.top + barHeight + padding.bottom);
-  const localBarX = Math.round((stageWidth - barWidth) / 2);
-  const localBarY = Math.min(padding.top, Math.max(0, stageHeight - barHeight - padding.bottom));
-  const stageX = primary.workArea.x + Math.round((primary.workAreaSize.width - stageWidth) / 2);
-  const stageY = primary.workArea.y + 4;
-  return {
-    windowBounds: {
-      x: stageX,
-      y: stageY,
-      width: stageWidth,
-      height: stageHeight
-    },
-    barBounds: {
-      x: stageX + localBarX,
-      y: stageY + localBarY,
-      width: barWidth,
-      height: barHeight
-    }
-  };
-}
-
 function resizeDesktopBar(sourceSettings = settings) {
   if (!desktopBarWindow || desktopBarWindow.isDestroyed()) return;
-  setWindowBoundsIfChanged(desktopBarWindow, getDesktopBarWindowBounds(sourceSettings));
+  setWindowBoundsIfChanged(desktopBarWindow, getDesktopBarWindowBounds(sourceSettings, screen.getPrimaryDisplay()));
   setDesktopBarMouseRegion(false);
 }
 
@@ -2363,7 +2313,7 @@ function getPublicSettings(sourceSettings = settings) {
   return {
     ...sourceSettings,
     providerRegistry: getProviderRegistry(sourceSettings),
-    desktopBarStage: getDesktopBarRendererLayout(sourceSettings)
+    desktopBarStage: getDesktopBarRendererLayout(sourceSettings, screen.getPrimaryDisplay())
   };
 }
 
