@@ -58,6 +58,8 @@ const commands = [
   npmRunner(["run", "test:overlay-state"]),
   npmRunner(["run", "test:tool-detection"]),
   npmRunner(["run", "test:overlay-layout-geometry"]),
+  npmRunner(["run", "test:overlay-layout-hud"]),
+  npmRunner(["run", "test:hud-payload"]),
   npmRunner(["run", "test:window-detection"]),
   npmRunner(["run", "test:adapter-catalog"]),
   npmRunner(["run", "test:adapter-contract"]),

@@ -101,6 +101,8 @@
     "test:overlay-state": "node scripts/test-overlay-state.mjs",
     "test:tool-detection": "node scripts/test-tool-detection.mjs",
     "test:overlay-layout-geometry": "node scripts/test-overlay-layout-geometry.mjs",
+    "test:overlay-layout-hud": "node scripts/test-overlay-layout-hud.mjs",
+    "test:hud-payload": "node scripts/test-hud-payload.mjs",
     "test:hud-stability": "node scripts/test-hud-stability.mjs",
     "test:window-detection": "node scripts/test-window-detection.mjs",
     "test:adapter-catalog": "node scripts/test-adapter-catalog.mjs",
