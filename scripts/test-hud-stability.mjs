@@ -862,12 +862,12 @@ function testHudWindowLifecycleGuards() {
   );
   assert.match(
     overlayLayoutSource,
-    /function hudAnchorBoundsCloseEnough\(first, second\)[\s\S]*?scaledHudAnchorBoundsCloseEnough\(first, second\)/,
+    /function hudAnchorBoundsCloseEnough\(first, second(, isDisplayFillingBoundsFn)?\)[\s\S]*?scaledHudAnchorBoundsCloseEnough\(first, second/,
     "HUD anchor comparison should tolerate equivalent high-DPI logical/physical bounds for the same fullscreen tool."
   );
   assert.match(
     overlayLayoutSource,
-    /function scaledHudAnchorBoundsCloseEnough\(first, second\)[\s\S]*?for \(const scale of \[0\.5, 2\]\)[\s\S]*?isDisplayFillingBounds/,
+    /function scaledHudAnchorBoundsCloseEnough\(first, second(, isDisplayFillingBoundsFn)?\)[\s\S]*?for \(const scale of \[0\.5, 2\]\)[\s\S]*?isDisplayFillingBoundsFn/,
     "High-DPI bounds normalization should be limited to display-filling anchors, not arbitrary small window movement."
   );
   assert.match(

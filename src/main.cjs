@@ -1326,7 +1326,7 @@ function shouldRefreshToolHudForDecision(decision, previousDecision) {
   const previousWindow = latestHudPayload.activeWindow || {};
   const nextWindow = decision.toolContext?.window || decision.activeWindow || {};
   if (String(previousWindow.hwnd || "") !== String(nextWindow.hwnd || "")) return true;
-  return !hudAnchorBoundsCloseEnough(previousWindow.bounds, nextWindow.bounds);
+  return !hudAnchorBoundsCloseEnough(previousWindow.bounds, nextWindow.bounds, isDisplayFillingBounds);
 }
 
 function getSnapshotAgeMs(snapshot, now = Date.now()) {
