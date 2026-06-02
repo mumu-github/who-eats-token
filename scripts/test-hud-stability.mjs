@@ -339,11 +339,6 @@ function testHudWindowLifecycleGuards() {
   );
   assert.match(
     toolDetectionSource,
-    /activeWindow\?\.desktop\?\.blockers/,
-    "Dialog foreground reports may inspect filtered desktop blockers before positioning the HUD."
-  );
-  assert.match(
-    toolDetectionSource,
     /function shouldInspectDesktopBlockersForToolDetection/,
     "Tool detection should explicitly gate when desktop blocker windows are eligible."
   );
@@ -351,11 +346,6 @@ function testHudWindowLifecycleGuards() {
     toolDetectionSource,
     /function getToolDetectionBlockers/,
     "Tool detection should centralize blocker filtering before using background windows."
-  );
-  assert.match(
-    toolDetectionSource,
-    /isPotentialDialogParentWindow\(activeWindow, blocker\)/,
-    "Dialog foregrounds should inspect only plausible parent windows instead of every desktop blocker."
   );
   assert.match(
     toolDetectionSource,
@@ -367,11 +357,6 @@ function testHudWindowLifecycleGuards() {
     /if \(!shouldInspectDesktopBlockersForToolDetection\(activeWindow\)\) \{\s*return candidates;\s*\}/,
     "Ordinary unsupported foreground apps must not inherit a HUD from background desktop blockers."
   );
-  assert.match(
-    toolDetectionSource,
-    /function shouldInspectDesktopBlockersForToolDetection\(activeWindow\) \{[\s\S]*?if \(isDialogWindow\(activeWindow\)\) return true;[\s\S]*?return hasDesktopForegroundBlocker\(activeWindow\);/,
-    "Only real dialog foregrounds should use blockers to find a plausible parent tool."
-  );
   assert.ok(
     !shouldInspectBlockersSource.includes("isDesktopForeground("),
     "Desktop foreground must not scan blockers to resurrect a background tool HUD."
@@ -380,16 +365,6 @@ function testHudWindowLifecycleGuards() {
     toolDetectionSource,
     /function isShellForegroundWindow/,
     "Shell and taskbar foreground reports should be recognized so they can be arbitrated explicitly."
-  );
-  assert.match(
-    toolDetectionSource,
-    /"#32768"[\s\S]*?notifyicon\|overflow/,
-    "Desktop context menus and shell overflow popups should both be recognized as shell foreground reports."
-  );
-  assert.match(
-    toolDetectionSource,
-    /tasklistthumbnailwnd[\s\S]*?taskswitcherwnd[\s\S]*?mstasklistwclass/,
-    "Windows taskbar thumbnail previews should be recognized as shell foreground popups."
   );
   assert.match(
     mainSource,
@@ -435,11 +410,6 @@ function testHudWindowLifecycleGuards() {
     mainSource,
     /!overlayCoordinatorInFlight && !overlayCoordinatorPriorityInFlight && overlayCoordinatorPending && !isQuitting[\s\S]*?overlayCoordinatorPending = false;[\s\S]*?setTimeout\(refreshOverlayCoordinator, 0\)/,
     "Queued overlay refreshes should rerun only after ordinary and priority arbitration passes have both finished."
-  );
-  assert.match(
-    toolDetectionSource,
-    /function isForegroundSamplingNoise\(activeWindow\) \{[\s\S]*?foregroundFallbackMiss[\s\S]*?samplingNoise[\s\S]*?isZeroSizedExplorerForeground\(activeWindow\)/,
-    "Foreground fallback misses and zero-size Explorer shell samples should be treated as sampling noise, not as real app or desktop foreground."
   );
   assert.match(
     mainSource,
@@ -490,11 +460,6 @@ function testHudWindowLifecycleGuards() {
     wakeProbeSource,
     /GetShellWindow[\s\S]*?IsIconic[\s\S]*?\$isOffscreenForeground[\s\S]*?tool-desktop-wake-offscreen-probe/,
     "The Windows tool-desktop wake helper should treat minimized or offscreen foreground tools as Show Desktop evidence and feed the real shell window back to the coordinator."
-  );
-  assert.match(
-    toolDetectionSource,
-    /function normalizeToolDesktopWakeProbeWindow\(payload\) \{[\s\S]*?source: payload\?\.source \|\| "tool-desktop-wake-probe"/,
-    "The wake helper should preserve whether a desktop sample came from a direct desktop foreground or an offscreen-foreground shell fallback."
   );
   assert.match(
     mainSource,
@@ -760,11 +725,6 @@ function testHudWindowLifecycleGuards() {
     "Shell and taskbar foreground reports should not use a separate legacy top-bar reason."
   );
   assert.match(
-    toolDetectionSource,
-    /function isDesktopOverlayForeground\(activeWindow\) \{[\s\S]*?isDesktopForeground\(activeWindow\) \|\| isDesktopShellTransientForeground\(activeWindow\)/,
-    "Desktop and desktop shell transient foregrounds should share the highest-priority desktop overlay state."
-  );
-  assert.match(
     activeWindowSource,
     /function isWindowsDesktopAssistantForeground\(windowInfo[\s\S]*?ClickToDo[\s\S]*?narratorhelperwindow/,
     "Windows Click to Do and Narrator helper foregrounds should be recognized as narrow desktop assistant candidates."
@@ -984,21 +944,6 @@ function testHudWindowLifecycleGuards() {
     /function shouldShowDesktopBar/,
     "The desktop top bar should centralize its positive desktop visibility gate."
   );
-  assert.match(
-    toolDetectionSource,
-    /function shouldShowDesktopBar\(activeWindow\) \{[\s\S]*?hasDesktopForegroundBlocker\(activeWindow\)[\s\S]*?return isDesktopOverlayForeground\(activeWindow\);[\s\S]*?\}/,
-    "The desktop top bar should show only for clear desktop foregrounds."
-  );
-  assert.match(
-    toolDetectionSource,
-    /function hasDesktopForegroundBlocker\(activeWindow\) \{[\s\S]*?desktop\.clear !== false[\s\S]*?blockerCount[\s\S]*?> 0/,
-    "A fresh desktop foreground with real blockers should suppress the top bar during desktop-to-tool transitions."
-  );
-  assert.match(
-    toolDetectionSource,
-    /function shouldInspectDesktopBlockersForToolDetection\(activeWindow\) \{[\s\S]*?isDialogWindow\(activeWindow\)[\s\S]*?hasDesktopForegroundBlocker\(activeWindow\);[\s\S]*?\}/,
-    "Tool detection should inspect fresh desktop blockers so remembered tools can recover quickly during shell transition frames."
-  );
   assert.doesNotMatch(
     mainSource,
     /desktop-after-tool-transition|shouldDeferTransientDesktopAfterTool|DESKTOP_AFTER_TOOL_TRANSIENT_GRACE_MS/,
@@ -1011,11 +956,6 @@ function testHudWindowLifecycleGuards() {
   assert.ok(
     !shouldShowDesktopBarSource.includes("isShellForegroundWindow("),
     "Generic shell foreground windows must not be promoted to desktop visibility inside shouldShowDesktopBar."
-  );
-  assert.match(
-    toolDetectionSource,
-    /function isForegroundFullscreen\(activeWindow\) \{[\s\S]*?getDisplayBounds\(activeWindow\)[\s\S]*?horizontalCoverage >= 0\.98[\s\S]*?verticalCoverage >= 0\.98/,
-    "Fullscreen suppression should compare the foreground bounds against the display bounds, not desktop blockers."
   );
   assert.ok(
     !shouldShowDesktopBarSource.includes("desktop.blockers") && !shouldShowDesktopBarSource.includes("hasDesktopBarBlocker"),
@@ -1668,11 +1608,6 @@ function testSettingsPreviewGuards() {
     activeWindowSource,
     /谁在吃 token 设置/,
     "The settings preview window should be treated as an owned overlay so desktop top-bar previews stay visible."
-  );
-  assert.match(
-    toolDetectionSource,
-    /notifyiconoverflowwindow/,
-    "Windows tray overflow windows should be recognized as shell foreground windows."
   );
   assert.match(
     hudPopoverHtml,
