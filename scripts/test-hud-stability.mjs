@@ -314,6 +314,7 @@ function testHudRendererCoupledVisuals() {
 function testHudWindowLifecycleGuards() {
   const mainSource = read("src/main.cjs");
   const wakeProbeSource = read("src/main/wake-probe.ps1");
+  const overlayLayoutSource = read("src/main/overlay-layout.cjs");
   const activeWindowSource = read("src/system/active-window.cjs");
   const overlayControllerSource = read("src/main/overlay-controller.cjs");
   const stressSource = read("scripts/stress-overlay-switch.mjs");
@@ -859,18 +860,18 @@ function testHudWindowLifecycleGuards() {
     "The coordinator should ignore tiny tool-bound jitters while staying on the same tool window."
   );
   assert.match(
-    mainSource,
+    overlayLayoutSource,
     /function hudAnchorBoundsCloseEnough\(first, second\)[\s\S]*?scaledHudAnchorBoundsCloseEnough\(first, second\)/,
     "HUD anchor comparison should tolerate equivalent high-DPI logical/physical bounds for the same fullscreen tool."
   );
   assert.match(
-    mainSource,
+    overlayLayoutSource,
     /function scaledHudAnchorBoundsCloseEnough\(first, second\)[\s\S]*?for \(const scale of \[0\.5, 2\]\)[\s\S]*?isDisplayFillingBounds/,
     "High-DPI bounds normalization should be limited to display-filling anchors, not arbitrary small window movement."
   );
   assert.match(
     mainSource,
-    /function refreshToolHud\(options = \{\}\) \{[\s\S]*?const hudBounds = getHudBounds\(display, tool, anchorWindow \|\| activeWindow\);[\s\S]*?setWindowBoundsIfChanged\(toolHudWindow, hudBounds\)/,
+    /function refreshToolHud\(options = \{\}\) \{[\s\S]*?const hudBounds = getHudBounds\(display, tool, anchorWindow \|\| activeWindow, settings\);[\s\S]*?setWindowBoundsIfChanged\(toolHudWindow, hudBounds\)/,
     "The HUD render path should position from the state-controller tool bounds without dialog-overlap arbitration."
   );
   assert.match(
@@ -1075,12 +1076,12 @@ function testHudWindowLifecycleGuards() {
     "A clear desktop report from native scanning must not bypass foreground desktop validation."
   );
   assert.match(
-    mainSource,
+    overlayLayoutSource,
     /const WINDOW_BOUNDS_JITTER_TOLERANCE_PX = 2;/,
     "Window positioning should define a small tolerance for native 1-2px foreground-bound jitter."
   );
   assert.match(
-    mainSource,
+    overlayLayoutSource,
     /function boundsCloseEnough\(first, second[\s\S]*?WINDOW_BOUNDS_JITTER_TOLERANCE_PX[\s\S]*?Math\.abs\(left\.x - right\.x\)/,
     "HUD window positioning should compare bounds with a small pixel tolerance."
   );
@@ -1138,6 +1139,7 @@ function testHudWindowLifecycleGuards() {
 
 function testSettingsPreviewGuards() {
   const mainSource = read("src/main.cjs");
+  const overlayLayoutSource = read("src/main/overlay-layout.cjs");
   const preloadSource = read("src/preload.cjs");
   const appSource = read("src/renderer/app.js");
   const settingsSource = read("src/renderer/settings.js");
@@ -1198,7 +1200,7 @@ function testSettingsPreviewGuards() {
     "Live settings preview should include independent tool HUD vertical offset."
   );
   assert.match(
-    mainSource,
+    overlayLayoutSource,
     /function getToolHudOffset/,
     "Tool HUD positioning should use dedicated offset settings."
   );
@@ -1608,7 +1610,7 @@ function testSettingsPreviewGuards() {
     "The desktop top bar should use a larger transparent window for the mascot stage."
   );
   assert.match(
-    mainSource,
+    overlayLayoutSource,
     /DESKTOP_BAR_STAGE_MAX_TOP_PAD = 4/,
     "The desktop top bar glass strip should sit against the top edge while leaving mascot room on other sides."
   );

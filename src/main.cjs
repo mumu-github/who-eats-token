@@ -29,6 +29,26 @@ const {
   summarizeProviders
 } = require("./main/hud-payload.cjs");
 const {
+  DEFAULT_BAR_HEIGHT,
+  DEFAULT_HUD_WIDTH,
+  DEFAULT_HUD_HEIGHT,
+  TOOL_HUD_HITBOX_WIDTH,
+  TOOL_HUD_HITBOX_HEIGHT,
+  WINDOW_BOUNDS_JITTER_TOLERANCE_PX,
+  boundsCloseEnough,
+  getDesktopBarHeight,
+  getDesktopBarStagePadding,
+  getHudBottomOffset,
+  getHudBounds,
+  getHudPosition,
+  getHudTargetArea,
+  getToolHudOffset,
+  getToolHudSize,
+  hudAnchorBoundsCloseEnough,
+  scaleBounds,
+  scaledHudAnchorBoundsCloseEnough
+} = require("./main/overlay-layout.cjs");
+const {
   guardBooleanPayload,
   guardHudTrustPopoverPayload,
   guardHudTrustPopoverSize,
@@ -53,20 +73,9 @@ if (process.env.WHO_EATS_TOKEN_DISABLE_GPU === "1") {
   app.commandLine.appendSwitch("disable-gpu-compositing");
 }
 
-const DEFAULT_BAR_HEIGHT = 64;
-const DEFAULT_HUD_WIDTH = 396;
-const DEFAULT_HUD_HEIGHT = 136;
 const HUD_TRUST_POPOVER_WIDTH = 440;
 const HUD_TRUST_POPOVER_MIN_HEIGHT = 336;
 const HUD_TRUST_POPOVER_MAX_HEIGHT = 480;
-const TOOL_HUD_HITBOX_WIDTH = 164;
-const TOOL_HUD_HITBOX_HEIGHT = 30;
-const DESKTOP_BAR_STAGE_MIN_SIDE_PAD = 42;
-const DESKTOP_BAR_STAGE_MAX_SIDE_PAD = 88;
-const DESKTOP_BAR_STAGE_MIN_TOP_PAD = 0;
-const DESKTOP_BAR_STAGE_MAX_TOP_PAD = 4;
-const DESKTOP_BAR_STAGE_MIN_BOTTOM_PAD = 82;
-const DESKTOP_BAR_STAGE_MAX_BOTTOM_PAD = 130;
 const SYSTEM_REFRESH_MS = 2000;
 const OVERLAY_COORDINATOR_REFRESH_MS = 200;
 const OVERLAY_DEFERRED_RETRY_MS = 75;
@@ -75,7 +84,6 @@ const OVERLAY_ACTIVE_WINDOW_TIMEOUT_MS = 1000;
 const TOOL_DESKTOP_WAKE_MS = 75;
 const TOOL_DESKTOP_WAKE_TIMEOUT_MS = 120;
 const TOOL_DESKTOP_WAKE_PROBE_INTERVAL_MS = 50;
-const WINDOW_BOUNDS_JITTER_TOLERANCE_PX = 2;
 const TOOL_TRANSITION_SNAPSHOT_DELAY_MS = OVERLAY_COORDINATOR_REFRESH_MS;
 const TOOL_HUD_STEADY_REFRESH_MS = 5 * 60 * 1000;
 const HIDDEN_SNAPSHOT_REFRESH_MS = 5 * 60 * 1000;
@@ -285,15 +293,6 @@ function getDesktopBarStageLayout(sourceSettings = settings) {
   };
 }
 
-function getDesktopBarStagePadding(sourceSettings = settings) {
-  const barHeight = getDesktopBarHeight(sourceSettings);
-  return {
-    x: clampNumber(Math.round(barHeight * 1.12), DESKTOP_BAR_STAGE_MIN_SIDE_PAD, DESKTOP_BAR_STAGE_MAX_SIDE_PAD),
-    top: clampNumber(Math.round(barHeight * 0.06), DESKTOP_BAR_STAGE_MIN_TOP_PAD, DESKTOP_BAR_STAGE_MAX_TOP_PAD),
-    bottom: clampNumber(Math.round(barHeight * 1.46), DESKTOP_BAR_STAGE_MIN_BOTTOM_PAD, DESKTOP_BAR_STAGE_MAX_BOTTOM_PAD)
-  };
-}
-
 function resizeDesktopBar(sourceSettings = settings) {
   if (!desktopBarWindow || desktopBarWindow.isDestroyed()) return;
   setWindowBoundsIfChanged(desktopBarWindow, getDesktopBarWindowBounds(sourceSettings));
@@ -324,11 +323,6 @@ function setToolHudHitboxMouseRegion(interactive) {
   toolHudHitboxWindow.setIgnoreMouseEvents(!nextInteractive, { forward: true });
   reinforceNonActivatingWindow(toolHudHitboxWindow); // Post-reinforce to restore non-activating state
   return true;
-}
-
-function getDesktopBarHeight(sourceSettings = settings) {
-  const height = Number(sourceSettings?.windows?.desktopBarHeight);
-  return Number.isFinite(height) ? Math.round(height) : DEFAULT_BAR_HEIGHT;
 }
 
 function resizeToolHud(sourceSettings = settings, previousSettings = settings) {
@@ -363,74 +357,6 @@ function resizeToolHud(sourceSettings = settings, previousSettings = settings) {
   }
 }
 
-function getToolHudSize(sourceSettings = settings) {
-  const width = Number(sourceSettings?.windows?.toolHudWidth);
-  const height = Number(sourceSettings?.windows?.toolHudHeight);
-  return {
-    width: Number.isFinite(width) ? Math.round(width) : DEFAULT_HUD_WIDTH,
-    height: Number.isFinite(height) ? Math.round(height) : DEFAULT_HUD_HEIGHT
-  };
-}
-
-function getToolHudOffset(sourceSettings = settings) {
-  const offsetX = Number(sourceSettings?.windows?.toolHudOffsetX);
-  const offsetY = Number(sourceSettings?.windows?.toolHudOffsetY);
-  return {
-    x: Number.isFinite(offsetX) ? Math.round(offsetX) : 0,
-    y: Number.isFinite(offsetY) ? Math.round(offsetY) : 0
-  };
-}
-
-function boundsCloseEnough(first, second, tolerancePx = WINDOW_BOUNDS_JITTER_TOLERANCE_PX) {
-  const left = normalizeBounds(first);
-  const right = normalizeBounds(second);
-  if (!left || !right) return false;
-  return (
-    Math.abs(left.x - right.x) <= tolerancePx &&
-    Math.abs(left.y - right.y) <= tolerancePx &&
-    Math.abs(left.width - right.width) <= tolerancePx &&
-    Math.abs(left.height - right.height) <= tolerancePx
-  );
-}
-
-function hudAnchorBoundsCloseEnough(first, second) {
-  if (boundsCloseEnough(first, second)) return true;
-  return scaledHudAnchorBoundsCloseEnough(first, second);
-}
-
-function scaledHudAnchorBoundsCloseEnough(first, second) {
-  const left = normalizeBounds(first);
-  const right = normalizeBounds(second);
-  if (!left || !right) return false;
-
-  for (const scale of [0.5, 2]) {
-    const scaledLeft = scaleBounds(left, scale);
-    if (boundsCloseEnough(scaledLeft, right, WINDOW_BOUNDS_JITTER_TOLERANCE_PX * 2) &&
-        isDisplayFillingBounds(scaledLeft) &&
-        isDisplayFillingBounds(right)) {
-      return true;
-    }
-
-    const scaledRight = scaleBounds(right, scale);
-    if (boundsCloseEnough(left, scaledRight, WINDOW_BOUNDS_JITTER_TOLERANCE_PX * 2) &&
-        isDisplayFillingBounds(left) &&
-        isDisplayFillingBounds(scaledRight)) {
-      return true;
-    }
-  }
-
-  return false;
-}
-
-function scaleBounds(bounds, scale) {
-  return {
-    x: Math.round(bounds.x * scale),
-    y: Math.round(bounds.y * scale),
-    width: Math.round(bounds.width * scale),
-    height: Math.round(bounds.height * scale)
-  };
-}
-
 function isDisplayFillingBounds(bounds) {
   const normalized = normalizeBounds(bounds);
   if (!normalized) return false;
@@ -453,8 +379,8 @@ function setWindowBoundsIfChanged(window, bounds) {
 
 function createToolHudWindow() {
   const primary = screen.getPrimaryDisplay();
-  const { x, y } = getHudPosition(primary);
-  const size = getToolHudSize();
+  const { x, y } = getHudPosition(primary, null, null, settings);
+  const size = getToolHudSize(settings);
 
   toolHudWindow = new BrowserWindow({
     x,
@@ -883,49 +809,6 @@ function createTrayIcon() {
   return nativeImage.createFromPath(path.join(__dirname, "assets", "tray.ico"));
 }
 
-function getHudPosition(display, tool = null, activeWindow = null, sourceSettings = settings) {
-  const workArea = display.workArea;
-  const rightGap = 12;
-  const bottomOffset = getHudBottomOffset(tool);
-  const targetArea = getHudTargetArea(display, activeWindow, sourceSettings);
-  const size = getToolHudSize(sourceSettings);
-  const offset = getToolHudOffset(sourceSettings);
-  const minX = workArea.x + 12;
-  const maxX = workArea.x + workArea.width - size.width - rightGap;
-  const minY = workArea.y + 12;
-  const maxY = workArea.y + workArea.height - size.height - rightGap;
-  const x = targetArea.x + targetArea.width - size.width - rightGap - offset.x;
-  const y = targetArea.y + targetArea.height - size.height - bottomOffset - offset.y;
-  return {
-    x: clampNumber(x, minX, maxX),
-    y: clampNumber(y, minY, maxY)
-  };
-}
-
-function getHudBounds(display, tool = null, activeWindow = null, sourceSettings = settings) {
-  const size = getToolHudSize(sourceSettings);
-  return {
-    ...getHudPosition(display, tool, activeWindow, sourceSettings),
-    width: size.width,
-    height: size.height
-  };
-}
-
-function getHudTargetArea(display, activeWindow, sourceSettings = settings) {
-  const bounds = activeWindow?.bounds;
-  const size = getToolHudSize(sourceSettings);
-  if (!bounds || bounds.width <= size.width || bounds.height <= size.height) {
-    return display.workArea;
-  }
-  return bounds;
-}
-
-function getHudBottomOffset(tool) {
-  const offset = Number(tool?.hud?.bottomOffset);
-  if (!Number.isFinite(offset) || offset < 12) return 12;
-  return offset;
-}
-
 async function refreshDesktopBarFromForeground() {
   return refreshOverlayCoordinator();
 }
@@ -1192,7 +1075,7 @@ function warmShowToolHudForTransition(decision) {
 
   const anchorWindow = decision.toolContext.window || decision.activeWindow || payload.activeWindow;
   const display = getDisplayForActiveWindow(anchorWindow);
-  const hudBounds = getHudBounds(display, decision.toolContext.tool, anchorWindow) || warmToolHudBounds;
+  const hudBounds = getHudBounds(display, decision.toolContext.tool, anchorWindow, settings) || warmToolHudBounds;
   if (!hudBounds) return false;
 
   latestHudPayload = payload;
@@ -2377,7 +2260,7 @@ async function refreshToolHud(options = {}) {
     }
 
     const display = getDisplayForActiveWindow(anchorWindow || activeWindow);
-    const hudBounds = getHudBounds(display, tool, anchorWindow || activeWindow);
+    const hudBounds = getHudBounds(display, tool, anchorWindow || activeWindow, settings);
     setWindowBoundsIfChanged(toolHudWindow, hudBounds);
     sendHudUpdate(latestHudPayload);
     lastVisibleHudPayload = latestHudPayload;
@@ -2577,7 +2460,7 @@ function getHudAnchorWindow(activeWindow) {
   if (!isDialogWindow(activeWindow)) return activeWindow;
 
   const activePid = Number(activeWindow?.pid) || null;
-  const size = getToolHudSize();
+  const size = getToolHudSize(settings);
   const blockers = Array.isArray(activeWindow?.desktop?.blockers)
     ? activeWindow.desktop.blockers
     : [];
