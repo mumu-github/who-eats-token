@@ -379,8 +379,8 @@ function setWindowBoundsIfChanged(window, bounds) {
 
 function createToolHudWindow() {
   const primary = screen.getPrimaryDisplay();
-  const { x, y } = getHudPosition(primary);
-  const size = getToolHudSize();
+  const { x, y } = getHudPosition(primary, null, null, settings);
+  const size = getToolHudSize(settings);
 
   toolHudWindow = new BrowserWindow({
     x,
@@ -1075,7 +1075,7 @@ function warmShowToolHudForTransition(decision) {
 
   const anchorWindow = decision.toolContext.window || decision.activeWindow || payload.activeWindow;
   const display = getDisplayForActiveWindow(anchorWindow);
-  const hudBounds = getHudBounds(display, decision.toolContext.tool, anchorWindow) || warmToolHudBounds;
+  const hudBounds = getHudBounds(display, decision.toolContext.tool, anchorWindow, settings) || warmToolHudBounds;
   if (!hudBounds) return false;
 
   latestHudPayload = payload;
@@ -2460,7 +2460,7 @@ function getHudAnchorWindow(activeWindow) {
   if (!isDialogWindow(activeWindow)) return activeWindow;
 
   const activePid = Number(activeWindow?.pid) || null;
-  const size = getToolHudSize();
+  const size = getToolHudSize(settings);
   const blockers = Array.isArray(activeWindow?.desktop?.blockers)
     ? activeWindow.desktop.blockers
     : [];
