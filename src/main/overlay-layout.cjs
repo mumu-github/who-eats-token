@@ -115,28 +115,32 @@ function boundsCloseEnough(first, second, tolerancePx = WINDOW_BOUNDS_JITTER_TOL
   );
 }
 
-function hudAnchorBoundsCloseEnough(first, second) {
+function hudAnchorBoundsCloseEnough(first, second, isDisplayFillingBoundsFn) {
   if (boundsCloseEnough(first, second)) return true;
-  return scaledHudAnchorBoundsCloseEnough(first, second);
+  return scaledHudAnchorBoundsCloseEnough(first, second, isDisplayFillingBoundsFn);
 }
 
-function scaledHudAnchorBoundsCloseEnough(first, second) {
+function scaledHudAnchorBoundsCloseEnough(first, second, isDisplayFillingBoundsFn) {
   const left = normalizeBounds(first);
   const right = normalizeBounds(second);
   if (!left || !right) return false;
 
+  // isDisplayFillingBoundsFn is injected from main.cjs (depends on Electron screen).
+  // If not provided, scaled comparison is skipped to avoid ReferenceError.
+  if (typeof isDisplayFillingBoundsFn !== "function") return false;
+
   for (const scale of [0.5, 2]) {
     const scaledLeft = scaleBounds(left, scale);
     if (boundsCloseEnough(scaledLeft, right, WINDOW_BOUNDS_JITTER_TOLERANCE_PX * 2) &&
-        isDisplayFillingBounds(scaledLeft) &&
-        isDisplayFillingBounds(right)) {
+        isDisplayFillingBoundsFn(scaledLeft) &&
+        isDisplayFillingBoundsFn(right)) {
       return true;
     }
 
     const scaledRight = scaleBounds(right, scale);
     if (boundsCloseEnough(left, scaledRight, WINDOW_BOUNDS_JITTER_TOLERANCE_PX * 2) &&
-        isDisplayFillingBounds(left) &&
-        isDisplayFillingBounds(scaledRight)) {
+        isDisplayFillingBoundsFn(left) &&
+        isDisplayFillingBoundsFn(scaledRight)) {
       return true;
     }
   }

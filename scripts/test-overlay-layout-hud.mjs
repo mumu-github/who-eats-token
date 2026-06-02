@@ -36,6 +36,7 @@ const {
   getDesktopBarStagePadding,
   boundsCloseEnough,
   hudAnchorBoundsCloseEnough,
+  scaledHudAnchorBoundsCloseEnough,
   scaleBounds,
   WINDOW_BOUNDS_JITTER_TOLERANCE_PX,
 } = mod;
@@ -334,6 +335,40 @@ assert.ok(
 );
 
 console.log("  ✅ hudAnchorBoundsCloseEnough correct");
+
+// ── Test 13b: scaledHudAnchorBoundsCloseEnough (DI fix) ──────────────
+
+console.log("\n[Test 13b] scaledHudAnchorBoundsCloseEnough");
+
+// Without DI function → safe fallback to false (no ReferenceError)
+assert.ok(
+  !scaledHudAnchorBoundsCloseEnough(boundsA, boundsB, null),
+  "without DI fn → false (safe fallback)"
+);
+
+// With mock DI that rejects all → false
+assert.ok(
+  !scaledHudAnchorBoundsCloseEnough(boundsA, boundsB, () => false),
+  "DI rejects all → false"
+);
+
+// With mock DI that accepts all, scaled bounds within tolerance → true
+const displayFilling = { x: 0, y: 0, width: 1920, height: 1080 };
+const halfDisplay = { x: 0, y: 0, width: 960, height: 540 };
+const alwaysTrue = () => true;
+assert.ok(
+  scaledHudAnchorBoundsCloseEnough(displayFilling, halfDisplay, alwaysTrue),
+  "display-filling vs half, DI accepts → true (scale 2x right match)"
+);
+
+// Selective DI: only accepts display-filling bounds → still matches
+const onlyDisplayFilling = (b) => b.width >= 1920 && b.height >= 1080;
+assert.ok(
+  scaledHudAnchorBoundsCloseEnough(displayFilling, halfDisplay, onlyDisplayFilling),
+  "display-filling vs half, selective DI → true (scaledRight={0,0,1920,1080})"
+);
+
+console.log("  ✅ scaledHudAnchorBoundsCloseEnough DI injection correct");
 
 // ── Test 14: HUD position determinism ────────────────────────────────
 
