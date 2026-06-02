@@ -72,12 +72,43 @@ const { collectSystemMetrics } = require("./system/system-metrics.cjs");
 const { detectTool, isDialogWindow } = require("./system/tool-detector.cjs");
 const { createToolDetection } = require("./main/tool-detection.cjs");
 
+// ── display-adapter (sole screen.* boundary) ────────────────────────
+
+function getPrimaryDisplay() {
+  return screen.getPrimaryDisplay();
+}
+
+function getMatchingDisplay(bounds) {
+  return screen.getDisplayMatching(bounds);
+}
+
 function getDisplayBounds(activeWindow) {
   const bounds = activeWindow?.bounds;
   if (!bounds || bounds.width <= 0 || bounds.height <= 0) {
-    return screen.getPrimaryDisplay().bounds;
+    return getPrimaryDisplay().bounds;
   }
-  return normalizeBounds(screen.getDisplayMatching(bounds)?.bounds);
+  return normalizeBounds(getMatchingDisplay(bounds)?.bounds);
+}
+
+function isDisplayFillingBounds(bounds) {
+  const normalized = normalizeBounds(bounds);
+  if (!normalized) return false;
+  const display = getMatchingDisplay(normalized);
+  const area = display?.bounds || getPrimaryDisplay().bounds;
+  if (!area?.width || !area?.height) return false;
+  const horizontalCoverage = normalized.width / area.width;
+  const verticalCoverage = normalized.height / area.height;
+  const leftAligned = normalized.x <= area.x + 16;
+  const topAligned = normalized.y <= area.y + 16;
+  return horizontalCoverage >= 0.9 && verticalCoverage >= 0.9 && leftAligned && topAligned;
+}
+
+function getDisplayForActiveWindow(activeWindow) {
+  const bounds = activeWindow?.bounds;
+  if (!bounds || bounds.width <= 0 || bounds.height <= 0) {
+    return getPrimaryDisplay();
+  }
+  return getMatchingDisplay(bounds);
 }
 
 const {
@@ -106,7 +137,7 @@ const {
   isDesktopForegroundWindow,
   isDialogWindow,
   getDisplayBounds,
-  getDesktopBarVisualBounds: () => getDesktopBarVisualBounds(settings, screen.getPrimaryDisplay()),
+  getDesktopBarVisualBounds: () => getDesktopBarVisualBounds(settings, getPrimaryDisplay()),
   isOwnDesktopBar
 });
 
@@ -238,7 +269,7 @@ app.on("second-instance", () => {
 });
 
 function createDesktopBarWindow() {
-  const bounds = getDesktopBarWindowBounds(settings, screen.getPrimaryDisplay());
+  const bounds = getDesktopBarWindowBounds(settings, getPrimaryDisplay());
 
   desktopBarWindow = new BrowserWindow({
     x: bounds.x,
@@ -284,7 +315,7 @@ function createDesktopBarWindow() {
 
 function resizeDesktopBar(sourceSettings = settings) {
   if (!desktopBarWindow || desktopBarWindow.isDestroyed()) return;
-  setWindowBoundsIfChanged(desktopBarWindow, getDesktopBarWindowBounds(sourceSettings, screen.getPrimaryDisplay()));
+  setWindowBoundsIfChanged(desktopBarWindow, getDesktopBarWindowBounds(sourceSettings, getPrimaryDisplay()));
   setDesktopBarMouseRegion(false);
 }
 
@@ -330,7 +361,7 @@ function resizeToolHud(sourceSettings = settings, previousSettings = settings) {
   const nextOffset = getToolHudOffset(sourceSettings);
   const deltaX = nextOffset.x - previousOffset.x;
   const deltaY = nextOffset.y - previousOffset.y;
-  const display = screen.getDisplayMatching(current);
+  const display = getMatchingDisplay(current);
   const rightGap = 12;
   const bottomGap = 12;
   const bounds = {
@@ -346,18 +377,7 @@ function resizeToolHud(sourceSettings = settings, previousSettings = settings) {
   }
 }
 
-function isDisplayFillingBounds(bounds) {
-  const normalized = normalizeBounds(bounds);
-  if (!normalized) return false;
-  const display = screen.getDisplayMatching(normalized);
-  const area = display?.bounds || screen.getPrimaryDisplay().bounds;
-  if (!area?.width || !area?.height) return false;
-  const horizontalCoverage = normalized.width / area.width;
-  const verticalCoverage = normalized.height / area.height;
-  const leftAligned = normalized.x <= area.x + 16;
-  const topAligned = normalized.y <= area.y + 16;
-  return horizontalCoverage >= 0.9 && verticalCoverage >= 0.9 && leftAligned && topAligned;
-}
+
 
 function setWindowBoundsIfChanged(window, bounds) {
   if (!window || window.isDestroyed()) return;
@@ -367,7 +387,7 @@ function setWindowBoundsIfChanged(window, bounds) {
 }
 
 function createToolHudWindow() {
-  const primary = screen.getPrimaryDisplay();
+  const primary = getPrimaryDisplay();
   const { x, y } = getHudPosition(primary, null, null, settings);
   const size = getToolHudSize(settings);
 
@@ -575,7 +595,7 @@ function resizeHudTrustPopover(size = {}) {
 
 function getHudTrustPopoverBounds(anchor = {}, anchorWindow = toolHudWindow, size = latestHudTrustPopoverSize) {
   const sourceBounds = anchorWindow.getBounds();
-  const display = screen.getDisplayMatching(sourceBounds);
+  const display = getMatchingDisplay(sourceBounds);
   const workArea = display.workArea;
   const width = Number(size?.width) || HUD_TRUST_POPOVER_WIDTH;
   const height = Number(size?.height) || HUD_TRUST_POPOVER_MIN_HEIGHT;
@@ -635,7 +655,7 @@ function openSettingsWindow(owner = "unknown") {
     return;
   }
 
-  const primary = screen.getPrimaryDisplay();
+  const primary = getPrimaryDisplay();
   const x = primary.workArea.x + Math.round((primary.workArea.width - SETTINGS_WIDTH) / 2);
   const y = primary.workArea.y + Math.round((primary.workArea.height - SETTINGS_HEIGHT) / 2);
 
@@ -1590,7 +1610,7 @@ function reinforceNonActivatingWindow(window) {
 }
 
 function getWindowInspectionOptions() {
-  const primary = screen.getPrimaryDisplay();
+  const primary = getPrimaryDisplay();
   return {
     ignoredHwnds: getOwnedWindowHwnds(),
     desktopArea: primary.workArea
@@ -2301,19 +2321,13 @@ function getAlertTiers() {
 
 
 
-function getDisplayForActiveWindow(activeWindow) {
-  const bounds = activeWindow?.bounds;
-  if (!bounds || bounds.width <= 0 || bounds.height <= 0) {
-    return screen.getPrimaryDisplay();
-  }
-  return screen.getDisplayMatching(bounds);
-}
+
 
 function getPublicSettings(sourceSettings = settings) {
   return {
     ...sourceSettings,
     providerRegistry: getProviderRegistry(sourceSettings),
-    desktopBarStage: getDesktopBarRendererLayout(sourceSettings, screen.getPrimaryDisplay())
+    desktopBarStage: getDesktopBarRendererLayout(sourceSettings, getPrimaryDisplay())
   };
 }
 
