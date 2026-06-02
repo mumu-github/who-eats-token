@@ -153,6 +153,63 @@ function scaleBounds(bounds, scale) {
   };
 }
 
+// ── Desktop bar geometry ────────────────────────────────────────────
+/**
+ * Calculate desktop bar stage layout from a primary display.
+ * @param {object} sourceSettings
+ * @param {object} primaryDisplay - Result of screen.getPrimaryDisplay()
+ *   Must provide { workArea: {x,y,width,height}, workAreaSize: {width,height} }.
+ *   Passed explicitly so overlay-layout never imports Electron.
+ */
+function getDesktopBarStageLayout(sourceSettings, primaryDisplay) {
+  const ratio = sourceSettings.windows.desktopWidthRatio;
+  const barHeight = getDesktopBarHeight(sourceSettings);
+  const padding = getDesktopBarStagePadding(sourceSettings);
+  const desiredBarWidth = Math.round(primaryDisplay.workAreaSize.width * ratio);
+  const stageWidth = Math.min(primaryDisplay.workAreaSize.width, desiredBarWidth + padding.x * 2);
+  const availableBarWidth = Math.max(320, stageWidth - padding.x * 2);
+  const barWidth = Math.min(desiredBarWidth, availableBarWidth);
+  const stageHeight = Math.min(primaryDisplay.workAreaSize.height, padding.top + barHeight + padding.bottom);
+  const localBarX = Math.round((stageWidth - barWidth) / 2);
+  const localBarY = Math.min(padding.top, Math.max(0, stageHeight - barHeight - padding.bottom));
+  const stageX = primaryDisplay.workArea.x + Math.round((primaryDisplay.workAreaSize.width - stageWidth) / 2);
+  const stageY = primaryDisplay.workArea.y + 4;
+  return {
+    windowBounds: {
+      x: stageX,
+      y: stageY,
+      width: stageWidth,
+      height: stageHeight
+    },
+    barBounds: {
+      x: stageX + localBarX,
+      y: stageY + localBarY,
+      width: barWidth,
+      height: barHeight
+    }
+  };
+}
+
+function getDesktopBarWindowBounds(sourceSettings, primaryDisplay) {
+  return getDesktopBarStageLayout(sourceSettings, primaryDisplay).windowBounds;
+}
+
+function getDesktopBarVisualBounds(sourceSettings, primaryDisplay) {
+  return getDesktopBarStageLayout(sourceSettings, primaryDisplay).barBounds;
+}
+
+function getDesktopBarRendererLayout(sourceSettings, primaryDisplay) {
+  const layout = getDesktopBarStageLayout(sourceSettings, primaryDisplay);
+  return {
+    barX: layout.barBounds.x - layout.windowBounds.x,
+    barY: layout.barBounds.y - layout.windowBounds.y,
+    barWidth: layout.barBounds.width,
+    barHeight: layout.barBounds.height,
+    stageWidth: layout.windowBounds.width,
+    stageHeight: layout.windowBounds.height
+  };
+}
+
 module.exports = {
   DEFAULT_BAR_HEIGHT,
   DEFAULT_HUD_WIDTH,
@@ -163,6 +220,10 @@ module.exports = {
   boundsCloseEnough,
   getDesktopBarHeight,
   getDesktopBarStagePadding,
+  getDesktopBarStageLayout,
+  getDesktopBarWindowBounds,
+  getDesktopBarVisualBounds,
+  getDesktopBarRendererLayout,
   getHudBottomOffset,
   getHudBounds,
   getHudPosition,
