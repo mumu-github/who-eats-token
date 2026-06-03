@@ -149,7 +149,7 @@ assert.strictEqual(roundedNumberOrNull(42.6), 43, "42.6 → 43");
 assert.strictEqual(roundedNumberOrNull(42.4), 42, "42.4 → 42");
 assert.strictEqual(roundedNumberOrNull("75.5"), 76, "string → rounded");
 assert.strictEqual(roundedNumberOrNull("abc"), null, "invalid → null");
-assert.strictEqual(roundedNumberOrNull(null), 0, "null → 0 (Number(null)=0)");
+assert.strictEqual(roundedNumberOrNull(null), null, "null → null (guard before Number coercion)");
 
 console.log("  ✅ roundedNumberOrNull correct");
 
