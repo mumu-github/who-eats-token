@@ -82,6 +82,11 @@ const {
   getDisplayForActiveWindow
 } = createDisplayAdapter({ screen });
 
+// ── Hot-plug: reposition overlay/HUD immediately on display change ──
+screen.on('display-added', () => refreshOverlayCoordinator());
+screen.on('display-removed', () => refreshOverlayCoordinator());
+screen.on('display-metrics-changed', () => refreshOverlayCoordinator());
+
 const {
   addWindowCandidate,
   doesWindowOverlapDesktopBar,
