@@ -8,6 +8,7 @@ const MAX_OVERLAY_REPORTS = 128;
 const RECENT_MS = 60 * 60 * 1000;
 const OVERLAY_FRESH_MS = 3000;
 const OVERLAY_RECENT_MS = 15 * 1000;
+const PORT_RETRY_MS = 10_000;
 
 function createIngestServer({ port, accessToken = null, getSnapshot = null, security = {} } = {}) {
   const events = [];
@@ -15,6 +16,7 @@ function createIngestServer({ port, accessToken = null, getSnapshot = null, secu
   const allowUnauthenticatedNoOrigin = security.allowUnauthenticatedNoOrigin === true;
   let listening = false;
   let listenError = null;
+  let retryTimer = null;
 
   const server = http.createServer(async (req, res) => {
     const originAllowed = setCors(req, res);
@@ -86,11 +88,24 @@ function createIngestServer({ port, accessToken = null, getSnapshot = null, secu
 
   server.on("listening", () => {
     listening = true;
+    listenError = null;
+    if (retryTimer) { clearInterval(retryTimer); retryTimer = null; }
   });
   server.on("error", (error) => {
     listenError = error;
+    listening = false;
+    if (error.code === "EADDRINUSE" && !retryTimer) {
+      retryTimer = setInterval(() => {
+        try { server.listen(port, "127.0.0.1"); } catch { /* retry next tick */ }
+      }, PORT_RETRY_MS);
+      retryTimer.unref?.();
+    }
   });
   server.listen(port, "127.0.0.1");
+
+  server.on("close", () => {
+    if (retryTimer) { clearInterval(retryTimer); retryTimer = null; }
+  });
 
   function getSummary() {
     const now = Date.now();

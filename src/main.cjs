@@ -2560,7 +2560,7 @@ ipcMain.handle("desktop-bar:mouse-region", (_event, interactive) => setDesktopBa
 ipcMain.handle("hud:mouse-region", (_event, interactive) => setToolHudMouseRegion(guardBooleanPayload(interactive)));
 ipcMain.handle("hud-hitbox:mouse-region", (_event, interactive) => setToolHudHitboxMouseRegion(guardBooleanPayload(interactive)));
 ipcMain.handle("settings:open", (event, owner) => {
-  openSettingsWindow(owner || getSettingsOverlayOwnerFromWindow(BrowserWindow.fromWebContents(event.sender)));
+  openSettingsWindow(String(owner || "") || getSettingsOverlayOwnerFromWindow(BrowserWindow.fromWebContents(event.sender)));
   return true;
 });
 ipcMain.handle("settings:close", () => {
