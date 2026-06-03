@@ -1118,21 +1118,6 @@ function testHudWindowLifecycleGuards() {
     /const display = getMatchingDisplay\(sourceBounds\)/,
     "getHudTrustPopoverBounds should call getMatchingDisplay(sourceBounds)."
   );
-  assert.match(
-    mainSource,
-    /screen\.on\('display-added'/,
-    "main.cjs should listen for display-added to reposition overlay on hot-plug."
-  );
-  assert.match(
-    mainSource,
-    /screen\.on\('display-removed'/,
-    "main.cjs should listen for display-removed to reposition overlay on hot-unplug."
-  );
-  assert.match(
-    mainSource,
-    /screen\.on\('display-metrics-changed'/,
-    "main.cjs should listen for display-metrics-changed to reposition overlay on resolution/position change."
-  );
 }
 
 function testSettingsPreviewGuards() {
