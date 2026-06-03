@@ -100,6 +100,7 @@
     "test:performance-summary": "node scripts/test-performance-summary.mjs",
     "test:overlay-state": "node scripts/test-overlay-state.mjs",
     "test:tool-detection": "node scripts/test-tool-detection.mjs",
+    "test:display-adapter": "node scripts/test-display-adapter.mjs",
     "test:overlay-layout-geometry": "node scripts/test-overlay-layout-geometry.mjs",
     "test:overlay-layout-hud": "node scripts/test-overlay-layout-hud.mjs",
     "test:hud-payload": "node scripts/test-hud-payload.mjs",

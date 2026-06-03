@@ -320,6 +320,7 @@ function testHudWindowLifecycleGuards() {
   const preloadSource = read("src/preload.cjs");
   const hudHitboxSource = read("src/renderer/hud-hitbox.js");
   const toolDetectionSource = read("src/main/tool-detection.cjs");
+  const displayAdapterSource = read("src/main/display-adapter.cjs");
   const shouldInspectBlockersSource = extractFunction(toolDetectionSource, "function shouldInspectDesktopBlockersForToolDetection");
   const shouldShowDesktopBarSource = extractFunction(toolDetectionSource, "function shouldShowDesktopBar");
   const isDesktopForegroundSource = extractFunction(toolDetectionSource, "function isDesktopForeground");
@@ -1054,6 +1055,68 @@ function testHudWindowLifecycleGuards() {
     mainSource,
     /setTimeout\(refreshOverlayCoordinator, 500\)/,
     "Startup should use the overlay coordinator for the initial visible-surface decision."
+  );
+
+  // -- display-adapter guards (PR #14: factory + smoke) --
+  assert.match(
+    mainSource,
+    /createDisplayAdapter\(\{ screen \}\)/,
+    "main.cjs should import display-adapter via DI factory with screen."
+  );
+  assert.match(
+    displayAdapterSource,
+    /function getPrimaryDisplay\(\)/,
+    "Display-adapter module should provide getPrimaryDisplay() primitive."
+  );
+  assert.match(
+    displayAdapterSource,
+    /function getMatchingDisplay\(bounds\)/,
+    "Display-adapter module should provide getMatchingDisplay(bounds) primitive."
+  );
+  assert.match(
+    displayAdapterSource,
+    /function getDisplayBounds\(activeWindow\)/,
+    "Display-adapter module should host getDisplayBounds function."
+  );
+  assert.match(
+    displayAdapterSource,
+    /function isDisplayFillingBounds\(bounds\)/,
+    "Display-adapter module should host isDisplayFillingBounds function."
+  );
+  assert.match(
+    displayAdapterSource,
+    /function getDisplayForActiveWindow\(activeWindow\)/,
+    "Display-adapter module should host getDisplayForActiveWindow function."
+  );
+  assert.match(
+    displayAdapterSource,
+    /screen\.getPrimaryDisplay\(\)/,
+    "Display-adapter primitives should wrap screen.getPrimaryDisplay()."
+  );
+  assert.match(
+    displayAdapterSource,
+    /screen\.getDisplayMatching\(bounds\)/,
+    "Display-adapter primitives should wrap screen.getDisplayMatching(bounds)."
+  );
+  assert.doesNotMatch(
+    mainSource,
+    /screen\.getPrimaryDisplay\(\)/,
+    "main.cjs should not call screen.getPrimaryDisplay() directly."
+  );
+  assert.doesNotMatch(
+    mainSource,
+    /screen\.getDisplayMatching\(/,
+    "main.cjs should not call screen.getDisplayMatching() directly."
+  );
+  assert.match(
+    mainSource,
+    /const display = getMatchingDisplay\(current\)/,
+    "resizeToolHud should call getMatchingDisplay(current)."
+  );
+  assert.match(
+    mainSource,
+    /const display = getMatchingDisplay\(sourceBounds\)/,
+    "getHudTrustPopoverBounds should call getMatchingDisplay(sourceBounds)."
   );
 }
 
