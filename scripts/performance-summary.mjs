@@ -144,6 +144,17 @@ function classifyInterval(occurrence) {
   }
 
   if (
+    (normalized === "src/collectors/ingest-server.cjs" || normalized === "src/collectors/hermes-bridge.cjs")
+    && line.includes("retryTimer = setInterval")
+  ) {
+    return {
+      ...occurrence,
+      classification: "reviewed-runtime",
+      reason: "Port retry timer: .unref(), cleared on listen/close, only fires on EADDRINUSE."
+    };
+  }
+
+  if (
     normalized.startsWith("adapters/")
     || normalized === "src/integrations/hermes-overlay-installer.cjs"
   ) {
