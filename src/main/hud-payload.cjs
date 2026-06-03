@@ -96,9 +96,8 @@ function buildHudPayload(snapshot, activeWindow, tool) {
 
 function getWindowRemaining(window) {
   if (!window) return null;
-  const usedPercent = Number(window.usedPercent);
-  if (!Number.isFinite(usedPercent)) return 0;
-  return Math.max(0, Math.min(100, 100 - Math.round(usedPercent)));
+  const usedPercent = Math.round(window.usedPercent);
+  return Math.max(0, Math.min(100, 100 - usedPercent));
 }
 
 // ── Summarizers (debug logging) ─────────────────────────────────────
@@ -214,7 +213,6 @@ function numberOrNull(value) {
 }
 
 function roundedNumberOrNull(value) {
-  if (value === null || value === undefined) return null;
   const number = Number(value);
   return Number.isFinite(number) ? Math.round(number) : null;
 }
