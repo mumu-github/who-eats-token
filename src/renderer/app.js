@@ -950,7 +950,9 @@ function getCapacityStandardRemaining(fiveHourRemaining, weekRemaining) {
 function getWindowRemaining(window) {
   if (sharedQuotaViewModel.getWindowRemaining) return sharedQuotaViewModel.getWindowRemaining(window);
   if (!window) return null;
-  return Math.max(0, 100 - Math.round(window.usedPercent));
+  const usedPercent = Number(window.usedPercent);
+  if (!Number.isFinite(usedPercent)) return 0;
+  return Math.max(0, Math.min(100, 100 - Math.round(usedPercent)));
 }
 
 function renderMiniChart(chart) {

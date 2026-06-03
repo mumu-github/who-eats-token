@@ -8,7 +8,9 @@
 
   function getWindowRemaining(windowValue) {
     if (!windowValue) return null;
-    return Math.max(0, 100 - Math.round(windowValue.usedPercent));
+    const usedPercent = Number(windowValue.usedPercent);
+    if (!Number.isFinite(usedPercent)) return 0;
+    return Math.max(0, Math.min(100, 100 - Math.round(usedPercent)));
   }
 
   function getRemainingLevel(value) {
