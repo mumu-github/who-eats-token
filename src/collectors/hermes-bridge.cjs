@@ -5,6 +5,7 @@ const DEFAULT_INGEST = "http://127.0.0.1:17667/events";
 const MAX_BODY_BYTES = 16 * 1024 * 1024;
 const DEFAULT_UPSTREAM_TIMEOUT_MS = 30_000;
 const DEFAULT_INGEST_TIMEOUT_MS = 2_500;
+const PORT_RETRY_MS = 10_000;
 
 function createHermesBridgeServer({
   port = 17668,
@@ -19,6 +20,7 @@ function createHermesBridgeServer({
   const allowUnauthenticatedNoOrigin = security.allowUnauthenticatedNoOrigin === true;
   let listening = false;
   let listenError = null;
+  let retryTimer = null;
   let proxiedCount = 0;
   let usageEventCount = 0;
   let lastUsageEvent = null;
@@ -139,9 +141,20 @@ function createHermesBridgeServer({
   server.on("listening", () => {
     listening = true;
     listenError = null;
+    if (retryTimer) { clearInterval(retryTimer); retryTimer = null; }
   });
   server.on("error", (error) => {
     listenError = error;
+    listening = false;
+    if (error.code === "EADDRINUSE" && !retryTimer) {
+      retryTimer = setInterval(() => {
+        try { server.listen(port, "127.0.0.1"); } catch { /* retry next tick */ }
+      }, PORT_RETRY_MS);
+      retryTimer.unref?.();
+    }
+  });
+  server.on("close", () => {
+    if (retryTimer) { clearInterval(retryTimer); retryTimer = null; }
   });
   server.listen(port, "127.0.0.1");
 
