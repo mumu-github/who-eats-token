@@ -10,7 +10,7 @@ For OSS maintainers and reviewers:
 
 - Local-first by default: no telemetry, no hosted backend, and no prompt/completion collection.
 - Maintainer workflow ready: CI, release readiness checks, adapter review tools, secret scanning, license checks, diagnostics, and redacted support bundles.
-- Security-sensitive surfaces are documented: localhost APIs, browser/IDE adapters, MCP tools, optional bridge traffic, and local credential files.
+- Security-sensitive surfaces are documented: localhost APIs, browser/IDE adapters, MCP tools, optional bridge traffic, local credential files, and [threat model](docs/threat-model.md).
 
 ## Screenshots
 
@@ -52,6 +52,7 @@ TokenTracker/ccusage 等外部摘要导入见 [docs/external-summary-import.md](
 IDE 状态栏接入见 [docs/ide-extension.md](docs/ide-extension.md)。
 低内存和稳定性预算见 [docs/performance-budget.md](docs/performance-budget.md)。
 已知风险和开源维护守卫见 [docs/risk-register.md](docs/risk-register.md)。
+安全威胁模型见 [docs/threat-model.md](docs/threat-model.md)。
 依赖许可证策略见 [docs/license-policy.md](docs/license-policy.md)。
 打包发布流程见 [docs/release.md](docs/release.md)，真机验证清单见 [docs/manual-validation.md](docs/manual-validation.md)。
 发布 readiness 总审计见 [docs/release-readiness.md](docs/release-readiness.md)。

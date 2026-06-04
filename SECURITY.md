@@ -20,6 +20,8 @@ macOS: ~/Library/Application Support/who-eats-token/api-token.txt
 
 Local CLI or SDK requests without an `Origin` header are allowed for compatibility, but integrations should still send `X-Who-Eats-Token`.
 
+For a reviewer-facing map of assets, trust boundaries, abuse cases, and release checks, see [docs/threat-model.md](docs/threat-model.md).
+
 ## Secret Handling
 
 Never commit or share these files:
