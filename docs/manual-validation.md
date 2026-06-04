@@ -18,6 +18,24 @@ Use `npm run validation:next -- --target browser|ide|macos|signing` when assigni
 
 Use `npm run validation:template -- --target browser|ide|macos|signing` when handing work to a tester. It prints the remaining actions, checklist items, required note fields, and exact record commands without marking anything passed.
 
+## Recorded Source-Beta Evidence
+
+The source-beta release already has reviewer-facing validation evidence in `docs/release-evidence.json` and the generated `docs/release-evidence.md` report:
+
+- Windows packaged runtime smoke passed on 2026-05-24 with `npm run smoke:packaged-win`.
+- Windows packaged 10-minute soak passed on 2026-05-24 with stable memory and quiet CPU.
+- Windows HUD desktop/tool placement was manually checked; Windows has no macOS Accessibility or Screen Recording permission gate.
+- Browser adapter host smoke covered Chrome for Testing 149.0.7827.22 and Edge 148.0.3967.83, including extension load and Options `/health`.
+- Browser adapter manual connection passed in Chrome for Testing and Edge; `/health` returned HTTP 200 and reported connected local providers without recording the local token.
+- IDE adapter host smoke and manual VSIX install passed on VS Code 1.121.0 and Cursor 3.5.33.
+- Dependency audit passed on 2026-05-25 with zero high-severity vulnerabilities.
+
+Remaining honest gaps before a public binary release:
+
+- Real macOS packaged smoke, 10-minute soak, and permission-state HUD checks.
+- VS Code/Cursor status bar, refresh command, and copy snapshot manual checks.
+- Windows Authenticode signing and macOS notarization.
+
 ## Windows 10+
 
 - `npm run package:dir` succeeds.
