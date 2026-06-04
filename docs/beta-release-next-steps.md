@@ -111,7 +111,8 @@ Before recording runtime evidence, make sure `npm run lag:triage -- --json` does
 These items do not block the source beta, but they still block a polished public binary/adapters release. Current Windows validation status:
 
 - Browser adapter: recorded. Chrome for Testing 149.0.7827.22 and Edge 148.0.3967.83 loaded the unpacked extension, and Options `/health` returned HTTP 200 in both hosts without recording the local token.
-- IDE adapter: VS Code 1.121.0 and Cursor 3.5.33 installed the generated VSIX and listed `who-eats-token.who-eats-token-vscode-adapter`. The remaining IDE item is the visible status bar `/health`, refresh command, and copy snapshot behavior in both hosts.
+- IDE adapter: VS Code 1.121.0 and Cursor 3.5.33 installed the generated VSIX and listed `who-eats-token.who-eats-token-vscode-adapter`. VS Code 1.122.1 now has partial manual connection evidence: an isolated profile showed the local `/health` status bar summary, Refresh Token Status executed, and Copy Token Snapshot produced structured `/snapshot` JSON. Cursor 3.6.21 is still blocked by the login screen, so Cursor status bar, refresh, and copy snapshot must be checked in a logged-in host.
+- Source-beta tester feedback: issue #26 is open for real user feedback and privacy-safe reports. This is an intake point, not adoption evidence, until external testers actually comment.
 - Windows signing: `npm run signing:readiness -- --platform windows --require` is blocked until `WIN_CSC_LINK` or `CSC_LINK`, plus `WIN_CSC_KEY_PASSWORD` or `CSC_KEY_PASSWORD`, are present in the release environment.
 
 Do not mark `ideAdapter.manualConnection` or `signing.windowsAuthenticode` as passed until those exact host/certificate checks have really been completed.
