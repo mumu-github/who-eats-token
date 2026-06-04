@@ -81,6 +81,14 @@ npm run release:evidence-report -- --write
 - Command: `Install VSIX in VS Code and Cursor`
 - Notes: VS Code version 1.121.0 and Cursor version 3.5.33 installed release/adapters/who-eats-token-vscode-adapter-0.1.0.vsix; adapter id who-eats-token.who-eats-token-vscode-adapter was listed as loaded in both hosts.
 
+### VS Code/Cursor status bar and snapshot manual check
+
+- Key: `ideAdapter.manualConnection`
+- Status: `blocked`
+- Recorded at: 2026-06-04T16:58:08.091Z
+- Command: `VS Code/Cursor status bar /health, refresh, and copy snapshot checks`
+- Notes: VS Code 1.122.1 isolated profile: VSIX installed; status bar showed local /health summary for Who Eats Token with 6 providers; Refresh Token Status command executed from the command palette; Copy Token Snapshot command showed the copied notification and clipboard contained snapshot JSON with ingest, bridges, system, settings, providers, providerHealth, totals, and collectedAt keys. Cursor 3.6.21: VSIX installed, but both isolated and default profiles stopped at the Cursor login screen, so Cursor status bar/refresh/copy snapshot were not verified and the full IDE manual pass remains open.
+
 ### Dependency audit
 
 - Key: `dependencyAudit`
@@ -95,7 +103,7 @@ npm run release:evidence-report -- --write
 - macOS packaged 10-minute soak: `not-run` - Requires a real macOS host.
 - macOS Accessibility and Screen Recording permission-state HUD checks: `not-run` - Must verify HUD behavior with permissions both granted and denied.
 - VS Code/Cursor host smoke: `host-smoke-only` - Validation machine host smoke passed: VS Code 1.121.0 and Cursor 3.5.33 installed the VSIX and listed who-eats-token.who-eats-token-vscode-adapter.
-- VS Code/Cursor status bar and snapshot manual check: `not-run` - Must verify the status bar and commands inside each host.
+- VS Code/Cursor status bar and snapshot manual check: `blocked` - VS Code 1.122.1 isolated profile: VSIX installed; status bar showed local /health summary for Who Eats Token with 6 providers; Refresh Token Status command executed from the command palette; Copy Token Snapshot command showed the copied notification and clipboard contained snapshot JSON with ingest, bridges, system, settings, providers, providerHealth, totals, and collectedAt keys. Cursor 3.6.21: VSIX installed, but both isolated and default profiles stopped at the Cursor login screen, so Cursor status bar/refresh/copy snapshot were not verified and the full IDE manual pass remains open.
 - Windows Authenticode signed artifact: `not-run` - Requires Windows code-signing certificate and password in release environment.
 - macOS notarized artifact: `not-run` - Requires Developer ID signing and Apple notarization credentials.
 
