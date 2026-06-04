@@ -217,6 +217,8 @@ npm run release:summary -- --require-source-beta
 - [Release Readiness](docs/release-readiness.md)
 - [Risk Register](docs/risk-register.md)
 - [Open Source Strategy](docs/open-source-form-strategy.md)
+- [Open Source Landscape](docs/open-source-landscape.md)
+- [TokenTracker Lessons](docs/token-tracker-lessons.md)
 
 ## Contributing
 
