@@ -27,7 +27,7 @@ npm run test:delight-contract
 - Icon, mascot, chart, tone, motion, priority, and accessibility label come from the shared delight state.
 - Reduced-motion mode must reduce decorative movement to static UI.
 - No delight feature may add a new polling loop.
-- No delight image/animation/mascot asset may exceed `100 KB` without an explicit release-note exception.
+- No delight image/animation/mascot asset in `src/assets/delight` may exceed `100 KB` without an explicit release-note exception.
 
 ## State Matrix
 

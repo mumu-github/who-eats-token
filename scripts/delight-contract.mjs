@@ -167,7 +167,7 @@ function inspectRendererCoupling() {
 }
 
 function inspectDelightAssets() {
-  const assetRoot = path.join(root, "src", "assets");
+  const assetRoot = path.join(root, "src", "assets", "delight");
   if (!fs.existsSync(assetRoot)) return [];
   const assets = [];
   walkAssets(assetRoot, assets);

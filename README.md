@@ -1,5 +1,28 @@
 # 谁在吃 token
 
+## English Overview
+
+Who Eats Token is a local-first desktop monitor for LLM token and quota visibility. It keeps usage data on the user's machine, shows a low-overhead Windows/macOS HUD, exposes a localhost event protocol, and provides adapter paths for Codex, Hermes, browser tools, IDEs, SDK wrappers, and MCP clients.
+
+The project is a source beta, not a claim to be the first or only token tracker. Its open-source value is the maintainer-friendly boundary: the desktop app owns realtime HUD and local aggregation, adapters own tool-specific usage capture, MCP exposes agent-readable status, and skills/plugins help with setup, diagnostics, and adapter authoring. See [docs/open-source-form-strategy.md](docs/open-source-form-strategy.md), [docs/risk-register.md](docs/risk-register.md), and [docs/beta-release-next-steps.md](docs/beta-release-next-steps.md) for reviewer-facing evidence and next steps.
+
+For OSS maintainers and reviewers:
+
+- Local-first by default: no telemetry, no hosted backend, and no prompt/completion collection.
+- Maintainer workflow ready: CI, release readiness checks, adapter review tools, secret scanning, license checks, diagnostics, and redacted support bundles.
+- Security-sensitive surfaces are documented: localhost APIs, browser/IDE adapters, MCP tools, optional bridge traffic, and local credential files.
+
+## Screenshots
+
+Generated with sanitized mock data via `npm run screenshots:readme`.
+
+<img src="docs/assets/screenshots/desktop-top-bar.png" alt="Desktop top bar showing Codex quota, usage, system status, and lightweight mascot state" width="900" />
+
+<p>
+  <img src="docs/assets/screenshots/in-tool-hud.png" alt="In-tool HUD showing five-hour and weekly quota, trust label, forecast, and mascot state" width="420" />
+  <img src="docs/assets/screenshots/settings-panel.png" alt="Settings panel for desktop top bar, in-tool HUD, visual style, alerts, performance, and adapter setup" width="420" />
+</p>
+
 本地低占用 LLM 容量监控顶栏，目标平台是 Windows 10+ 和 macOS：
 
 - 读取 Codex Desktop 本地 `token_count` 事件，显示 5 小时和 7 天窗口占用。

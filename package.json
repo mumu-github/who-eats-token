@@ -22,6 +22,7 @@
   "main": "src/main.cjs",
   "scripts": {
     "start": "electron .",
+    "screenshots:readme": "electron scripts/generate-readme-screenshots.cjs",
     "check": "node scripts/check.mjs",
     "package:dir": "electron-builder --dir --publish never --config.win.signAndEditExecutable=false",
     "package:browser-extension": "node scripts/package-browser-extension.mjs",

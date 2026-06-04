@@ -2,6 +2,87 @@
 
 This document is the handoff checklist after publishing the repository as a source beta. The beta can be public while the polished binary release remains blocked by manual host validation, macOS validation, and signing.
 
+## Reviewer Summary
+
+Who Eats Token is ready to present as an early source beta for maintainers, not as a polished public binary release. The strongest public evidence is:
+
+- MIT-licensed local-first desktop runtime for Windows 10+ and macOS.
+- Documented localhost protocol, `/health`, `/snapshot`, `/events`, MCP access, Node SDK, browser adapter, IDE adapter, and adapter catalog.
+- Privacy and security boundaries in `SECURITY.md`, `PRIVACY.md`, `docs/protocol.md`, and adapter docs.
+- Maintainer guardrails: CI, `release:check`, secret scanning, license checks, release readiness matrix, release evidence log, diagnostics, support bundle, and adapter review/fixture commands.
+- Honest blockers for public binaries: macOS real-machine validation, Windows/macOS signing, notarization, and remaining manual host checks.
+
+Do not describe this beta as production ready, universally adopted, or a universal token parser. The release message should emphasize local visibility, adapter interoperability, and maintainer workflow quality.
+
+## Suggested Source Beta Release Copy
+
+Title:
+
+```text
+v0.1.0-source-beta: local-first LLM token/quota monitor
+```
+
+Short description:
+
+```text
+Who Eats Token is a local-first desktop monitor for LLM token and quota visibility. This source beta publishes the core Electron app, localhost protocol, adapter catalog, MCP server, browser/IDE adapter references, Node SDK, and maintainer diagnostics so contributors can review and extend the project before signed public binaries are released.
+```
+
+Release notes:
+
+```text
+This is a source beta, not a polished binary release.
+
+What is ready:
+- Windows source/runtime validation and local API guardrails.
+- Localhost ingest, snapshot, and health endpoints.
+- Codex and Hermes local collection paths.
+- Hermes OpenAI-compatible bridge usage capture.
+- Browser extension and VS Code/Cursor adapter reference implementations.
+- MCP server and Node SDK entry points for agent workflows.
+- CI, release readiness checks, secret scan, license check, adapter review, diagnostics, and redacted support bundle commands.
+
+Known blockers before public binaries:
+- macOS packaged smoke/soak and permission-state validation on a real Mac.
+- Windows Authenticode signing.
+- macOS Developer ID signing and notarization.
+- Full manual browser and IDE UX validation beyond host smoke.
+
+Privacy boundary:
+- No hosted telemetry.
+- No prompt, completion, source-file, API-key, cookie, local token, raw database, or screenshot collection.
+- Browser and IDE adapters should only report usage/quota/status metadata through explicit local-first paths.
+```
+
+## Public Roadmap
+
+| Phase | Goal | Evidence to keep visible |
+| --- | --- | --- |
+| P0 source beta | Keep source-level checks green and make the maintainer story easy to audit. | `npm run release:check`, `npm run test:docs`, `npm run secret:scan`, `npm run license:check`, `npm run release:gaps -- --target source-beta --require-source-beta` |
+| P1 validation | Complete remaining host checks without weakening privacy boundaries. | Browser Options `/health`, VS Code/Cursor status bar and snapshot checks, macOS permission-state evidence |
+| P2 public binaries | Ship verifiable signed artifacts. | Authenticode, Developer ID signing, notarization, `release-manifest.json`, `SHA256SUMS.txt` |
+| P3 community adapters | Make new provider integrations safe to review. | `adapters/catalog.json`, `adapter:review`, `adapter:fixture`, adapter privacy/performance guardrails |
+
+## Pre-Application Checklist
+
+Run or verify this before submitting open-source support applications:
+
+```powershell
+npm run test:delight-contract
+npm run test:support-bundle
+npm run test:docs
+npm run test:release-readiness
+npm run release:gaps -- --target source-beta --require-source-beta
+npm run release:summary -- --require-source-beta
+```
+
+Application language should stay factual:
+
+- Say "source beta" when public binary blockers remain.
+- Mention current repository usage metrics only if they are verified.
+- Lead with ecosystem importance, maintainer evidence, local privacy, adapter interoperability, and security-sensitive boundaries.
+- Do not claim broad adoption, exact provider support, or production installer readiness without recorded evidence.
+
 ## Current Beta State
 
 Source beta is acceptable when these pass on Windows:
