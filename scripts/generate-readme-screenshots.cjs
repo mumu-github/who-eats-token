@@ -65,6 +65,12 @@ const hermesDelight = getQuotaDelight({
   lowestRemainingPercent: 34
 });
 
+const lowQuotaDelight = getQuotaDelight({
+  status: "live",
+  freshness: "fresh",
+  lowestRemainingPercent: 12
+});
+
 const snapshot = {
   collectedAt: "2026-06-04T10:00:00.000Z",
   activeTool: {
@@ -229,6 +235,79 @@ const hudPayload = {
   }
 };
 
+const lowQuotaHudPayload = {
+  visible: true,
+  tool: { name: "Codex Desktop" },
+  provider: {
+    id: "codex-low",
+    name: "Codex Desktop",
+    displayMode: "capacity",
+    fiveHourRemaining: 12,
+    weekRemaining: 28,
+    todayTokens: 286000,
+    recentTokens: 31200,
+    syncStatus: "live",
+    syncLabel: "本地精确",
+    trendStatus: "fast",
+    trendLabel: "消耗偏快",
+    fiveHourResetsAt: "2026-06-04T14:32:00+08:00",
+    capacityTrend: {
+      forecast: {
+        status: "soon",
+        label: "建议等重置更稳"
+      }
+    },
+    delight: lowQuotaDelight,
+    trust: {
+      level: "exact-local",
+      label: "本地精确",
+      sourceLabel: "Codex JSONL",
+      ageMs: 18000,
+      freshness: "fresh",
+      explain: "来自本机 token_count 事件。"
+    }
+  }
+};
+
+const tokenPlanHudPayload = {
+  visible: true,
+  tool: { name: "Hermes Bridge" },
+  provider: {
+    id: "hermes",
+    name: "Hermes Bridge",
+    displayMode: "token-plan",
+    tokenPlanPlanName: "Local Token Plan",
+    tokenPlanRemaining: 34,
+    tokenPlanUsedPercent: 66,
+    tokenPlanUsedCredits: 132000000,
+    tokenPlanTotalCredits: 200000000,
+    tokenPlanRemainingCredits: 68000000,
+    tokenPlanRecentCredits: 820000,
+    tokenPlanSource: "local-estimate",
+    todayTokens: 2280000,
+    recentTokens: 410000,
+    syncStatus: "live",
+    syncLabel: "本地估算",
+    trendStatus: "using",
+    trendLabel: "计划余量",
+    delight: hermesDelight,
+    trust: {
+      level: "estimate",
+      label: "估算",
+      sourceLabel: "Hermes local",
+      ageMs: 48000,
+      freshness: "fresh",
+      explain: "来自本地 bridge usage。"
+    }
+  }
+};
+
+const hudPayloads = {
+  hud: hudPayload,
+  "hud-low": lowQuotaHudPayload,
+  "hud-plan": tokenPlanHudPayload
+};
+
 const watchdog = setTimeout(() => {
   console.error("README screenshot generation timed out.");
   app.exit(1);
@@ -273,6 +352,50 @@ async function main() {
             radial-gradient(circle at 20% 12%, rgba(255, 211, 111, 0.13), transparent 34%),
             radial-gradient(circle at 88% 22%, rgba(139, 215, 255, 0.16), transparent 34%),
             linear-gradient(135deg, #101821 0%, #171f2a 100%) !important;
+        }
+        .hud {
+          position: absolute;
+          left: 34px;
+          top: 38px;
+          width: calc(100vw - 68px);
+          height: calc(100vh - 76px);
+        }
+      `
+    },
+    {
+      source: "hud.html",
+      output: "token-plan-hud.png",
+      width: 430,
+      height: 260,
+      mockKind: "hud-plan",
+      extraStyle: `
+        html, body {
+          background:
+            radial-gradient(circle at 18% 18%, rgba(125, 242, 173, 0.14), transparent 33%),
+            radial-gradient(circle at 86% 20%, rgba(139, 215, 255, 0.18), transparent 34%),
+            linear-gradient(135deg, #0f1820 0%, #17212a 100%) !important;
+        }
+        .hud {
+          position: absolute;
+          left: 34px;
+          top: 38px;
+          width: calc(100vw - 68px);
+          height: calc(100vh - 76px);
+        }
+      `
+    },
+    {
+      source: "hud.html",
+      output: "low-quota-hud.png",
+      width: 430,
+      height: 260,
+      mockKind: "hud-low",
+      extraStyle: `
+        html, body {
+          background:
+            radial-gradient(circle at 18% 16%, rgba(255, 211, 111, 0.16), transparent 33%),
+            radial-gradient(circle at 88% 18%, rgba(255, 111, 111, 0.11), transparent 34%),
+            linear-gradient(135deg, #151821 0%, #211920 100%) !important;
         }
         .hud {
           position: absolute;
@@ -329,7 +452,8 @@ async function main() {
 async function capture(win, { source, output, width, height, mockKind, extraStyle }) {
   win.setContentSize(width, height);
   const htmlPath = writeInjectedHtml(source, mockKind, extraStyle);
-  await withTimeout(win.loadURL(pathToFileURL(htmlPath).href), 15000, `load ${source}`);
+  const url = `${pathToFileURL(htmlPath).href}?kind=${encodeURIComponent(mockKind)}`;
+  await withTimeout(win.loadURL(url), 15000, `load ${source}`);
   await waitForIdle(win);
   const image = await win.webContents.capturePage();
   const outputPath = path.join(outputDir, output);
@@ -358,7 +482,7 @@ function mockScript(kind) {
     (() => {
       const settings = ${JSON.stringify(settings)};
       const snapshot = ${JSON.stringify(snapshot)};
-      const hudPayload = ${JSON.stringify(hudPayload)};
+      const hudPayload = ${JSON.stringify(getHudPayload(kind))};
       const listeners = {
         update: [],
         system: [],
@@ -396,6 +520,10 @@ function mockScript(kind) {
   `;
 }
 
+function getHudPayload(kind) {
+  return hudPayloads[kind] || hudPayload;
+}
+
 function waitForIdle(win) {
   return new Promise((resolve) => {
     setTimeout(async () => {
@@ -420,7 +548,7 @@ function getOnlyArg(argv) {
   const arg = argv.find((item) => item.startsWith("--only="));
   if (!arg) return "";
   const value = arg.slice("--only=".length);
-  if (!["desktop", "hud", "settings"].includes(value)) {
+  if (!["desktop", "hud", "hud-low", "hud-plan", "settings"].includes(value)) {
     throw new Error(`Unknown --only value: ${value}`);
   }
   return value;
