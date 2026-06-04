@@ -28,13 +28,12 @@ The source-beta release already has reviewer-facing validation evidence in `docs
 - Browser adapter host smoke covered Chrome for Testing 149.0.7827.22 and Edge 148.0.3967.83, including extension load and Options `/health`.
 - Browser adapter manual connection passed in Chrome for Testing and Edge; `/health` returned HTTP 200 and reported connected local providers without recording the local token.
 - IDE adapter host smoke and manual VSIX install passed on VS Code 1.121.0 and Cursor 3.5.33.
-- IDE adapter partial manual connection now has VS Code 1.122.1 evidence: an isolated VS Code profile loaded the VSIX, showed the local `/health` status bar summary, executed Refresh Token Status, and copied a structured `/snapshot` JSON. Cursor 3.6.21 still needs a logged-in host check because isolated and default profiles stopped at the Cursor login screen.
+- IDE adapter manual connection now has VS Code 1.122.1 and Cursor 3.6.31 evidence: both hosts loaded the VSIX, showed the local `/health` status bar summary, executed refresh, and copied structured `/snapshot` JSON without recording local token values or full snapshot payloads.
 - Dependency audit passed on 2026-05-25 with zero high-severity vulnerabilities.
 
 Remaining honest gaps before a public binary release:
 
 - Real macOS packaged smoke, 10-minute soak, and permission-state HUD checks.
-- Cursor status bar, refresh command, and copy snapshot manual checks.
 - Windows Authenticode signing and macOS notarization.
 
 ## Windows 10+

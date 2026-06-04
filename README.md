@@ -210,7 +210,6 @@ npm run release:summary -- --require-source-beta
 - macOS 真机 packaged smoke/soak 与权限状态验证。
 - Windows Authenticode 签名。
 - macOS Developer ID 签名和 notarization。
-- Cursor adapter 登录宿主内的状态栏、refresh 和 copy snapshot 手动验证。
 - 1-2 个真实 source-beta 试用反馈：[issue #26](https://github.com/mumu-github/who-eats-token/issues/26)。
 
 路线和 reviewer 证据见：
