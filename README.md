@@ -16,13 +16,9 @@ For OSS maintainers and reviewers:
 
 Generated with sanitized mock data via `npm run screenshots:readme`.
 
-<img src="docs/assets/screenshots/desktop-top-bar.png" alt="Desktop top bar showing Codex quota, usage, system status, and lightweight mascot state" width="100%" />
+<img src="docs/assets/screenshots/runtime-showcase.png" alt="Runtime showcase with desktop quota bar, Codex capacity HUD, Hermes token plan HUD, and low quota warning generated from sanitized mock data" width="100%" />
 
-| Codex capacity HUD | Hermes token plan HUD |
-| --- | --- |
-| <img src="docs/assets/screenshots/in-tool-hud.png" alt="In-tool HUD showing five-hour and weekly quota, trust label, forecast, and mascot state with sanitized mock data" width="100%" /> | <img src="docs/assets/screenshots/token-plan-hud.png" alt="Hermes token plan HUD showing remaining credits, used credits, and estimate trust label with sanitized mock data" width="100%" /> |
-| Low quota warning | Settings panel |
-| <img src="docs/assets/screenshots/low-quota-hud.png" alt="In-tool HUD showing a low five-hour quota warning, forecast text, and exact-local trust label with sanitized mock data" width="100%" /> | <img src="docs/assets/screenshots/settings-panel.png" alt="Settings panel for desktop top bar, in-tool HUD, visual style, alerts, performance, and adapter setup" width="100%" /> |
+<img src="docs/assets/screenshots/visual-assets-showcase.png" alt="Visual asset showcase with settings panel, mascot states, token generator, and roaming token assets" width="100%" />
 
 本地低占用 LLM 容量监控顶栏，目标平台是 Windows 10+ 和 macOS：
 

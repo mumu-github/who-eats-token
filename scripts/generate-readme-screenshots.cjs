@@ -420,6 +420,20 @@ async function main() {
             linear-gradient(135deg, #111822 0%, #161e29 100%) !important;
         }
       `
+    },
+    {
+      output: "runtime-showcase.png",
+      width: 1280,
+      height: 540,
+      mockKind: "runtime-showcase",
+      html: getRuntimeShowcaseHtml
+    },
+    {
+      output: "visual-assets-showcase.png",
+      width: 1280,
+      height: 620,
+      mockKind: "visual-assets",
+      html: getVisualAssetsShowcaseHtml
     }
   ];
 
@@ -449,9 +463,11 @@ async function main() {
   app.quit();
 }
 
-async function capture(win, { source, output, width, height, mockKind, extraStyle }) {
+async function capture(win, { source, output, width, height, mockKind, extraStyle, html }) {
   win.setContentSize(width, height);
-  const htmlPath = writeInjectedHtml(source, mockKind, extraStyle);
+  const htmlPath = html
+    ? writeStaticHtml(`${mockKind}.html`, html())
+    : writeInjectedHtml(source, mockKind, extraStyle);
   const url = `${pathToFileURL(htmlPath).href}?kind=${encodeURIComponent(mockKind)}`;
   await withTimeout(win.loadURL(url), 15000, `load ${source}`);
   await waitForIdle(win);
@@ -459,6 +475,12 @@ async function capture(win, { source, output, width, height, mockKind, extraStyl
   const outputPath = path.join(outputDir, output);
   fs.writeFileSync(outputPath, image.toPNG());
   console.log(`wrote ${path.relative(root, outputPath).replace(/\\/g, "/")}`);
+}
+
+function writeStaticHtml(name, html) {
+  const htmlPath = path.join(tempDir, name);
+  fs.writeFileSync(htmlPath, html);
+  return htmlPath;
 }
 
 function writeInjectedHtml(source, mockKind, extraStyle) {
@@ -524,11 +546,281 @@ function getHudPayload(kind) {
   return hudPayloads[kind] || hudPayload;
 }
 
+function getRuntimeShowcaseHtml() {
+  return `<!doctype html>
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <style>
+      ${showcaseBaseCss()}
+      .runtime {
+        display: grid;
+        grid-template-rows: 204px auto;
+        gap: 20px;
+      }
+      .bar-frame {
+        min-width: 0;
+      }
+      .bar-shot {
+        overflow: hidden;
+        border: 1px solid rgba(160, 206, 236, 0.16);
+        background: rgba(16, 24, 33, 0.78);
+      }
+      .bar-shot img {
+        display: block;
+        width: 100%;
+        height: 100%;
+        object-fit: contain;
+      }
+      .hud-row {
+        display: grid;
+        grid-template-columns: repeat(3, 1fr);
+        gap: 18px;
+      }
+      .hud-shot {
+        overflow: hidden;
+        border: 1px solid rgba(160, 206, 236, 0.13);
+        background: rgba(15, 22, 31, 0.78);
+      }
+      .hud-shot img {
+        display: block;
+        width: 100%;
+        height: auto;
+        object-fit: contain;
+      }
+    </style>
+  </head>
+  <body>
+    <main class="stage runtime">
+      <section class="bar-frame">
+        <div class="bar-shot">
+          <img src="${screenshotUrl("desktop-top-bar.png")}" alt="" />
+        </div>
+      </section>
+      <section class="hud-row">
+        <div class="hud-shot"><img src="${screenshotUrl("in-tool-hud.png")}" alt="" /></div>
+        <div class="hud-shot"><img src="${screenshotUrl("token-plan-hud.png")}" alt="" /></div>
+        <div class="hud-shot"><img src="${screenshotUrl("low-quota-hud.png")}" alt="" /></div>
+      </section>
+    </main>
+  </body>
+</html>`;
+}
+
+function getVisualAssetsShowcaseHtml() {
+  const mascots = [
+    ["comfy", "mascot-comfy.png"],
+    ["careful", "mascot-careful.png"],
+    ["low", "mascot-low.png"],
+    ["login", "mascot-login.png"],
+    ["asleep", "mascot-asleep.png"]
+  ];
+  const roaming = [
+    ["catch", "roaming/token-catch.png"],
+    ["eat", "roaming/token-eat.png"],
+    ["guard", "roaming/token-guard.png"],
+    ["panic", "roaming/token-panic.png"],
+    ["run", "roaming/token-run.png"]
+  ];
+  return `<!doctype html>
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <style>
+      ${showcaseBaseCss()}
+      .assets {
+        display: grid;
+        grid-template-columns: 430px 1fr;
+        gap: 28px;
+      }
+      .settings-preview {
+        overflow: hidden;
+        border: 1px solid rgba(160, 206, 236, 0.16);
+        background: rgba(16, 24, 33, 0.78);
+      }
+      .settings-preview img {
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+        object-position: top center;
+      }
+      .asset-board {
+        display: grid;
+        grid-template-rows: auto 1fr;
+        gap: 18px;
+        min-width: 0;
+      }
+      .asset-head {
+        display: grid;
+        grid-template-columns: 1fr 208px;
+        gap: 22px;
+        align-items: center;
+      }
+      .asset-copy h1 {
+        margin: 0 0 10px;
+        font-size: 34px;
+        line-height: 1.08;
+      }
+      .asset-copy p {
+        margin: 0;
+        max-width: 560px;
+        color: rgba(234, 244, 255, 0.68);
+        font-size: 17px;
+        line-height: 1.45;
+      }
+      .generator-hero {
+        position: relative;
+        display: grid;
+        place-items: center;
+        min-height: 172px;
+        overflow: hidden;
+        border: 1px solid rgba(255, 211, 111, 0.22);
+        background:
+          radial-gradient(circle at 50% 40%, rgba(255, 211, 111, 0.19), transparent 56%),
+          rgba(26, 31, 41, 0.76);
+      }
+      .generator-hero img {
+        width: 158px;
+        height: 158px;
+        object-fit: contain;
+        filter: drop-shadow(0 16px 24px rgba(0, 0, 0, 0.32));
+      }
+      .asset-grid {
+        display: grid;
+        grid-template-columns: repeat(5, 1fr);
+        gap: 14px;
+      }
+      .asset-tile {
+        position: relative;
+        display: grid;
+        grid-template-rows: 1fr auto;
+        align-items: center;
+        justify-items: center;
+        min-height: 154px;
+        padding: 14px 10px 12px;
+        overflow: hidden;
+        border: 1px solid rgba(160, 206, 236, 0.13);
+        background:
+          radial-gradient(circle at 50% 34%, rgba(139, 215, 255, 0.12), transparent 48%),
+          rgba(18, 26, 36, 0.78);
+      }
+      .asset-tile[data-tone="warm"] {
+        background:
+          radial-gradient(circle at 50% 34%, rgba(255, 211, 111, 0.16), transparent 50%),
+          rgba(24, 26, 34, 0.8);
+      }
+      .asset-tile img {
+        max-width: 110px;
+        max-height: 104px;
+        object-fit: contain;
+        filter: drop-shadow(0 12px 18px rgba(0, 0, 0, 0.28));
+      }
+      .asset-tile[data-large="true"] img {
+        max-width: 126px;
+        max-height: 122px;
+      }
+      .asset-tile span {
+        color: rgba(234, 244, 255, 0.7);
+        font-size: 13px;
+        letter-spacing: 0;
+        text-transform: uppercase;
+      }
+    </style>
+  </head>
+  <body>
+    <main class="stage assets">
+      <section class="settings-preview">
+        <img src="${screenshotUrl("settings-panel.png")}" alt="" />
+      </section>
+      <section class="asset-board">
+        <div class="asset-head">
+          <div class="asset-copy">
+            <h1>Mascot and token asset system</h1>
+            <p>README evidence now shows the actual delight assets used by the HUD: mascot moods, flying token coins, and the token generator scene.</p>
+          </div>
+          <div class="generator-hero">
+            <img src="${delightUrl("roaming/token-generator.png")}" alt="" />
+          </div>
+        </div>
+        <div class="asset-grid">
+          ${mascots.map(([label, file]) => assetTile(label, delightUrl(file), "warm")).join("")}
+          ${roaming.map(([label, file]) => assetTile(label, delightUrl(file))).join("")}
+        </div>
+      </section>
+    </main>
+  </body>
+</html>`;
+}
+
+function assetTile(label, url, tone = "") {
+  const large = label === "generator" || label === "desktop" ? " data-large=\"true\"" : "";
+  const toneAttr = tone ? ` data-tone="${tone}"` : "";
+  return `<div class="asset-tile"${toneAttr}${large}><img src="${url}" alt="" /><span>${label}</span></div>`;
+}
+
+function showcaseBaseCss() {
+  return `
+      * {
+        box-sizing: border-box;
+      }
+      html,
+      body {
+        width: 100%;
+        height: 100%;
+        margin: 0;
+        overflow: hidden;
+        background:
+          radial-gradient(circle at 10% 12%, rgba(125, 242, 173, 0.13), transparent 26%),
+          radial-gradient(circle at 88% 10%, rgba(139, 215, 255, 0.16), transparent 28%),
+          radial-gradient(circle at 78% 88%, rgba(255, 211, 111, 0.12), transparent 28%),
+          linear-gradient(135deg, #0e141d 0%, #121a24 48%, #0f131b 100%);
+        color: #f4f8fb;
+        font-family: "Comic Sans MS", "Segoe UI", Arial, sans-serif;
+      }
+      .stage {
+        width: 100vw;
+        height: 100vh;
+        padding: 34px;
+      }
+      .bar-shot,
+      .signal,
+      .hud-shot,
+      .settings-preview,
+      .generator-hero,
+      .asset-tile {
+        border-radius: 18px;
+        box-shadow:
+          0 22px 48px rgba(0, 0, 0, 0.28),
+          inset 0 1px 0 rgba(255, 255, 255, 0.06);
+      }
+  `;
+}
+
+function screenshotUrl(file) {
+  return assetUrl("docs", "assets", "screenshots", file);
+}
+
+function delightUrl(file) {
+  return assetUrl("src", "assets", "delight", file);
+}
+
+function assetUrl(...segments) {
+  return pathToFileURL(path.join(root, ...segments)).href;
+}
+
 function waitForIdle(win) {
   return new Promise((resolve) => {
     setTimeout(async () => {
       await win.webContents.executeJavaScript(`
-        new Promise((resolve) => requestAnimationFrame(() => requestAnimationFrame(resolve)))
+        Promise.all(
+          Array.from(document.images || []).map((image) => {
+            if (image.complete) return Promise.resolve();
+            return new Promise((resolve) => {
+              image.addEventListener("load", resolve, { once: true });
+              image.addEventListener("error", resolve, { once: true });
+            });
+          })
+        ).then(() => new Promise((resolve) => requestAnimationFrame(() => requestAnimationFrame(resolve))))
       `);
       resolve();
     }, 500);
@@ -548,7 +840,7 @@ function getOnlyArg(argv) {
   const arg = argv.find((item) => item.startsWith("--only="));
   if (!arg) return "";
   const value = arg.slice("--only=".length);
-  if (!["desktop", "hud", "hud-low", "hud-plan", "settings"].includes(value)) {
+  if (!["desktop", "hud", "hud-low", "hud-plan", "settings", "runtime-showcase", "visual-assets"].includes(value)) {
     throw new Error(`Unknown --only value: ${value}`);
   }
   return value;
