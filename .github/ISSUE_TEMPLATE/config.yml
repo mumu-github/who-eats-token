@@ -1,5 +1,5 @@
 blank_issues_enabled: false
 contact_links:
   - name: Security-sensitive report
-    url: https://github.com/
+    url: https://github.com/mumu-github/who-eats-token/security/policy
     about: Do not open public issues with secrets, cookies, local tokens, or account screenshots. Use the repository security contact when configured.

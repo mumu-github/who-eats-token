@@ -1,0 +1,73 @@
+name: Source beta feedback
+description: Share privacy-safe feedback after trying the source beta.
+title: "[Feedback]: "
+labels: ["feedback", "source-beta"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for trying the source beta. Please do not paste API keys, provider cookies, local access tokens, prompts, completions, private source files, raw provider logs, or screenshots containing account details.
+  - type: dropdown
+    id: host
+    attributes:
+      label: Host environment
+      options:
+        - Windows 10
+        - Windows 11
+        - macOS Intel
+        - macOS Apple Silicon
+        - Other
+    validations:
+      required: true
+  - type: checkboxes
+    id: surfaces
+    attributes:
+      label: What did you try?
+      options:
+        - label: Source app / Electron runtime
+        - label: Desktop top bar
+        - label: In-tool HUD
+        - label: Browser extension
+        - label: VS Code adapter
+        - label: Cursor adapter
+        - label: MCP server
+        - label: Node SDK / localhost protocol
+  - type: textarea
+    id: worked
+    attributes:
+      label: What worked well?
+      placeholder: Status display, local API, setup flow, visual behavior, docs, etc.
+    validations:
+      required: true
+  - type: textarea
+    id: confusing
+    attributes:
+      label: What was confusing, missing, slow, or visually noisy?
+      placeholder: Setup friction, stale data, HUD overlap, adapter behavior, missing provider, unclear docs, etc.
+    validations:
+      required: true
+  - type: textarea
+    id: privacy
+    attributes:
+      label: Did the privacy boundary feel clear?
+      placeholder: Mention anything that felt unsafe, unclear, or too broad.
+    validations:
+      required: true
+  - type: textarea
+    id: checks
+    attributes:
+      label: Optional checks run
+      description: Paste only redacted command names or high-level results.
+      render: text
+      placeholder: |
+        npm run status
+        npm run diagnostics
+        npm run smoke:browser-hosts -- --require
+        npm run smoke:ide-hosts -- --require
+  - type: checkboxes
+    id: safety
+    attributes:
+      label: Safety checklist
+      options:
+        - label: I removed API keys, cookies, local access tokens, prompts, completions, private source files, raw provider logs, and account screenshots.
+          required: true
