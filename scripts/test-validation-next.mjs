@@ -14,7 +14,7 @@ const all = runJson([]);
 assert.equal(all.ok, false);
 assert.ok(all.summary.total > 0);
 assert.ok(!all.actions.some((action) => action.target === "browser"), "browser evidence should be complete.");
-assert.ok(all.actions.some((action) => action.key === "ideAdapter.manualConnection"));
+assert.ok(!all.actions.some((action) => action.key === "ideAdapter.manualConnection"), "IDE manual evidence should be complete.");
 assert.ok(all.actions.some((action) => action.key === "macosPackagedRuntime.smoke"));
 assert.ok(!all.actions.some((action) => action.key === "browserAdapter.hostSmoke"), "host-smoke-only browser evidence should not appear as a remaining action.");
 
@@ -25,7 +25,8 @@ assert.deepEqual(browser.actions, []);
 
 const ide = runJson(["--target=ide"]);
 assert.equal(ide.target, "ide");
-assert.deepEqual(ide.actions.map((action) => action.key), ["ideAdapter.manualConnection"]);
+assert.equal(ide.ok, true);
+assert.deepEqual(ide.actions, []);
 
 const audit = runJson(["--target", "audit"]);
 assert.equal(audit.ok, true);

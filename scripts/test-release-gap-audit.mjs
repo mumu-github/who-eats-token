@@ -30,7 +30,7 @@ assert.equal(find("docs-quality").status, "automated");
 assert.equal(find("artifact-integrity").status, "automated");
 assert.equal(find("macos-packaged-runtime").status, "external-required");
 assert.equal(find("browser-manual").status, "manual-recorded");
-assert.equal(find("ide-manual").status, "host-smoke-recorded");
+assert.equal(find("ide-manual").status, "manual-recorded");
 assert.equal(find("signing").status, "external-required");
 assert.equal(find("npm-audit").status, "manual-recorded");
 

@@ -17,8 +17,8 @@ assert.equal(browser.sections.length, 0);
 
 const ide = runJson(["--target=ide"]);
 assert.equal(ide.target, "ide");
-assert.equal(ide.openActionCount, 1);
-assert.ok(findAction(ide, "ideAdapter.manualConnection").requiredNotes.some((note) => note.includes("copy snapshot")));
+assert.equal(ide.openActionCount, 0);
+assert.equal(ide.sections.length, 0);
 
 const macos = runJson(["--target", "macos"]);
 assert.equal(macos.target, "macos");

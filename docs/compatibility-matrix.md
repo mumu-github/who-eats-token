@@ -46,7 +46,6 @@ Catalog updated: 2026-05-24
 ## Current Public Release Blockers
 
 - `macos-packaged-runtime` (external-required): Run smoke, soak, and permission-state HUD checks on a macOS host.
-- `ide-manual` (host-smoke-recorded): Load the VSIX or extension folder in VS Code and Cursor and record results.
 - `signing` (external-required): Run signing readiness with release secrets in the signing environment.
 
 ## Checks
