@@ -26,7 +26,7 @@ assert.ok(matrix.adapters.some((adapter) => adapter.id === "provider-specific-ad
 assert.ok(matrix.signalCoverage.some((entry) => entry.signal === "hud-overlays" && entry.adapters.includes("browser-extension")));
 assert.ok(matrix.signalCoverage.some((entry) => entry.signal === "quota-token-plan" && entry.adapters.includes("hermes-local-collector")));
 assert.ok(matrix.releaseBlockers.some((blocker) => blocker.id === "macos-packaged-runtime"), "Current public blockers must stay visible.");
-assert.ok(matrix.commands.includes("npm run compatibility:matrix -- --check"));
+assert.ok(matrix.commands.includes("npm run compatibility:matrix -- -- --check"));
 assert.deepEqual(matrix.findings, []);
 
 const docPath = path.join(root, "docs", "compatibility-matrix.md");

@@ -5,18 +5,18 @@ Automated checks catch syntax, protocol, packaging config, and low-memory rules.
 Generate a platform-specific checklist before manual validation:
 
 ```powershell
-npm run manual:preflight -- --platform windows
-npm run manual:preflight -- --platform macos
-npm run manual:preflight -- --platform all --json
+npm run manual:preflight -- -- --platform windows
+npm run manual:preflight -- -- --platform macos
+npm run manual:preflight -- -- --platform all --json
 npm run adapter:manual-readiness
-npm run signing:readiness -- --platform all
+npm run signing:readiness -- -- --platform all
 npm run validation:next
-npm run validation:template -- --target browser
+npm run validation:template -- -- --target browser
 ```
 
-Use `npm run validation:next -- --target browser|ide|macos|signing` when assigning a specific manual validation task. It reads the current recorded evidence and prints only the remaining checks plus the matching `release:evidence` commands.
+Use `npm run validation:next -- -- --target browser|ide|macos|signing` when assigning a specific manual validation task. It reads the current recorded evidence and prints only the remaining checks plus the matching `release:evidence` commands.
 
-Use `npm run validation:template -- --target browser|ide|macos|signing` when handing work to a tester. It prints the remaining actions, checklist items, required note fields, and exact record commands without marking anything passed.
+Use `npm run validation:template -- -- --target browser|ide|macos|signing` when handing work to a tester. It prints the remaining actions, checklist items, required note fields, and exact record commands without marking anything passed.
 
 ## Recorded Source-Beta Evidence
 
@@ -78,19 +78,21 @@ Remaining honest gaps before a public binary release:
 
 - `npm run package:browser-extension` succeeds.
 - `npm run adapter:manual-readiness` shows the browser artifact and available Chrome/Edge hosts.
-- `npm run smoke:browser-hosts -- --require` succeeds for automatable hosts. Official Chrome 137+ may be reported as a policy skip; use manual load or Chrome for Testing/Chromium for automated host smoke.
+- `npm run smoke:browser-hosts -- -- --require` succeeds for automatable hosts. Official Chrome 137+ may be reported as a policy skip; use manual load or Chrome for Testing/Chromium for automated host smoke.
 - Chrome loads `adapters/browser-extension` unpacked.
 - Edge loads `adapters/browser-extension` unpacked.
 - Options test connection succeeds with local token through `/health`.
-- Hermes Web UI reports overlay hints when dialogs/buttons appear.
+- Hermes Web UI reports overlay rectangles when dialogs/buttons appear.
+- Overlay reports include only sanitized page state: host/tool identity, bounded rectangles, visibility state, and confidence labels.
 - Non-matching websites do not inject the content script.
+- Browser evidence does not record prompts, completions, cookies, API keys, local tokens, raw page text, or account screenshots.
 - Hermes HUD behavior in Chrome/Edge matches the desktop app rules: only Hermes pages show it, unrelated tabs hide it, and overlapping dialogs trigger hide or reposition.
 
 ## IDE Adapter
 
 - `npm run package:vscode-extension` succeeds.
 - `npm run adapter:manual-readiness` shows the VSIX artifact and available VS Code/Cursor hosts.
-- `npm run smoke:ide-hosts -- --require` succeeds on a validation machine with VS Code and Cursor installed.
+- `npm run smoke:ide-hosts -- -- --require` succeeds on a validation machine with VS Code and Cursor installed.
 - VS Code Extension Development Host loads `adapters/vscode-extension`.
 - Status bar shows compact local `/health` state or a clear disconnected state.
 - Refresh command works.

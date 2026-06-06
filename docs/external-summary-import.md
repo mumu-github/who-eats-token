@@ -17,19 +17,19 @@ TokenTracker and ccusage already do strong parser/reporting work. Who Eats Token
 Dry-run first:
 
 ```powershell
-npm run import:usage-report -- --dry-run --provider codex --source tokentracker-summary path\to\summary.json
+npm run import:usage-report -- -- --dry-run --provider codex --source tokentracker-summary path\to\summary.json
 ```
 
 Live post:
 
 ```powershell
-npm run import:usage-report -- --provider claude --tool ccusage --source ccusage-json path\to\ccusage.json
+npm run import:usage-report -- -- --provider claude --tool ccusage --source ccusage-json path\to\ccusage.json
 ```
 
 Pipe from another command:
 
 ```sh
-some-usage-tool --json | npm run import:usage-report -- --provider claude --tool ccusage --source ccusage-json
+some-usage-tool --json | npm run import:usage-report -- -- --provider claude --tool ccusage --source ccusage-json
 ```
 
 Options:

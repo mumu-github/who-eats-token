@@ -38,6 +38,7 @@ const commands = [
   npmRunner(["run", "test:secret-scan"]),
   npmRunner(["run", "test:license-check"]),
   npmRunner(["run", "test:docs"]),
+  npmRunner(["run", "test:npm-run-args"]),
   npmRunner(["run", "test:release-evidence"]),
   npmRunner(["run", "test:release-evidence-cli"]),
   npmRunner(["run", "test:release-evidence-quality"]),

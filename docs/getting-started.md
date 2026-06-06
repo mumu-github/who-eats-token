@@ -56,7 +56,7 @@ token="$(cat "$HOME/Library/Application Support/who-eats-token/api-token.txt")"
 
 ```powershell
 npm run status
-npm run status -- --json
+npm run status -- -- --json
 ```
 
 重点看每个 provider 的状态：

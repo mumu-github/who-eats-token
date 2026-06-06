@@ -58,7 +58,7 @@ Privacy boundary:
 
 | Phase | Goal | Evidence to keep visible |
 | --- | --- | --- |
-| P0 source beta | Keep source-level checks green and make the maintainer story easy to audit. | `npm run release:check`, `npm run test:docs`, `npm run secret:scan`, `npm run license:check`, `npm run release:gaps -- --target source-beta --require-source-beta` |
+| P0 source beta | Keep source-level checks green and make the maintainer story easy to audit. | `npm run release:check`, `npm run test:docs`, `npm run secret:scan`, `npm run license:check`, `npm run release:gaps -- -- --target source-beta --require-source-beta` |
 | P1 validation | Complete remaining host checks without weakening privacy boundaries. | Browser Options `/health`, VS Code/Cursor status bar and snapshot checks, macOS permission-state evidence |
 | P2 public binaries | Ship verifiable signed artifacts. | Authenticode, Developer ID signing, notarization, `release-manifest.json`, `SHA256SUMS.txt` |
 | P3 community adapters | Make new provider integrations safe to review. | `adapters/catalog.json`, `adapter:review`, `adapter:fixture`, adapter privacy/performance guardrails |
@@ -72,8 +72,8 @@ npm run test:delight-contract
 npm run test:support-bundle
 npm run test:docs
 npm run test:release-readiness
-npm run release:gaps -- --target source-beta --require-source-beta
-npm run release:summary -- --require-source-beta
+npm run release:gaps -- -- --target source-beta --require-source-beta
+npm run release:summary -- -- --require-source-beta
 ```
 
 Application language should stay factual:
@@ -95,16 +95,18 @@ npm run test:release-readiness
 npm run test:release-check
 npm run secret:scan
 npm run license:check
-npm audit --audit-level=high
-npm run release:gaps -- --target source-beta --require-source-beta
-npm run release:summary -- --require-source-beta
-npm run release:evidence-quality -- --require-clean
-npm run release:summary -- --json
+npm audit --audit-level=high --registry=https://registry.npmjs.org/
+npm run release:gaps -- -- --target source-beta --require-source-beta
+npm run release:summary -- -- --require-source-beta
+npm run release:evidence-quality -- -- --require-clean
+npm run release:summary -- -- --json
 ```
 
 `release:gaps -- --target source-beta --require-source-beta` and `release:summary -- --require-source-beta` should pass before pushing the source beta. `release:summary` is still expected to report `publicReleaseReady: false` until the manual and signing blockers below are recorded. That does not block a source beta.
 
-Before recording runtime evidence, make sure `npm run lag:triage -- --json` does not report `partial-snapshot`. If it does, restart the desktop app and confirm `npm run diagnostics -- --json` includes `stability.system`.
+If `npm audit` fails because a mirrored registry cannot serve advisory data, rerun it with `--registry=https://registry.npmjs.org/` and record the registry failure as missing evidence rather than a clean audit.
+
+Before recording runtime evidence, make sure `npm run lag:triage -- -- --json` does not report `partial-snapshot`. If it does, restart the desktop app and confirm `npm run diagnostics -- -- --json` includes `stability.system`.
 
 ## Current Windows Non-macOS Blockers
 
@@ -113,7 +115,7 @@ These items do not block the source beta, but they still block a polished public
 - Browser adapter: recorded. Chrome for Testing 149.0.7827.22 and Edge 148.0.3967.83 loaded the unpacked extension, and Options `/health` returned HTTP 200 in both hosts without recording the local token.
 - IDE adapter: VS Code 1.121.0 and Cursor 3.5.33 installed the generated VSIX and listed `who-eats-token.who-eats-token-vscode-adapter`. VS Code 1.122.1 isolated profile and Cursor 3.6.31 logged-in profile now have manual connection evidence: both showed the local `/health` status bar summary, executed refresh, and Copy Token Snapshot produced structured `/snapshot` JSON without recording local token values or full snapshot payloads.
 - Source-beta tester feedback: issue #26 is open for real user feedback and privacy-safe reports. This is an intake point, not adoption evidence, until external testers actually comment.
-- Windows signing: `npm run signing:readiness -- --platform windows --require` is blocked until `WIN_CSC_LINK` or `CSC_LINK`, plus `WIN_CSC_KEY_PASSWORD` or `CSC_KEY_PASSWORD`, are present in the release environment.
+- Windows signing: `npm run signing:readiness -- -- --platform windows --require` is blocked until `WIN_CSC_LINK` or `CSC_LINK`, plus `WIN_CSC_KEY_PASSWORD` or `CSC_KEY_PASSWORD`, are present in the release environment.
 
 Do not mark `signing.windowsAuthenticode` as passed until the exact certificate check has really been completed.
 
@@ -130,8 +132,8 @@ npm run test:release-readiness
 npm run package:dir
 npm run smoke:packaged-mac
 npm run soak:packaged-mac
-npm run manual:preflight -- --platform macos
-npm run validation:template -- --target macos
+npm run manual:preflight -- -- --platform macos
+npm run validation:template -- -- --target macos
 ```
 
 Manual checks:
@@ -145,7 +147,7 @@ Manual checks:
 Record passing evidence with the commands printed by:
 
 ```sh
-npm run validation:next -- --target macos
+npm run validation:next -- -- --target macos
 ```
 
 ## Browser Extension Validation
@@ -156,8 +158,8 @@ Run on Windows or macOS with Chrome and Edge installed:
 npm ci
 npm run package:browser-extension
 npm run adapter:manual-readiness
-npm run smoke:browser-hosts -- --require
-npm run validation:template -- --target browser
+npm run smoke:browser-hosts -- -- --require
+npm run validation:template -- -- --target browser
 ```
 
 Manual checks:
@@ -173,7 +175,7 @@ Manual checks:
 Record evidence with the commands printed by:
 
 ```powershell
-npm run validation:next -- --target browser
+npm run validation:next -- -- --target browser
 ```
 
 ## VS Code and Cursor Adapter Validation
@@ -184,8 +186,8 @@ Run on a machine with VS Code and Cursor installed:
 npm ci
 npm run package:vscode-extension
 npm run adapter:manual-readiness
-npm run smoke:ide-hosts -- --require
-npm run validation:template -- --target ide
+npm run smoke:ide-hosts -- -- --require
+npm run validation:template -- -- --target ide
 ```
 
 Manual checks:
@@ -200,7 +202,7 @@ Manual checks:
 Record evidence with the commands printed by:
 
 ```powershell
-npm run validation:next -- --target ide
+npm run validation:next -- -- --target ide
 ```
 
 ## Signing and Notarization
@@ -212,7 +214,7 @@ Windows signing readiness:
 ```powershell
 $env:WIN_CSC_LINK = "<path-or-base64-certificate>"
 $env:WIN_CSC_KEY_PASSWORD = "<password>"
-npm run signing:readiness -- --platform windows --require
+npm run signing:readiness -- -- --platform windows --require
 npm run dist:win
 ```
 
@@ -224,14 +226,14 @@ export MAC_CSC_KEY_PASSWORD="<password>"
 export APPLE_API_KEY="<path-or-key>"
 export APPLE_API_KEY_ID="<key-id>"
 export APPLE_API_ISSUER="<issuer-id>"
-npm run signing:readiness -- --platform macos --require
+npm run signing:readiness -- -- --platform macos --require
 npm run dist:mac
 ```
 
 Record evidence with:
 
 ```powershell
-npm run validation:next -- --target signing
+npm run validation:next -- -- --target signing
 ```
 
 Do not commit certificates, passwords, Apple API keys, cookies, local access tokens, logs, databases, or screenshots containing account data.
@@ -241,9 +243,9 @@ Do not commit certificates, passwords, Apple API keys, cookies, local access tok
 After all evidence is recorded:
 
 ```powershell
-npm run release:evidence-quality -- --require-clean
-npm run release:evidence-report -- --check
-npm run release:gaps -- --require-public-release
+npm run release:evidence-quality -- -- --require-clean
+npm run release:evidence-report -- -- --check
+npm run release:gaps -- -- --require-public-release
 npm run release:summary
 npm run release:check
 ```

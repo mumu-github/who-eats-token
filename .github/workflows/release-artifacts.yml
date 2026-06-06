@@ -24,7 +24,7 @@ jobs:
       - run: npm run release:check
       - run: npm run secret:scan
       - run: npm run license:check
-      - run: npm run signing:readiness -- --platform all
+      - run: npm run signing:readiness -- -- --platform all
       - run: npm run package:dir
       - run: npm run smoke:packaged-win
       - run: npm run smoke:packaged-mac

@@ -13,18 +13,29 @@ Use `electron-builder` for the desktop app:
 
 The current config is `electron-builder.yml`.
 
+## npm Flag Forwarding
+
+On npm 11 for Windows, documented commands that pass flags through `npm run` should use an extra separator:
+
+```powershell
+npm run release:check -- -- --list --json
+npm run adapter:review -- -- --id <adapter-id>
+```
+
+Direct Node invocations such as `node scripts/release-check.mjs --list --json` remain valid for maintainer debugging. Public docs and generated command lists should prefer the npm-safe form above.
+
 ## Commands
 
 ```powershell
 npm run release:check
 npm run secret:scan
 npm run license:check
-npm run diagnostics -- --json
-npm run lag:triage -- --json
-npm run support:bundle -- --json
+npm run diagnostics -- -- --json
+npm run lag:triage -- -- --json
+npm run support:bundle -- -- --json
 npm run performance:summary
-npm run performance:summary -- --json
-npm run delight:contract -- --check
+npm run performance:summary -- -- --json
+npm run delight:contract -- -- --check
 npm run test:release-readiness
 npm run test:release-evidence
 npm run package:dir
@@ -40,21 +51,21 @@ npm run smoke:browser-hosts
 npm run smoke:ide-hosts
 npm run adapter:review
 npm run adapter:fixture
-npm run compatibility:matrix -- --check
-npm run manual:preflight -- --platform all
-npm run release:validation-pack -- --platform all
+npm run compatibility:matrix -- -- --check
+npm run manual:preflight -- -- --platform all
+npm run release:validation-pack -- -- --platform all
 npm run validation:next
-npm run validation:template -- --target browser
-npm run release:evidence -- --list
-npm run release:evidence-quality -- --require-clean
-npm run release:evidence-report -- --check
+npm run validation:template -- -- --target browser
+npm run release:evidence -- -- --list
+npm run release:evidence-quality -- -- --require-clean
+npm run release:evidence-report -- -- --check
 npm run release:gaps
-npm run release:gaps -- --target source-beta --require-source-beta
+npm run release:gaps -- -- --target source-beta --require-source-beta
 npm run release:summary
-npm run release:summary -- --require-source-beta
-npm run release:check -- --list
-npm run release:check -- --list --json
-npm run signing:readiness -- --platform all
+npm run release:summary -- -- --require-source-beta
+npm run release:check -- -- --list
+npm run release:check -- -- --list --json
+npm run signing:readiness -- -- --platform all
 ```
 
 Platform artifacts:
@@ -74,14 +85,22 @@ npm run dist:mac
 `release:check` runs the source-level release guard suite. It prints per-command timings, summarizes slow commands, and applies a per-command timeout so a stuck test does not silently hang the release lane. The default timeout is 180 seconds per command and can be changed with `WHO_EATS_TOKEN_RELEASE_CHECK_TIMEOUT_MS` or `--command-timeout-ms`. Use `--list --json` to inspect the command list without running it:
 
 ```powershell
-npm run release:check -- --list
-npm run release:check -- --list --json
-npm run release:check -- --command-timeout-ms 180000 --slow-ms 30000
+npm run release:check -- -- --list
+npm run release:check -- -- --list --json
+npm run release:check -- -- --command-timeout-ms 180000 --slow-ms 30000
 ```
 
 `secret:scan` is a local source-release guard. It skips dependencies and generated artifacts, then checks repository text files for common provider keys, Xiaomi platform cookies, bearer tokens, local API tokens, and private-key material. It allows documented placeholders such as `...`, `<redacted>`, or `你的 Cookie`.
 
 `license:check` reads `package-lock.json` without network access and fails on forbidden or unreviewed dependency licenses. See [docs/license-policy.md](license-policy.md) for the allowlist, blocked families, and reviewed exceptions.
+
+`npm audit` requires a registry with advisory endpoints. CI uses the public npm registry explicitly:
+
+```powershell
+npm audit --audit-level=high --registry=https://registry.npmjs.org/
+```
+
+If a mirror returns a registry/advisory lookup error, record it as an audit evidence gap and rerun with the public registry before publishing. Do not treat a registry failure as a clean vulnerability result.
 
 `smoke:packaged-win` launches `release/win-unpacked/Who Eats Token.exe` with isolated temp user data and random localhost ports. It uses a headless, `--no-sandbox` test mode for CI stability, then checks full `/snapshot` data, local API `/health`, browser-origin token rejection, Hermes bridge `/health`, overlay reporting, a tiny local usage event, RSS/CPU budgets, absence of default HUD debug logs, and local API shutdown after exit. Manual validation still covers normal sandboxed launch, real transparent windows, and HUD placement.
 
@@ -103,110 +122,110 @@ WHO_EATS_TOKEN_SMOKE_MAX_CPU_PERCENT=35
 `release:evidence` lists or updates structured manual/external evidence in `docs/release-evidence.json`. It rejects invalid evidence keys and prevents host-smoke checks from being recorded as a full manual pass:
 
 ```powershell
-npm run release:evidence -- --list
-npm run release:evidence -- --set browserAdapter.manualLoad --status passed --command "Chrome and Edge loaded adapters/browser-extension unpacked" --notes "Options page visible in both hosts"
+npm run release:evidence -- -- --list
+npm run release:evidence -- -- --set browserAdapter.manualLoad --status passed --command "Chrome and Edge loaded adapters/browser-extension unpacked" --notes "Options page visible in both hosts"
 ```
 
 `release:evidence-quality` checks whether recorded evidence is specific enough to be useful later. It is especially strict for browser and IDE manual passes: notes must include host names/versions, `/health` or status-bar results, token handling, and source-file privacy boundaries where relevant.
 
 ```powershell
 npm run release:evidence-quality
-npm run release:evidence-quality -- --json
-npm run release:evidence-quality -- --require-clean
+npm run release:evidence-quality -- -- --json
+npm run release:evidence-quality -- -- --require-clean
 ```
 
 `release:evidence-report` keeps the human-readable `docs/release-evidence.md` synchronized with the JSON source of truth:
 
 ```powershell
-npm run release:evidence-report -- --check
-npm run release:evidence-report -- --write
-npm run release:evidence-report -- --json
+npm run release:evidence-report -- -- --check
+npm run release:evidence-report -- -- --write
+npm run release:evidence-report -- -- --json
 ```
 
 `release:validation-pack` generates a platform-specific validation pack for external testers. It groups the commands to run, the manual checklist, and the exact `release:evidence -- --set ...` commands to record successful macOS, browser, IDE, and signing evidence:
 
 ```powershell
-npm run release:validation-pack -- --platform windows
-npm run release:validation-pack -- --platform macos
-npm run release:validation-pack -- --platform all --json
+npm run release:validation-pack -- -- --platform windows
+npm run release:validation-pack -- -- --platform macos
+npm run release:validation-pack -- -- --platform all --json
 ```
 
 `validation:next` reads the current `docs/release-evidence.json` and prints only the remaining validation actions. Use it before asking someone to verify a release candidate so they do not repeat completed checks or accidentally record host smoke as full manual evidence:
 
 ```powershell
 npm run validation:next
-npm run validation:next -- --target browser
-npm run validation:next -- --target ide --json
+npm run validation:next -- -- --target browser
+npm run validation:next -- -- --target ide --json
 ```
 
 `validation:template` turns those remaining actions into a tester-facing evidence template. It is read-only: it lists the checklist, required note fields, and exact `release:evidence` command to run after the human validation is complete:
 
 ```powershell
-npm run validation:template -- --target browser
-npm run validation:template -- --target ide --json
-npm run validation:template -- --target macos
+npm run validation:template -- -- --target browser
+npm run validation:template -- -- --target ide --json
+npm run validation:template -- -- --target macos
 ```
 
 `release:gaps` has two release targets. The default target is `public-binary`, which keeps macOS runtime validation and signing/notarization as hard blockers. `source-beta` checks only the source-level gates needed to publish the repository as an open beta:
 
 ```powershell
-npm run release:gaps -- --target source-beta
-npm run release:gaps -- --target source-beta --require-source-beta
-npm run release:gaps -- --require-public-release
+npm run release:gaps -- -- --target source-beta
+npm run release:gaps -- -- --target source-beta --require-source-beta
+npm run release:gaps -- -- --require-public-release
 ```
 
 `release:summary` is the short maintainer dashboard. It aggregates `release:gaps`, `validation:next`, `secret:scan`, and `license:check` without running the longer packaged or browser/IDE smoke tests:
 
 ```powershell
 npm run release:summary
-npm run release:summary -- --json
-npm run release:summary -- --require-source-beta
-npm run release:summary -- --require-public-release
+npm run release:summary -- -- --json
+npm run release:summary -- -- --require-source-beta
+npm run release:summary -- -- --require-public-release
 ```
 
 `performance:summary` is the short low-memory dashboard. It aggregates static interval risk, dependency weight, adapter performance boundaries, packaged smoke/soak budgets, and recorded soak evidence without launching Electron or scanning live browser pages:
 
 ```powershell
 npm run performance:summary
-npm run performance:summary -- --json
-npm run performance:summary -- --require-clean
+npm run performance:summary -- -- --json
+npm run performance:summary -- -- --require-clean
 ```
 
 `lag:triage` is the first-pass support command for "the app feels laggy" reports. It combines `performance:summary` with a single live `/snapshot`, labels the likely cause, and suggests the next command without starting a background sampler:
 
 ```powershell
 npm run lag:triage
-npm run lag:triage -- --json
-npm run lag:triage -- --require-clean
+npm run lag:triage -- -- --json
+npm run lag:triage -- -- --require-clean
 ```
 
 `support:bundle` is the all-in-one support attachment for public bug and performance reports. It combines release summary, compatibility matrix, performance summary, delight contract, lag triage, and diagnostics into one redacted report without launching Electron or scanning browser pages:
 
 ```powershell
 npm run support:bundle
-npm run support:bundle -- --json
-npm run support:bundle -- --json --require-clean
+npm run support:bundle -- -- --json
+npm run support:bundle -- -- --json --require-clean
 ```
 
 `delight:contract` is the release guard for lightweight fun. It verifies that cute labels, icon/mascot/chart cues, warning thresholds, reduced-motion behavior, renderer coupling, and delight asset size stay tied to `quota-delight`:
 
 ```powershell
 npm run delight:contract
-npm run delight:contract -- --json
-npm run delight:contract -- --check
+npm run delight:contract -- -- --json
+npm run delight:contract -- -- --check
 ```
 
 `smoke:browser-hosts` launches installed Chrome/Edge with an isolated temporary profile and loads the unpacked browser extension through `--load-extension` when that host allows it. Official Chrome 137+ branded builds may block this command-line path; in that case the script records a policy skip and maintainers should use manual loading or Chrome for Testing/Chromium for automated Chrome coverage. It is a machine smoke test for extension-host compatibility; it does not replace the manual Options-page connection check in `docs/manual-validation.md`.
 
 `smoke:ide-hosts` installs the packaged VSIX into temporary VS Code/Cursor extension directories, lists installed extensions through each host CLI, and confirms the adapter id is visible. It validates host/package compatibility without touching the user's real IDE profile. It does not replace the manual status-bar and command checks in `docs/manual-validation.md`.
 
-`adapter:review` reads `adapters/catalog.json` and prints a maintainer-friendly report for each adapter: claimed signals, privacy/performance boundary findings, and recommended verification commands. Use `npm run adapter:review -- --id <adapter-id>` in adapter pull requests.
+`adapter:review` reads `adapters/catalog.json` and prints a maintainer-friendly report for each adapter: claimed signals, privacy/performance boundary findings, and recommended verification commands. Use `npm run adapter:review -- -- --id <adapter-id>` in adapter pull requests.
 
 `adapter:fixture` is the safe compatibility simulator for adapter authors. It starts an isolated ingest server by default, posts representative Codex/Hermes/browser/IDE/gateway usage and overlay events, verifies `/snapshot`, `/health`, provider health, low-quota attention, and secret redaction, and does not touch a running desktop app unless `--endpoint` is passed:
 
 ```powershell
 npm run adapter:fixture
-npm run adapter:fixture -- --json
+npm run adapter:fixture -- -- --json
 npm run test:adapter-fixture
 ```
 
@@ -214,8 +233,8 @@ npm run test:adapter-fixture
 
 ```powershell
 npm run compatibility:matrix
-npm run compatibility:matrix -- --json
-npm run compatibility:matrix -- --check
+npm run compatibility:matrix -- -- --json
+npm run compatibility:matrix -- -- --check
 ```
 
 ## Signing Policy
@@ -229,16 +248,27 @@ Before a public release:
 - Keep signing credentials in CI secrets, never in the repository.
 - Publish `release-manifest.json` and `SHA256SUMS.txt` next to artifacts.
 
+Readiness plan:
+
+| Area | Required inputs | Expected evidence |
+| --- | --- | --- |
+| Windows Authenticode | `WIN_CSC_LINK` or `CSC_LINK`, plus `WIN_CSC_KEY_PASSWORD` or `CSC_KEY_PASSWORD` | Signed `.exe`/installer names, certificate subject, and `npm run signing:readiness -- -- --platform windows --require` result |
+| macOS Developer ID | Developer ID signing identity via `WHO_EATS_TOKEN_MAC_SIGNING_CONFIG`, `MAC_CSC_LINK`, `CSC_LINK`, or `CSC_NAME` | Signed `.app`/DMG/ZIP names and `codesign` validation result |
+| macOS notarization | `APPLE_API_KEY`/issuer trio or Apple ID/app-specific password/team id | Notary submission result, stapling result, and `npm run signing:readiness -- -- --platform macos --require` result |
+| Release manifest | Built public artifacts under `release/` | `release/release-manifest.json`, `release/SHA256SUMS.txt`, `npm run release:manifest`, and `npm run verify:release-manifest` |
+
+Source beta notes must stay explicit that signed/notarized public binaries are not ready until the signing and notarization evidence above exists.
+
 Check signing readiness without printing secrets:
 
 ```powershell
-npm run signing:readiness -- --platform all
+npm run signing:readiness -- -- --platform all
 ```
 
 For a real public release, require every signing check to pass:
 
 ```powershell
-npm run signing:readiness -- --platform all --require
+npm run signing:readiness -- -- --platform all --require
 ```
 
 Expected release secrets/config:
@@ -258,26 +288,26 @@ On Windows, full `dist:win` may require Developer Mode or a signing environment 
 1. Bump version in `package.json`.
 2. Run `npm ci`.
 3. Run `npm run release:check`.
-4. Run `npm run secret:scan` and `npm run license:check`.
-5. Run `npm run performance:summary -- --require-clean`.
-6. Run `npm run delight:contract -- --check`.
-7. Run `npm run lag:triage -- --json` while the desktop app is running.
-8. Run `npm run support:bundle -- --json` and keep it with the release notes or issue handoff.
+4. Run `npm run secret:scan`, `npm run license:check`, and `npm audit --audit-level=high --registry=https://registry.npmjs.org/`.
+5. Run `npm run performance:summary -- -- --require-clean`.
+6. Run `npm run delight:contract -- -- --check`.
+7. Run `npm run lag:triage -- -- --json` while the desktop app is running.
+8. Run `npm run support:bundle -- -- --json` and keep it with the release notes or issue handoff.
 9. Run `npm run package:dir` on Windows and macOS.
 10. Run the packaged smoke for the current OS: `npm run smoke:packaged-win` or `npm run smoke:packaged-mac`.
 11. Run the packaged soak for the current OS: `npm run soak:packaged-win` or `npm run soak:packaged-mac`.
 12. Run `npm run package:adapters`.
-13. Run `npm run compatibility:matrix -- --check`.
+13. Run `npm run compatibility:matrix -- -- --check`.
 14. Run `npm run release:manifest` and `npm run verify:release-manifest`.
-15. Run `npm run smoke:browser-hosts -- --require` on a browser validation machine.
-16. Run `npm run smoke:ide-hosts -- --require` on an IDE validation machine.
-17. Run `npm run adapter:fixture -- --json` as a protocol/signal sanity check for adapter-facing changes.
-18. Generate a checklist with `npm run manual:preflight -- --platform all`, a handoff pack with `npm run release:validation-pack -- --platform all`, or a focused evidence template with `npm run validation:template -- --target browser|ide|macos|signing`.
-19. Update `docs/release-evidence.json` with the generated `npm run release:evidence -- --set ...` commands, then run `npm run release:evidence-report -- --write` to refresh `docs/release-evidence.md`.
-20. Run `npm run release:evidence-quality -- --require-clean` to reject vague browser/IDE/manual evidence.
+15. Run `npm run smoke:browser-hosts -- -- --require` on a browser validation machine.
+16. Run `npm run smoke:ide-hosts -- -- --require` on an IDE validation machine.
+17. Run `npm run adapter:fixture -- -- --json` as a protocol/signal sanity check for adapter-facing changes.
+18. Generate a checklist with `npm run manual:preflight -- -- --platform all`, a handoff pack with `npm run release:validation-pack -- -- --platform all`, or a focused evidence template with `npm run validation:template -- -- --target browser|ide|macos|signing`.
+19. Update `docs/release-evidence.json` with the generated `npm run release:evidence -- -- --set ...` commands, then run `npm run release:evidence-report -- -- --write` to refresh `docs/release-evidence.md`.
+20. Run `npm run release:evidence-quality -- -- --require-clean` to reject vague browser/IDE/manual evidence.
 21. Run `npm run release:summary` for the short maintainer overview.
-22. Run `npm run release:gaps -- --require-public-release`; it should pass only when public-release blockers are cleared.
-23. Run `npm run signing:readiness -- --platform all --require` in the signing environment.
+22. Run `npm run release:gaps -- -- --require-public-release`; it should pass only when public-release blockers are cleared.
+23. Run `npm run signing:readiness -- -- --platform all --require` in the signing environment.
 24. Run the manual smoke tests in `docs/manual-validation.md`.
 25. Create a tag: `v0.x.y`.
 26. Let `.github/workflows/release-artifacts.yml` create build artifacts.

@@ -23,8 +23,8 @@ For quick measured state, skills should prefer:
 
 ```powershell
 npm run status
-npm run status -- --json
-npm run diagnostics -- --json
+npm run status -- -- --json
+npm run diagnostics -- -- --json
 ```
 
 `status` reads the desktop app's local `/snapshot` and shared `providerHealth` summary. `diagnostics` adds the redacted stability bundle for issue-quality evidence. Neither command inspects prompts, files, windows, browser pages, or external services.

@@ -91,8 +91,8 @@ Invoke-RestMethod http://127.0.0.1:17667/snapshot -Headers @{ "X-Who-Eats-Token"
 不要把完整 `/snapshot` 自动贴到聊天里。需要分享时先脱敏，且优先使用：
 
 ```powershell
-npm run diagnostics -- --json
-npm run support:bundle -- --json
+npm run diagnostics -- -- --json
+npm run support:bundle -- -- --json
 ```
 
 ## 4. 判断不同工具余量

@@ -7,7 +7,7 @@ body:
     attributes:
       value: |
         Performance reports are most useful with measured CPU/RSS numbers and the active adapters/providers.
-        Please run `npm run support:bundle -- --json`, remove any local paths or account details you do not want to share, and paste the redacted output below.
+        Please run `npm run support:bundle -- -- --json`, remove any local paths or account details you do not want to share, and paste the redacted output below.
   - type: dropdown
     id: os
     attributes:
@@ -36,7 +36,7 @@ body:
     id: stability
     attributes:
       label: Diagnostics bundle
-      description: Paste redacted output from `npm run support:bundle -- --json`.
+      description: Paste redacted output from `npm run support:bundle -- -- --json`.
       render: json
       placeholder: |
         {
@@ -74,9 +74,9 @@ body:
       label: Checks run
       render: text
       placeholder: |
-        npm run diagnostics -- --json
-        npm run support:bundle -- --json
-        npm run stability -- --json
+        npm run diagnostics -- -- --json
+        npm run support:bundle -- -- --json
+        npm run stability -- -- --json
         npm run test:performance-budget
         npm run smoke:packaged-win
   - type: checkboxes

@@ -73,7 +73,7 @@ function validationPlan() {
       phase: "Browser adapter",
       key: "browserAdapter.hostSmoke",
       kind: "host-smoke",
-      command: "npm run smoke:browser-hosts -- --require",
+      command: "npm run smoke:browser-hosts -- -- --require",
       recordStatus: "host-smoke-only",
       notesTemplate: "Chrome/Edge host smoke result. Use host-smoke-only unless full Options flow was checked."
     },
@@ -100,7 +100,7 @@ function validationPlan() {
       phase: "IDE adapter",
       key: "ideAdapter.hostSmoke",
       kind: "host-smoke",
-      command: "npm run smoke:ide-hosts -- --require",
+      command: "npm run smoke:ide-hosts -- -- --require",
       recordStatus: "host-smoke-only",
       notesTemplate: "VS Code/Cursor VSIX install and list result on the validation machine."
     },
@@ -127,7 +127,7 @@ function validationPlan() {
       phase: "Signing",
       key: "signing.windowsAuthenticode",
       kind: "external",
-      command: "npm run signing:readiness -- --platform windows --require",
+      command: "npm run signing:readiness -- -- --platform windows --require",
       recordStatus: "passed",
       notesTemplate: "Signed Windows artifact names and certificate subject."
     },
@@ -136,7 +136,7 @@ function validationPlan() {
       phase: "Signing",
       key: "signing.macosNotarization",
       kind: "external",
-      command: "npm run signing:readiness -- --platform macos --require",
+      command: "npm run signing:readiness -- -- --platform macos --require",
       recordStatus: "passed",
       notesTemplate: "Notarized macOS artifact names and notary result."
     },
@@ -145,9 +145,9 @@ function validationPlan() {
       phase: "Dependency audit",
       key: "dependencyAudit",
       kind: "network",
-      command: "npm audit --audit-level=high",
+      command: "npm audit --audit-level=high --registry=https://registry.npmjs.org/",
       recordStatus: "passed",
-      notesTemplate: "Audit completed with zero high-severity vulnerabilities."
+      notesTemplate: "Audit completed against the public npm registry with zero high-severity vulnerabilities."
     }
   ];
 }
@@ -186,7 +186,7 @@ function getCheck(payload, key) {
 }
 
 function evidenceCommand(key, status, command, notes) {
-  return `npm run release:evidence -- --set ${key} --status ${status} --command "${command}" --notes "${notes}"`;
+  return `npm run release:evidence -- -- --set ${key} --status ${status} --command "${command}" --notes "${notes}"`;
 }
 
 function printReport(report) {

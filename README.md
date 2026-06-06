@@ -185,9 +185,9 @@ npm run test:adapter-catalog
 npm run secret:scan
 npm run license:check
 npm run release:check
-npm run release:check -- --list
-npm run release:gaps -- --target source-beta --require-source-beta
-npm run release:summary -- --require-source-beta
+npm run release:check -- -- --list
+npm run release:gaps -- -- --target source-beta --require-source-beta
+npm run release:summary -- -- --require-source-beta
 ```
 
 完整脚本清单以 [package.json](package.json) 为准。
@@ -200,7 +200,7 @@ npm run release:summary -- --require-source-beta
 | 诊断与支持包 | [docs/diagnostics.md](docs/diagnostics.md)、[docs/support-bundle.md](docs/support-bundle.md) | `npm run diagnostics`、`npm run support:bundle` |
 | 轻量趣味交互 | [docs/delight-contract.md](docs/delight-contract.md) | `npm run delight:contract` |
 | 兼容性矩阵 | [docs/compatibility-matrix.md](docs/compatibility-matrix.md) | `npm run compatibility:matrix` |
-| 许可证与证据 | [docs/license-policy.md](docs/license-policy.md)、[docs/release-evidence.md](docs/release-evidence.md) | `npm run release:evidence-report -- --check`、`npm run release:evidence-quality` |
+| 许可证与证据 | [docs/license-policy.md](docs/license-policy.md)、[docs/release-evidence.md](docs/release-evidence.md) | `npm run release:evidence-report -- -- --check`、`npm run release:evidence-quality` |
 | 打包验证 | [docs/release.md](docs/release.md)、[docs/manual-validation.md](docs/manual-validation.md) | `npm run package:dir`、`npm run soak:packaged-win` |
 
 ## 当前状态与路线
@@ -222,6 +222,8 @@ npm run release:summary -- --require-source-beta
 - [TokenTracker Lessons](docs/token-tracker-lessons.md)
 
 ## Contributing
+
+First-time contributors can use [docs/first-contribution.md](docs/first-contribution.md). Adapter authors should start with [docs/adapter-contribution-checklist.md](docs/adapter-contribution-checklist.md) and [docs/adapter-guide.md](docs/adapter-guide.md).
 
 欢迎贡献 adapter、协议测试、真机验证、HUD 细节和诊断工具。贡献前请先看 [CONTRIBUTING.md](CONTRIBUTING.md)。
 

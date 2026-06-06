@@ -80,13 +80,13 @@ The automated gate is intentionally conservative and static; it catches the easy
 Before deeper profiling, run:
 
 ```powershell
-npm run diagnostics -- --json
-npm run stability -- --json
-npm run lag:triage -- --json
-npm run support:bundle -- --json
+npm run diagnostics -- -- --json
+npm run stability -- -- --json
+npm run lag:triage -- -- --json
+npm run support:bundle -- -- --json
 npm run performance:summary
-npm run performance:summary -- --json
-npm run delight:contract -- --check
+npm run performance:summary -- -- --json
+npm run delight:contract -- -- --check
 ```
 
 The diagnostics bundle, stability report, lag triage, support bundle, performance summary, and delight contract are one-shot diagnostics. They record CPU, memory, app RSS, provider health, active overlay hints, low-memory configuration warnings, static polling risk, dependency weight, adapter review health, recorded soak evidence, and lightweight interaction budget without adding a background sampler.
@@ -105,7 +105,7 @@ It is read-only and does not launch Electron, attach to browsers, or scan real p
 
 ```powershell
 npm run performance:summary
-npm run performance:summary -- --json
+npm run performance:summary -- -- --json
 npm run test:performance-summary
 ```
 

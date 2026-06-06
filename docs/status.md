@@ -17,15 +17,15 @@ npm run status
 Machine-readable for skills, plugins, and issue reports:
 
 ```powershell
-npm run status -- --json
+npm run status -- -- --json
 ```
 
-For public issue reports, prefer `npm run diagnostics -- --json` because it includes this provider status plus stability findings with an explicit redaction contract.
+For public issue reports, prefer `npm run diagnostics -- -- --json` because it includes this provider status plus stability findings with an explicit redaction contract.
 
 Custom local API endpoint:
 
 ```powershell
-npm run status -- --endpoint http://127.0.0.1:17667 --token $env:WHO_EATS_TOKEN_API_TOKEN
+npm run status -- -- --endpoint http://127.0.0.1:17667 --token $env:WHO_EATS_TOKEN_API_TOKEN
 ```
 
 ## Output Meaning

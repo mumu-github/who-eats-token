@@ -14,12 +14,14 @@ const keyDocs = [
   "docs/token-tracker-lessons.md",
   "docs/delight-contract.md",
   "docs/release-readiness.md",
+  "docs/first-contribution.md",
   "docs/performance-budget.md",
   "docs/license-policy.md",
   "docs/risk-register.md",
   "docs/release.md",
   "docs/manual-validation.md",
   "docs/adapter-guide.md",
+  "docs/adapter-contribution-checklist.md",
   "docs/adapter-signal-matrix.md",
   "docs/adapter-fixture.md",
   "docs/browser-extension.md",
@@ -61,7 +63,7 @@ assertIncludes(readme, "macOS");
 assertIncludes(readme, "docs/compatibility-matrix.md");
 assertIncludes(readme, "docs/adapter-fixture.md");
 assertIncludes(readme, "npm run release:check");
-assertIncludes(readme, "npm run release:check -- --list");
+assertIncludes(readme, "npm run release:check -- -- --list");
 assertIncludes(readme, "npm run release:summary");
 assertIncludes(readme, "npm run performance:summary");
 assertIncludes(readme, "npm run lag:triage");
@@ -70,10 +72,12 @@ assertIncludes(readme, "npm run support:bundle");
 assertIncludes(readme, "docs/delight-contract.md");
 assertIncludes(readme, "docs/getting-started.md");
 assertIncludes(readme, "docs/agent-getting-started.md");
+assertIncludes(readme, "docs/first-contribution.md");
+assertIncludes(readme, "docs/adapter-contribution-checklist.md");
 assertIncludes(readme, "npm run compatibility:matrix");
 assertIncludes(readme, "npm run soak:packaged-win");
 assertIncludes(readme, "npm run secret:scan");
-assertIncludes(readme, "npm run release:evidence-report -- --check");
+assertIncludes(readme, "npm run release:evidence-report -- -- --check");
 assertIncludes(readme, "npm run release:evidence-quality");
 assertIncludes(readme, "docs/license-policy.md");
 assertIncludes(readme, "npm run test:adapter-contract");
@@ -162,7 +166,7 @@ assertIncludes(stability, "does not poll");
 
 const diagnostics = read("docs/diagnostics.md");
 assertIncludes(diagnostics, "redacted bundle");
-assertIncludes(diagnostics, "npm run diagnostics -- --json");
+assertIncludes(diagnostics, "npm run diagnostics -- -- --json");
 assertIncludes(diagnostics, "npm run lag:triage");
 assertIncludes(diagnostics, "npm run support:bundle");
 assertIncludes(diagnostics, "does not poll");
@@ -194,6 +198,21 @@ assertIncludes(signalMatrix, "HUD Avoidance");
 const adapterGuide = read("docs/adapter-guide.md");
 assertIncludes(adapterGuide, "adapter:fixture");
 assertIncludes(adapterGuide, "test:adapter-fixture");
+assertIncludes(adapterGuide, "adapter-contribution-checklist.md");
+
+const adapterChecklist = read("docs/adapter-contribution-checklist.md");
+assertIncludes(adapterChecklist, "providedSignals");
+assertIncludes(adapterChecklist, "privacyBoundary");
+assertIncludes(adapterChecklist, "performanceBoundary");
+assertIncludes(adapterChecklist, "disablePath");
+assertIncludes(adapterChecklist, "npm run adapter:review -- -- --id");
+assertIncludes(adapterChecklist, "npm run adapter:fixture -- -- --json");
+
+const firstContribution = read("docs/first-contribution.md");
+assertIncludes(firstContribution, "Starter Paths");
+assertIncludes(firstContribution, "What Needs Special Access");
+assertIncludes(firstContribution, "npm run check");
+assertIncludes(firstContribution, "npm run adapter:fixture -- -- --json");
 
 const adapterFixture = read("docs/adapter-fixture.md");
 assertIncludes(adapterFixture, "Adapter Fixture");
@@ -205,7 +224,7 @@ assertIncludes(adapterFixture, "test:adapter-fixture");
 
 const releaseDoc = read("docs/release.md");
 assertIncludes(releaseDoc, "per-command timeout");
-assertIncludes(releaseDoc, "release:check -- --list --json");
+assertIncludes(releaseDoc, "release:check -- -- --list --json");
 
 console.log("Documentation quality checks passed.");
 

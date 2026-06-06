@@ -53,5 +53,5 @@ body:
           required: true
         - label: If implemented, the adapter can be represented in adapters/catalog.json with a clear disable path and performance boundary.
           required: true
-        - label: If implemented, the adapter should be able to pass `npm run adapter:fixture -- --json` or explain which fixture signal does not apply.
+        - label: If implemented, the adapter should be able to pass `npm run adapter:fixture -- -- --json` or explain which fixture signal does not apply.
           required: false

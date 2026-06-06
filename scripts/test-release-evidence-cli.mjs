@@ -23,7 +23,7 @@ try {
     "--set", "ideAdapter.hostSmoke",
     "--status", "host-smoke-only",
     "--recorded-at", "2026-05-24T12:00:00+08:00",
-    "--command", "npm run smoke:ide-hosts -- --require",
+    "--command", "npm run smoke:ide-hosts -- -- --require",
     "--notes", "VS Code and Cursor host smoke passed on validation fixture."
   ], 0);
   let evidence = JSON.parse(fs.readFileSync(evidencePath, "utf8"));
@@ -33,7 +33,7 @@ try {
   const forbidden = run([
     "--set", "browserAdapter.hostSmoke",
     "--status", "passed",
-    "--command", "npm run smoke:browser-hosts -- --require",
+    "--command", "npm run smoke:browser-hosts -- -- --require",
     "--notes", "Should not be allowed."
   ], 1);
   assert.match(forbidden.stderr || forbidden.stdout, /host-smoke-only/);

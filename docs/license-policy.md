@@ -48,7 +48,9 @@ Before public source or binary release:
 ```powershell
 npm run secret:scan
 npm run license:check
-npm audit --audit-level=high
+npm audit --audit-level=high --registry=https://registry.npmjs.org/
 ```
 
 `secret:scan` protects local credentials. `license:check` protects open-source distribution rights. `npm audit` covers known vulnerability data and needs network access.
+
+If a mirrored registry does not expose npm advisory endpoints, the audit can fail with a registry or advisory lookup error even when no vulnerability result was produced. Rerun with `--registry=https://registry.npmjs.org/` before treating the release gate as clean. Registry failures are release evidence gaps; vulnerability findings are security bugs.

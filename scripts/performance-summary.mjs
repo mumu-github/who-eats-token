@@ -50,13 +50,13 @@ function buildSummary() {
     releaseEvidence: evidence,
     commands: [
       "npm run test:performance-budget",
-      "npm run performance:summary -- --json",
+      "npm run performance:summary -- -- --json",
       "npm run test:soak-script",
       "npm run soak:packaged-win",
       "npm run soak:packaged-mac",
       "npm run adapter:review",
-      "npm run diagnostics -- --json",
-      "npm run stability -- --json",
+      "npm run diagnostics -- -- --json",
+      "npm run stability -- -- --json",
       "npm run release:summary"
     ]
   };

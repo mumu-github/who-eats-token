@@ -62,8 +62,8 @@ body:
       placeholder: |
         npm run status
         npm run diagnostics
-        npm run smoke:browser-hosts -- --require
-        npm run smoke:ide-hosts -- --require
+        npm run smoke:browser-hosts -- -- --require
+        npm run smoke:ide-hosts -- -- --require
   - type: checkboxes
     id: safety
     attributes:

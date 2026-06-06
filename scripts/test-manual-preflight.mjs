@@ -8,8 +8,8 @@ assert.deepEqual(sectionTitles(windows), ["Windows 10+", "Browser Extension", "I
 assert.ok(windows.commands.includes("npm run smoke:packaged-win"));
 assert.ok(windows.commands.includes("npm run soak:packaged-win"));
 assert.ok(windows.commands.includes("npm run adapter:manual-readiness"));
-assert.ok(windows.commands.includes("npm run smoke:browser-hosts -- --require"));
-assert.ok(windows.commands.includes("npm run smoke:ide-hosts -- --require"));
+assert.ok(windows.commands.includes("npm run smoke:browser-hosts -- -- --require"));
+assert.ok(windows.commands.includes("npm run smoke:ide-hosts -- -- --require"));
 assert.ok(!windows.commands.includes("npm run smoke:packaged-mac"));
 assert.ok(sectionByTitle(windows, "Windows 10+").items.some((item) => item.includes("Desktop top bar")));
 assert.ok(sectionByTitle(windows, "Browser Extension").items.some((item) => item.includes("/health")));
@@ -23,8 +23,8 @@ assert.deepEqual(sectionTitles(macos), ["macOS", "Browser Extension", "IDE Adapt
 assert.ok(macos.commands.includes("npm run smoke:packaged-mac"));
 assert.ok(macos.commands.includes("npm run soak:packaged-mac"));
 assert.ok(macos.commands.includes("npm run adapter:manual-readiness"));
-assert.ok(macos.commands.includes("npm run smoke:browser-hosts -- --require"));
-assert.ok(macos.commands.includes("npm run smoke:ide-hosts -- --require"));
+assert.ok(macos.commands.includes("npm run smoke:browser-hosts -- -- --require"));
+assert.ok(macos.commands.includes("npm run smoke:ide-hosts -- -- --require"));
 assert.ok(!macos.commands.includes("npm run smoke:packaged-win"));
 assert.ok(sectionByTitle(macos, "macOS").items.some((item) => item.includes("Accessibility")));
 assert.ok(sectionByTitle(macos, "macOS").items.some((item) => item.includes("Screen Recording")));

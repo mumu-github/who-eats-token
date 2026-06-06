@@ -1,6 +1,6 @@
 # Adapter Catalog
 
-`adapters/catalog.json` is the machine-readable source of truth for supported, reference, and planned integration surfaces.
+`adapters/catalog.json` is the machine-readable source of truth for supported, reference, and planned integration surfaces. Community adapter PRs should use [docs/adapter-contribution-checklist.md](adapter-contribution-checklist.md) before review.
 
 The human-readable signal table is generated in [docs/adapter-signal-matrix.md](adapter-signal-matrix.md). The platform/tool compatibility view is generated in [docs/compatibility-matrix.md](compatibility-matrix.md). Run `npm run adapter:signal-matrix` and `npm run compatibility:matrix` after changing catalog entries.
 
@@ -49,16 +49,16 @@ Allowed signal keys:
 ```powershell
 npm run test:adapter-catalog
 npm run adapter:review
-npm run adapter:fixture -- --json
+npm run adapter:fixture -- -- --json
 npm run test:adapter-signal-matrix
-npm run compatibility:matrix -- --check
+npm run compatibility:matrix -- -- --check
 npm run test:compatibility-matrix
 npm run release:check
 ```
 
 `test:adapter-catalog` verifies schema shape, unique ids, `providedSignals`, existing docs/entrypoints, package scripts, and minimum privacy/performance boundaries. It intentionally rejects vague adapters that do not say what signals they provide, how they are tested, or how users can disable them.
 
-`adapter:review` is the contributor-facing report for the same catalog. Run `npm run adapter:review -- --id <adapter-id>` in PR review to see the adapter's signals, boundary findings, and recommended verification commands.
+`adapter:review` is the contributor-facing report for the same catalog. Run `npm run adapter:review -- -- --id <adapter-id>` in PR review to see the adapter's signals, boundary findings, and recommended verification commands.
 
 `adapter:fixture` is the local protocol simulator for adapter authors. It runs isolated by default, posts representative usage and overlay events, and verifies provider health, low-quota attention, and redaction before a real host integration is available.
 
@@ -70,4 +70,4 @@ npm run release:check
 4. Move to `supported` only when the integration is in the release path and has real platform smoke coverage.
 5. Never add an adapter that requires prompts, completions, source code, API keys, or cookies to be posted to `/events`.
 
-For implementation rules, see [docs/adapter-guide.md](adapter-guide.md). For review rules, see [docs/adapter-review.md](adapter-review.md).
+For implementation rules, see [docs/adapter-guide.md](adapter-guide.md). For contribution rules, see [docs/adapter-contribution-checklist.md](adapter-contribution-checklist.md). For review rules, see [docs/adapter-review.md](adapter-review.md).

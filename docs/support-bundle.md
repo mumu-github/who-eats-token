@@ -15,20 +15,20 @@ npm run support:bundle
 Machine-readable for GitHub issues, skills, plugins, and maintainer tools:
 
 ```powershell
-npm run support:bundle -- --json
+npm run support:bundle -- -- --json
 ```
 
 Fail in automation when static guards or critical runtime findings fail:
 
 ```powershell
-npm run support:bundle -- --json --require-clean
+npm run support:bundle -- -- --json --require-clean
 ```
 
 Custom local API endpoint:
 
 ```powershell
-npm run support:bundle -- --endpoint http://127.0.0.1:17667 --token $env:WHO_EATS_TOKEN_API_TOKEN
-npm run support:bundle -- --endpoint http://127.0.0.1:17667 --token $env:WHO_EATS_TOKEN_API_TOKEN --timeout-ms 1000 --json
+npm run support:bundle -- -- --endpoint http://127.0.0.1:17667 --token $env:WHO_EATS_TOKEN_API_TOKEN
+npm run support:bundle -- -- --endpoint http://127.0.0.1:17667 --token $env:WHO_EATS_TOKEN_API_TOKEN --timeout-ms 1000 --json
 ```
 
 ## What It Includes

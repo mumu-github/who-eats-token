@@ -26,8 +26,8 @@ for (const target of ["macos", "signing"]) {
 }
 assert.ok(!report.nextActions.actions.some((action) => action.target === "ide"), "IDE adapter validation should be complete.");
 assert.ok(!report.nextActions.actions.some((action) => action.target === "browser"), "Browser adapter validation should be complete.");
-assert.ok(report.commands.includes("npm run release:summary -- --json"));
-assert.ok(report.commands.includes("npm run release:check -- --list --json"));
+assert.ok(report.commands.includes("npm run release:summary -- -- --json"));
+assert.ok(report.commands.includes("npm run release:check -- -- --list --json"));
 
 const text = runText([]);
 assert.match(text, /Who Eats Token Release Summary/);

@@ -10,20 +10,20 @@ Run the isolated fixture:
 
 ```powershell
 npm run adapter:fixture
-npm run adapter:fixture -- --json
-npm run adapter:fixture -- --json --require-clean
+npm run adapter:fixture -- -- --json
+npm run adapter:fixture -- -- --json --require-clean
 ```
 
 Run against a live local app only when you want to intentionally add fixture events to that app's snapshot:
 
 ```powershell
-npm run adapter:fixture -- --endpoint http://127.0.0.1:17667 --token $env:WHO_EATS_TOKEN_API_TOKEN
+npm run adapter:fixture -- -- --endpoint http://127.0.0.1:17667 --token $env:WHO_EATS_TOKEN_API_TOKEN
 ```
 
 Use a shorter local timeout:
 
 ```powershell
-npm run adapter:fixture -- --timeout-ms 750 --json
+npm run adapter:fixture -- -- --timeout-ms 750 --json
 ```
 
 ## Scenarios
@@ -57,7 +57,7 @@ The report fails if any of those strings survive into `/snapshot`, `/health`, `/
 - after changing provider health or delight classification
 - when a tool claims `usage-events`, `quota-capacity`, `context-window`, `hud-overlays`, or `local-health`
 
-Run `npm run adapter:review -- --id <adapter-id>` alongside the fixture. Review checks the catalog entry; the fixture checks whether the local protocol can safely carry the signals a real adapter would emit.
+Run `npm run adapter:review -- -- --id <adapter-id>` alongside the fixture. Review checks the catalog entry; the fixture checks whether the local protocol can safely carry the signals a real adapter would emit.
 
 ## Checks
 

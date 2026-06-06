@@ -1,6 +1,6 @@
 # Adapter Guide
 
-Adapters make Who Eats Token multi-tool compatible without bloating the desktop app. An adapter should be small, local-first, and easy to disable.
+Adapters make Who Eats Token multi-tool compatible without bloating the desktop app. An adapter should be small, local-first, and easy to disable. Use [docs/adapter-contribution-checklist.md](adapter-contribution-checklist.md) before opening a community adapter PR.
 
 ## Adapter Types
 
@@ -105,7 +105,7 @@ Use `scripts/import-usage-report.mjs` or `npm run import:usage-report` when anot
 This is the preferred interop path for TokenTracker, ccusage, and similar projects: they keep parser breadth, Who Eats Token receives compact usage events for ambient HUD display.
 
 ```powershell
-npm run import:usage-report -- --dry-run --provider claude --tool ccusage --source ccusage-json path\to\summary.json
+npm run import:usage-report -- -- --dry-run --provider claude --tool ccusage --source ccusage-json path\to\summary.json
 ```
 
 See [docs/external-summary-import.md](external-summary-import.md).
@@ -116,7 +116,7 @@ Use `npm run adapter:fixture` before wiring a real host. It runs isolated by def
 
 ```powershell
 npm run adapter:fixture
-npm run adapter:fixture -- --json
+npm run adapter:fixture -- -- --json
 npm run test:adapter-fixture
 ```
 
@@ -165,9 +165,10 @@ Do not duplicate the desktop collector logic inside the MCP server.
 ## Acceptance Checklist
 
 - The adapter has an entry in `adapters/catalog.json`.
+- The adapter satisfies [docs/adapter-contribution-checklist.md](adapter-contribution-checklist.md).
 - `providedSignals` matches the real behavior; do not claim quota, overlay, health, or snapshot support unless the adapter implements it.
 - `npm run test:adapter-catalog` passes.
-- `npm run adapter:review -- --id your-adapter-id` shows no errors.
+- `npm run adapter:review -- -- --id your-adapter-id` shows no errors.
 - `npm run test:adapter-fixture` passes.
 - `npm run adapter:guard` passes.
 - `npm run test:adapter-contribution` passes when templates, issue forms, PR rules, or catalog docs changed.

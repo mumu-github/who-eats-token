@@ -24,7 +24,7 @@ This register turns known product and open-source risks into checks that maintai
 | Adapters become a parser warehouse | Maintenance cost grows quickly and privacy risk increases. | Keep adapter logic thin, require `adapters/catalog.json`, and review new adapters with `docs/adapter-review.md`. |
 | Browser or IDE hosts change install policy | Automated host smoke may pass on one machine but fail on user machines. | Treat host smoke as compatibility evidence, not full validation; keep manual Chrome/Edge and VS Code/Cursor checks as release blockers. |
 | macOS permission behavior drifts | HUD placement may fail or become stale when Accessibility or Screen Recording is denied. | macOS real-device smoke, soak, and permission-state checks remain external release blockers. |
-| Unsigned binaries trigger warnings or are blocked | Users cannot safely install public releases. | `npm run signing:readiness -- --platform all --require`, Authenticode, Developer ID signing, and notarization before public binaries. |
+| Unsigned binaries trigger warnings or are blocked | Users cannot safely install public releases. | `npm run signing:readiness -- -- --platform all --require`, Authenticode, Developer ID signing, and notarization before public binaries. |
 | Debug logs, screenshots, or bug reports contain secrets | Public issues or artifacts may leak private data. | Debug HUD logs are off by default and capped; issue/PR templates warn against API keys, cookies, prompts, completions, and source files. |
 | Release artifacts are hard to verify | Users and maintainers cannot tell which binaries match the source. | `release/release-manifest.json`, `SHA256SUMS.txt`, and `npm run verify:release-manifest` are required after packaging. |
 

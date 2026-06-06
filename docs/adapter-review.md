@@ -1,6 +1,6 @@
 # Adapter Review Checklist
 
-Use this checklist when reviewing new or changed adapters. The goal is to keep Who Eats Token multi-tool compatible without letting integrations become heavy, secret-hungry, or fragile.
+Use this checklist when reviewing new or changed adapters. The contributor-facing version is [docs/adapter-contribution-checklist.md](adapter-contribution-checklist.md). The goal is to keep Who Eats Token multi-tool compatible without letting integrations become heavy, secret-hungry, or fragile.
 
 ## Required Evidence
 
@@ -8,8 +8,8 @@ Use this checklist when reviewing new or changed adapters. The goal is to keep W
 - `providedSignals` says exactly which signals the adapter can provide, such as `usage-events`, `quota-capacity`, `quota-token-plan`, `hud-overlays`, `local-health`, or `status-display`.
 - The implementation has an adapter-specific test, or clearly extends an existing adapter test.
 - `npm run test:adapter-catalog` passes.
-- `npm run adapter:review -- --id <adapter-id>` shows no errors.
-- `npm run adapter:fixture -- --json` passes for adapter-facing protocol, provider-health, overlay, and redaction changes.
+- `npm run adapter:review -- -- --id <adapter-id>` shows no errors.
+- `npm run adapter:fixture -- -- --json` passes for adapter-facing protocol, provider-health, overlay, and redaction changes.
 - `npm run adapter:guard` passes for browser/IDE adapter changes.
 - `npm run test:adapter-contribution` passes.
 - `npm run release:check` passes.
@@ -55,9 +55,9 @@ Use the machine-readable catalog review before merging adapter changes:
 
 ```powershell
 npm run adapter:review
-npm run adapter:review -- --id browser-extension
-npm run adapter:review -- --id <adapter-id> --json
-npm run adapter:fixture -- --json
+npm run adapter:review -- -- --id browser-extension
+npm run adapter:review -- -- --id <adapter-id> --json
+npm run adapter:fixture -- -- --json
 ```
 
 The review command is read-only. It checks docs, entrypoints, npm scripts, signal claims, privacy boundaries, performance boundaries, and status expectations, then prints the commands reviewers should run for that adapter. The fixture command starts an isolated local ingest server unless `--endpoint` is passed; it verifies that representative adapter events and overlay reports stay compatible with the shared protocol.

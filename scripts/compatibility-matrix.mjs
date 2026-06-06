@@ -77,12 +77,12 @@ function buildMatrix() {
     releaseBlockers: releaseGaps.blocking,
     commands: [
       "npm run compatibility:matrix",
-      "npm run compatibility:matrix -- --json",
-      "npm run compatibility:matrix -- --check",
+      "npm run compatibility:matrix -- -- --json",
+      "npm run compatibility:matrix -- -- --check",
       "npm run test:compatibility-matrix",
       "npm run adapter:review",
-      "npm run adapter:signal-matrix -- --check",
-      "npm run release:gaps -- --json"
+      "npm run adapter:signal-matrix -- -- --check",
+      "npm run release:gaps -- -- --json"
     ],
     findings
   };
@@ -303,10 +303,10 @@ function renderMarkdown(report) {
     "## Checks",
     "",
     "```powershell",
-    "npm run compatibility:matrix -- --check",
+    "npm run compatibility:matrix -- -- --check",
     "npm run test:compatibility-matrix",
     "npm run adapter:review",
-    "npm run release:gaps -- --json",
+    "npm run release:gaps -- -- --json",
     "npm run release:check",
     "```",
     ""

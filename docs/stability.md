@@ -6,7 +6,7 @@ It reads the desktop app's local `/snapshot`, reuses `providerHealth`, and exits
 
 When the symptom is simply "it feels laggy" and the cause is unclear, start with `npm run lag:triage`. It combines this live stability snapshot with the static low-memory gates from `npm run performance:summary`, then suggests the next focused command.
 
-For public issues or repeated regressions, start with `npm run support:bundle -- --json` instead. It includes lag triage, diagnostics, release summary, compatibility matrix, performance summary, and delight contract in one redacted report.
+For public issues or repeated regressions, start with `npm run support:bundle -- -- --json` instead. It includes lag triage, diagnostics, release summary, compatibility matrix, performance summary, and delight contract in one redacted report.
 
 ## Commands
 
@@ -19,36 +19,36 @@ npm run stability
 Machine-readable:
 
 ```powershell
-npm run stability -- --json
+npm run stability -- -- --json
 ```
 
 Lag triage:
 
 ```powershell
 npm run lag:triage
-npm run lag:triage -- --json
+npm run lag:triage -- -- --json
 ```
 
 Full support bundle:
 
 ```powershell
 npm run support:bundle
-npm run support:bundle -- --json
+npm run support:bundle -- -- --json
 ```
 
-For public issue reports, prefer `npm run support:bundle -- --json` because it includes this stability report, provider status, lag classification, and static guard state with an explicit redaction contract.
+For public issue reports, prefer `npm run support:bundle -- -- --json` because it includes this stability report, provider status, lag classification, and static guard state with an explicit redaction contract.
 
 Fail in automation when severe findings are present:
 
 ```powershell
-npm run stability -- --fail-on critical
-npm run stability -- --fail-on warning
+npm run stability -- -- --fail-on critical
+npm run stability -- -- --fail-on warning
 ```
 
 Custom local API endpoint:
 
 ```powershell
-npm run stability -- --endpoint http://127.0.0.1:17667 --token $env:WHO_EATS_TOKEN_API_TOKEN
+npm run stability -- -- --endpoint http://127.0.0.1:17667 --token $env:WHO_EATS_TOKEN_API_TOKEN
 ```
 
 ## What It Reports

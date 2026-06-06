@@ -51,12 +51,12 @@ This adapter must not report:
 ```powershell
 npm run test:protocol
 npm run test:adapter-catalog
-npm run adapter:review -- --id your-adapter-id
-npm run adapter:fixture -- --json
+npm run adapter:review -- -- --id your-adapter-id
+npm run adapter:fixture -- -- --json
 npm run test:adapter-contribution
 npm run release:check
 ```
 
-`npm run adapter:fixture -- --json` runs an isolated local compatibility simulator. Use it before touching a real host to confirm usage events, quota/window signals, overlay rectangles, provider health, low-quota attention, and prompt/API-key/cookie/source-file redaction.
+`npm run adapter:fixture -- -- --json` runs an isolated local compatibility simulator. Use it before touching a real host to confirm usage events, quota/window signals, overlay rectangles, provider health, low-quota attention, and prompt/API-key/cookie/source-file redaction.
 
 Use [docs/adapter-review.md](../../../docs/adapter-review.md) as the PR review checklist.

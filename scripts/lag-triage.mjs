@@ -42,7 +42,7 @@ async function readRuntime() {
       nextSteps: [
         "Start the Who Eats Token desktop app.",
         "Verify the local API token if the app is already running.",
-        "Run `npm run diagnostics -- --json` after the app is reachable."
+        "Run `npm run diagnostics -- -- --json` after the app is reachable."
       ]
     };
   }
@@ -207,24 +207,24 @@ function buildNextActions(staticPerformance, runtimeSummary, likelyCause) {
   }
 
   if (["cpu-pressure", "memory-pressure", "app-rss-high"].includes(likelyCause.id)) {
-    actions.push("Run `npm run diagnostics -- --json` and attach the redacted bundle to the issue.");
-    actions.push("Run `npm run performance:summary -- --json` to confirm no static polling regression.");
+    actions.push("Run `npm run diagnostics -- -- --json` and attach the redacted bundle to the issue.");
+    actions.push("Run `npm run performance:summary -- -- --json` to confirm no static polling regression.");
     actions.push("Run `npm run soak:packaged-win` or `npm run soak:packaged-mac` on the affected OS.");
   }
 
   if (likelyCause.id === "provider-data") {
-    actions.push("Run `npm run status -- --json` and compare provider freshness with the tool's own quota UI.");
+    actions.push("Run `npm run status -- -- --json` and compare provider freshness with the tool's own quota UI.");
     actions.push("Check the adapter source before changing HUD rendering code.");
   }
 
   if (likelyCause.id === "partial-snapshot") {
     actions.push("Restart the desktop app so port 17667 is owned by the full Who Eats Token runtime.");
-    actions.push("Rerun `npm run diagnostics -- --json` and confirm `stability.system` is no longer null.");
+    actions.push("Rerun `npm run diagnostics -- -- --json` and confirm `stability.system` is no longer null.");
     actions.push("If the wrong instance keeps returning, identify the process with `netstat -ano | Select-String \":17667\"` before changing HUD code.");
   }
 
   if (likelyCause.id === "overlay-avoidance") {
-    actions.push("Run `npm run diagnostics -- --json` while the popup is visible.");
+    actions.push("Run `npm run diagnostics -- -- --json` while the popup is visible.");
     actions.push("Check whether overlay rectangles overlap the HUD before changing hide/move rules.");
   }
 
@@ -234,7 +234,7 @@ function buildNextActions(staticPerformance, runtimeSummary, likelyCause) {
   }
 
   if (actions.length === 0) {
-    actions.push("Record the current `npm run diagnostics -- --json` output if the user still sees lag.");
+    actions.push("Record the current `npm run diagnostics -- -- --json` output if the user still sees lag.");
     actions.push("Compare against OS Task Manager or Activity Monitor to identify non-app pressure.");
   }
 

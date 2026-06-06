@@ -8,6 +8,7 @@ const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const requiredFiles = [
   "adapters/templates/provider-adapter/README.md",
   "adapters/templates/provider-adapter/catalog-entry.json",
+  "docs/adapter-contribution-checklist.md",
   "docs/adapter-review.md",
   ".github/PULL_REQUEST_TEMPLATE.md",
   ".github/ISSUE_TEMPLATE/adapter_request.yml",
@@ -21,6 +22,7 @@ for (const file of requiredFiles) {
 const templateReadme = read("adapters/templates/provider-adapter/README.md");
 const templateCatalog = JSON.parse(read("adapters/templates/provider-adapter/catalog-entry.json"));
 const reviewDoc = read("docs/adapter-review.md");
+const contributionChecklist = read("docs/adapter-contribution-checklist.md");
 const contributing = read("CONTRIBUTING.md");
 const prTemplate = read(".github/PULL_REQUEST_TEMPLATE.md");
 const adapterIssue = read(".github/ISSUE_TEMPLATE/adapter_request.yml");
@@ -47,17 +49,25 @@ for (const text of [templateReadme, reviewDoc, contributing, prTemplate]) {
   assertIncludes(text, "npm run release:check", "Adapter contribution path must mention release:check.");
 }
 
-for (const text of [templateReadme, reviewDoc, contributing, prTemplate, adapterIssue]) {
+for (const text of [templateReadme, reviewDoc, contributionChecklist, contributing, prTemplate, adapterIssue]) {
   assertNoSecretBoundary(text);
 }
 
 assertIncludes(adapterGuide, "adapters/templates/provider-adapter", "Adapter guide should point contributors to the template.");
 assertIncludes(adapterGuide, "providedSignals", "Adapter guide should explain providedSignals.");
 assertIncludes(adapterGuide, "docs/adapter-review.md", "Adapter guide should point reviewers to the checklist.");
+assertIncludes(adapterGuide, "adapter-contribution-checklist.md", "Adapter guide should point contributors to the community checklist.");
+assertIncludes(contributionChecklist, "providedSignals", "Adapter checklist should require providedSignals.");
+assertIncludes(contributionChecklist, "privacyBoundary", "Adapter checklist should require privacyBoundary.");
+assertIncludes(contributionChecklist, "performanceBoundary", "Adapter checklist should require performanceBoundary.");
+assertIncludes(contributionChecklist, "disablePath", "Adapter checklist should require disablePath.");
+assertIncludes(contributionChecklist, "npm run adapter:review -- -- --id <adapter-id>", "Adapter checklist should use npm 11-safe review command.");
+assertIncludes(contributionChecklist, "npm run adapter:fixture -- -- --json", "Adapter checklist should use npm 11-safe fixture command.");
 assertIncludes(reviewDoc, "providedSignals", "Adapter review checklist should require providedSignals.");
 assertIncludes(reviewDoc, "npm run adapter:review", "Adapter review checklist should mention the review command.");
 assertIncludes(adapterCatalogDoc, "adapters/templates/provider-adapter", "Adapter catalog docs should point contributors to the template.");
 assertIncludes(adapterCatalogDoc, "providedSignals", "Adapter catalog docs should document providedSignals.");
+assertIncludes(adapterCatalogDoc, "adapter-contribution-checklist.md", "Adapter catalog docs should point contributors to the community checklist.");
 assertIncludes(adapterCatalogDoc, "docs/adapter-review.md", "Adapter catalog docs should point reviewers to the checklist.");
 
 console.log("Adapter contribution checks passed.");

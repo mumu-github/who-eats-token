@@ -38,8 +38,8 @@ function buildPack(platform) {
           "npm run verify:adapter-artifacts",
           "npm run release:manifest",
           "npm run verify:release-manifest",
-          `npm run manual:preflight -- --platform ${platform}`,
-          "npm run release:evidence -- --list"
+          `npm run manual:preflight -- -- --platform ${platform}`,
+          "npm run release:evidence -- -- --list"
         ],
         evidenceUpdates: []
       },
@@ -56,11 +56,11 @@ function buildPack(platform) {
         commands: [
           "npm run package:browser-extension",
           "npm run adapter:manual-readiness",
-          "npm run smoke:browser-hosts -- --require"
+          "npm run smoke:browser-hosts -- -- --require"
         ],
         checklist: sectionItems(manual, "Browser Extension"),
         evidenceUpdates: [
-          evidenceCommand("browserAdapter.hostSmoke", "host-smoke-only", "npm run smoke:browser-hosts -- --require", "Record Chrome/Edge host smoke result. Use host-smoke-only unless full manual Options flow was also checked."),
+          evidenceCommand("browserAdapter.hostSmoke", "host-smoke-only", "npm run smoke:browser-hosts -- -- --require", "Record Chrome/Edge host smoke result. Use host-smoke-only unless full manual Options flow was also checked."),
           evidenceCommand("browserAdapter.manualLoad", "passed", "Chrome and Edge load adapters/browser-extension unpacked", "Record exact Chrome/Edge versions and that the extension was enabled in both hosts."),
           evidenceCommand("browserAdapter.manualConnection", "passed", "Browser extension Options /health connection test", "Record that local token and /health succeeded in both Chrome and Edge.")
         ]
@@ -71,11 +71,11 @@ function buildPack(platform) {
         commands: [
           "npm run package:vscode-extension",
           "npm run adapter:manual-readiness",
-          "npm run smoke:ide-hosts -- --require"
+          "npm run smoke:ide-hosts -- -- --require"
         ],
         checklist: sectionItems(manual, "IDE Adapter"),
         evidenceUpdates: [
-          evidenceCommand("ideAdapter.hostSmoke", "host-smoke-only", "npm run smoke:ide-hosts -- --require", "Record VS Code/Cursor VSIX install/list result on the validation machine."),
+          evidenceCommand("ideAdapter.hostSmoke", "host-smoke-only", "npm run smoke:ide-hosts -- -- --require", "Record VS Code/Cursor VSIX install/list result on the validation machine."),
           evidenceCommand("ideAdapter.manualLoad", "passed", "Install VSIX in VS Code and Cursor", "Record exact VS Code/Cursor versions and that the extension loaded in both hosts."),
           evidenceCommand("ideAdapter.manualConnection", "passed", "VS Code/Cursor status bar /health, refresh, and copy snapshot checks", "Record status bar, refresh, and copy snapshot behavior in both hosts.")
         ]
@@ -91,7 +91,7 @@ function buildPack(platform) {
         title: "Final public-release audit",
         commands: [
           "npm run test:release-evidence",
-          "npm run release:gaps -- --require-public-release",
+          "npm run release:gaps -- -- --require-public-release",
           "npm run verify:release-manifest"
         ],
         evidenceUpdates: []
@@ -167,24 +167,24 @@ function runtimeEvidenceUpdates(platform) {
 }
 
 function signingCommands(platform) {
-  if (platform === "windows") return ["npm run signing:readiness -- --platform windows --require"];
-  if (platform === "macos") return ["npm run signing:readiness -- --platform macos --require"];
-  return ["npm run signing:readiness -- --platform all --require"];
+  if (platform === "windows") return ["npm run signing:readiness -- -- --platform windows --require"];
+  if (platform === "macos") return ["npm run signing:readiness -- -- --platform macos --require"];
+  return ["npm run signing:readiness -- -- --platform all --require"];
 }
 
 function signingEvidenceUpdates(platform) {
   const commands = [];
   if (platform === "windows" || platform === "all") {
-    commands.push(evidenceCommand("signing.windowsAuthenticode", "passed", "npm run signing:readiness -- --platform windows --require", "Record signed Windows artifact names and certificate subject."));
+    commands.push(evidenceCommand("signing.windowsAuthenticode", "passed", "npm run signing:readiness -- -- --platform windows --require", "Record signed Windows artifact names and certificate subject."));
   }
   if (platform === "macos" || platform === "all") {
-    commands.push(evidenceCommand("signing.macosNotarization", "passed", "npm run signing:readiness -- --platform macos --require", "Record notarized macOS artifact names and notary tool result."));
+    commands.push(evidenceCommand("signing.macosNotarization", "passed", "npm run signing:readiness -- -- --platform macos --require", "Record notarized macOS artifact names and notary tool result."));
   }
   return commands;
 }
 
 function evidenceCommand(key, status, command, notes) {
-  return `npm run release:evidence -- --set ${key} --status ${status} --command "${command}" --notes "${notes}"`;
+  return `npm run release:evidence -- -- --set ${key} --status ${status} --command "${command}" --notes "${notes}"`;
 }
 
 function sectionItems(manual, title) {

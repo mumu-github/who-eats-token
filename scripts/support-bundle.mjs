@@ -113,7 +113,7 @@ function buildNextActions(staticReports, runtimeReports, summary) {
   const lag = runtimeReports.lagTriage.data || {};
 
   if (!summary.runtimeAvailable) {
-    actions.push("Start the desktop app and rerun `npm run support:bundle -- --json`.");
+    actions.push("Start the desktop app and rerun `npm run support:bundle -- -- --json`.");
   }
   if (summary.criticalRuntimeFindings > 0 || summary.warningRuntimeFindings > 0) {
     actions.push("Review `runtime.lagTriage.nextActions` first; it already separates CPU, memory, provider, overlay, and app-unavailable causes.");
@@ -122,7 +122,7 @@ function buildNextActions(staticReports, runtimeReports, summary) {
     actions.push("Run `npm run release:check` and fix static guard failures before profiling UI behavior.");
   }
   if (summary.releaseBlockers > 0) {
-    actions.push("Use `npm run release:summary -- --json` for the current public-release blockers.");
+    actions.push("Use `npm run release:summary -- -- --json` for the current public-release blockers.");
   }
   if (release.nextActions?.actions?.length > 0) {
     actions.push("Use `npm run validation:next` before assigning manual macOS, browser, IDE, or signing work.");

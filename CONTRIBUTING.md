@@ -17,11 +17,20 @@ npm run test:protocol
 npm run test:adapter-catalog
 npm run adapter:review
 npm run adapter:fixture
-npm run support:bundle -- --json
+npm run support:bundle -- -- --json
 npm run test:adapter-contribution
 npm run demo:api
 npm run test:hermes-bridge
 ```
+
+If you pass flags through `npm run`, use the npm 11-safe separator form:
+
+```powershell
+npm run release:check -- -- --list --json
+npm run adapter:review -- -- --id your-adapter-id
+```
+
+First-time contributors can start with [docs/first-contribution.md](docs/first-contribution.md). Adapter authors should also use [docs/adapter-contribution-checklist.md](docs/adapter-contribution-checklist.md).
 
 ## Project Rules
 
@@ -31,7 +40,7 @@ npm run test:hermes-bridge
 - Hermes Web UI DOM overlay changes must remain opt-in and documented.
 - Avoid broad polling, shell inspection, or debug logging that can make the desktop feel laggy.
 - When changing HUD placement or hiding rules, test both desktop top bar and in-tool right-bottom HUD behavior.
-- New adapters must follow `docs/protocol.md`, `docs/adapter-guide.md`, `docs/adapter-review.md`, and `adapters/catalog.json`.
+- New adapters must follow `docs/protocol.md`, `docs/adapter-guide.md`, `docs/adapter-contribution-checklist.md`, `docs/adapter-review.md`, and `adapters/catalog.json`.
 
 ## Adding an Adapter
 
@@ -41,13 +50,14 @@ npm run test:hermes-bridge
 4. Keep the adapter local-first and make it fail quietly when the desktop app is closed.
 5. Do not send prompts, completions, source files, API keys, cookies, bearer tokens, local access tokens, raw databases, or screenshots to `/events`, `/overlays`, logs, or issues.
 6. Document the disable path and the manual Windows/macOS validation path.
-7. Run:
+7. Check [docs/adapter-contribution-checklist.md](docs/adapter-contribution-checklist.md) for required metadata, `providedSignals`, privacy boundary, performance budget, disable path, and fixture/review evidence.
+8. Run:
 
 ```powershell
 npm run test:protocol
 npm run test:adapter-catalog
-npm run adapter:review -- --id your-adapter-id
-npm run adapter:fixture -- --json
+npm run adapter:review -- -- --id your-adapter-id
+npm run adapter:fixture -- -- --json
 npm run test:adapter-contribution
 npm run release:check
 ```
@@ -63,12 +73,22 @@ Prefer this order:
 
 Provider output should include the source and confidence so the UI can explain whether data is live, estimated, delayed, or missing.
 
+## Audit Registry Fallback
+
+`npm audit` needs a registry with advisory endpoints. If a company or regional mirror returns a registry/advisory error instead of vulnerability findings, rerun the audit against the public npm registry:
+
+```powershell
+npm audit --audit-level=high --registry=https://registry.npmjs.org/
+```
+
+Treat registry failures as release evidence gaps, not as "zero vulnerabilities."
+
 ## Pull Request Checklist
 
 - `npm run check` passes.
 - `npm run test:protocol` passes when event, overlay, or adapter code changed.
-- `npm run test:adapter-catalog`, `npm run adapter:review -- --id <adapter-id>`, `npm run adapter:fixture -- --json`, and `npm run test:adapter-contribution` pass when adapter docs, templates, or catalog entries changed.
-- `npm run support:bundle -- --json` was run for bug, performance, diagnostics, or provider-routing changes.
+- `npm run test:adapter-catalog`, `npm run adapter:review -- -- --id <adapter-id>`, `npm run adapter:fixture -- -- --json`, and `npm run test:adapter-contribution` pass when adapter docs, templates, or catalog entries changed.
+- `npm run support:bundle -- -- --json` was run for bug, performance, diagnostics, or provider-routing changes.
 - Relevant provider or bridge test passes.
 - README or privacy/security docs are updated if data sources, ports, secrets, or third-party file writes changed.
 - UI changes were checked at desktop and app-window sizes.

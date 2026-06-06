@@ -23,7 +23,7 @@ if (args.json) {
   const current = fs.existsSync(markdownPath) ? fs.readFileSync(markdownPath, "utf8") : "";
   if (normalizeText(current) !== normalizeText(markdown)) {
     console.error("docs/release-evidence.md is out of sync with docs/release-evidence.json.");
-    console.error("Run: npm run release:evidence-report -- --write");
+    console.error("Run: npm run release:evidence-report -- -- --write");
     process.exitCode = 1;
   } else {
     console.log("Release evidence report is in sync.");
@@ -67,9 +67,9 @@ function renderMarkdown(report) {
     "",
     "```powershell",
     "npm run test:release-evidence",
-    "npm run release:evidence-quality -- --require-clean",
-    "npm run release:evidence-report -- --check",
-    "npm run release:evidence-report -- --write",
+    "npm run release:evidence-quality -- -- --require-clean",
+    "npm run release:evidence-report -- -- --check",
+    "npm run release:evidence-report -- -- --write",
     "```",
     "",
     "## Recorded Evidence",
@@ -107,9 +107,9 @@ function renderMarkdown(report) {
   lines.push("## Source Of Truth", "");
   lines.push("- Machine-readable record: `docs/release-evidence.json`");
   lines.push("- Schema: `docs/release-evidence.schema.json`");
-  lines.push("- Recorder: `npm run release:evidence -- --list` and `npm run release:evidence -- --set ...`");
-  lines.push("- Quality gate: `npm run release:evidence-quality -- --require-clean`");
-  lines.push("- Gap audit: `npm run release:gaps -- --require-public-release`");
+  lines.push("- Recorder: `npm run release:evidence -- -- --list` and `npm run release:evidence -- -- --set ...`");
+  lines.push("- Quality gate: `npm run release:evidence-quality -- -- --require-clean`");
+  lines.push("- Gap audit: `npm run release:gaps -- -- --require-public-release`");
   lines.push("");
 
   return `${lines.join("\n")}`;

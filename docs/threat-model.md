@@ -46,7 +46,7 @@ npm run test:browser-extension
 npm run test:vscode-extension
 npm run test:support-bundle
 npm run adapter:review
-npm run release:gaps -- --target source-beta --require-source-beta
+npm run release:gaps -- -- --target source-beta --require-source-beta
 ```
 
 Source beta security claims should stay narrow:

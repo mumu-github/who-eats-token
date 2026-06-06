@@ -53,7 +53,7 @@ assert.ok(badReport.findings.some((finding) => finding.key === "ideAdapter.manua
 
 const hostSmokePath = writeTempEvidence((payload) => {
   payload.evidence.browserAdapter.hostSmoke = passed(
-    "npm run smoke:browser-hosts -- --require",
+    "npm run smoke:browser-hosts -- -- --require",
     "Incorrectly marked as full pass."
   );
 });

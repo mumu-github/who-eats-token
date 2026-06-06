@@ -40,7 +40,7 @@ Hermes is treated as a generic local provider first. Xiaomi/MiMo Token Plan cred
 - Prefer incremental file reads and bounded tail reads for local logs.
 - Do not run heavy UI automation on every foreground-window check.
 - Keep the automated performance gate in `npm run test:performance-budget` green.
-- Keep the generated compatibility matrix current with `npm run compatibility:matrix -- --check`.
+- Keep the generated compatibility matrix current with `npm run compatibility:matrix -- -- --check`.
 
 ## Window Detection Fallbacks
 

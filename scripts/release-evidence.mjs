@@ -122,8 +122,8 @@ function writeEvidence(payload) {
 
 function printUsage() {
   console.log("Usage:");
-  console.log("  npm run release:evidence -- --list");
-  console.log("  npm run release:evidence -- --set browserAdapter.manualLoad --status passed --command \"...\" --notes \"...\"");
+  console.log("  npm run release:evidence -- -- --list");
+  console.log("  npm run release:evidence -- -- --set browserAdapter.manualLoad --status passed --command \"...\" --notes \"...\"");
 }
 
 function parseArgs(argv) {

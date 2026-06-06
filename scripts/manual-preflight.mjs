@@ -100,8 +100,8 @@ function commandsForPlatform(targetPlatform) {
     "npm run release:check",
     "npm run adapter:manual-readiness",
     "npm run package:adapters",
-    "npm run smoke:browser-hosts -- --require",
-    "npm run smoke:ide-hosts -- --require",
+    "npm run smoke:browser-hosts -- -- --require",
+    "npm run smoke:ide-hosts -- -- --require",
     "npm run verify:adapter-artifacts"
   ];
   if (targetPlatform === "windows" || targetPlatform === "all") {

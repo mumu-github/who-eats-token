@@ -23,6 +23,7 @@ const readme = read("README.md");
 const prTemplate = read(".github/PULL_REQUEST_TEMPLATE.md");
 const bugTemplate = read(".github/ISSUE_TEMPLATE/bug_report.yml");
 const performanceTemplate = read(".github/ISSUE_TEMPLATE/performance_report.yml");
+const docsIssueTemplate = read(".github/ISSUE_TEMPLATE/docs_improvement.yml");
 
 const requiredScripts = [
   "release:check",
@@ -46,6 +47,7 @@ const requiredScripts = [
   "test:secret-scan",
   "test:license-check",
   "test:docs",
+  "test:npm-run-args",
   "test:release-evidence",
   "test:release-evidence-cli",
   "test:release-evidence-quality",
@@ -151,6 +153,7 @@ const requiredFiles = [
   "docs/protocol.md",
   "docs/adapter-guide.md",
   "docs/adapter-catalog.md",
+  "docs/adapter-contribution-checklist.md",
   "docs/adapter-signal-matrix.md",
   "docs/adapter-fixture.md",
   "docs/adapter-review.md",
@@ -166,6 +169,7 @@ const requiredFiles = [
   "docs/stability.md",
   "docs/diagnostics.md",
   "docs/support-bundle.md",
+  ".github/ISSUE_TEMPLATE/docs_improvement.yml",
   "scripts/manual-preflight.mjs",
   "scripts/signing-readiness.mjs",
   "scripts/performance-summary.mjs",
@@ -196,6 +200,7 @@ const requiredFiles = [
   "src/diagnostics/stability-report.cjs",
   "src/diagnostics/diagnostics-bundle.cjs",
   "scripts/test-doc-quality.mjs",
+  "scripts/test-npm-run-args.mjs",
   "scripts/release-evidence.mjs",
   "scripts/test-release-evidence.mjs",
   "scripts/test-release-evidence-cli.mjs",
@@ -297,6 +302,11 @@ function assertMultiToolEvidence() {
   assertIncludes(readiness, "Multi-tool adapter signal contract", "Readiness matrix must cover multi-tool adapter signal contract.");
   assertIncludes(readiness, "providedSignals", "Readiness matrix must mention adapter providedSignals.");
   assertIncludes(read("docs/adapter-catalog.md"), "providedSignals", "Adapter catalog docs must document signal contracts.");
+  assertIncludes(read("docs/adapter-catalog.md"), "adapter-contribution-checklist.md", "Adapter catalog docs must link the community checklist.");
+  assertIncludes(read("docs/adapter-contribution-checklist.md"), "providedSignals", "Adapter checklist must require signal metadata.");
+  assertIncludes(read("docs/adapter-contribution-checklist.md"), "privacyBoundary", "Adapter checklist must require privacy metadata.");
+  assertIncludes(read("docs/adapter-contribution-checklist.md"), "performanceBoundary", "Adapter checklist must require performance metadata.");
+  assertIncludes(read("docs/adapter-contribution-checklist.md"), "disablePath", "Adapter checklist must require a disable path.");
   assertIncludes(read("docs/adapter-signal-matrix.md"), "Adapter Signal Matrix", "Adapter signal matrix doc must exist.");
   assertIncludes(read("docs/adapter-signal-matrix.md"), "Generated from `adapters/catalog.json`", "Adapter signal matrix must be generated from catalog.");
   assertIncludes(read("docs/adapter-fixture.md"), "safe compatibility simulator", "Adapter fixture doc must explain the simulator role.");
@@ -356,9 +366,9 @@ function assertPrivacyEvidence() {
   assertIncludes(protocol, "Do not send provider API keys, cookies, prompts, completions", "Protocol must state secret/prompt boundary.");
   assertIncludes(prTemplate, "No API keys, cookies, local tokens", "PR template must include secret boundary.");
   assertIncludes(bugTemplate, "Please do not paste API keys", "Bug template must warn against secrets.");
-  assertIncludes(bugTemplate, "npm run support:bundle -- --json", "Bug template must request the support bundle for lag/stale quota issues.");
-  assertIncludes(performanceTemplate, "npm run support:bundle -- --json", "Performance report must request support bundle.");
-  assertIncludes(performanceTemplate, "npm run diagnostics -- --json", "Performance report must still mention focused diagnostics.");
+  assertIncludes(bugTemplate, "npm run support:bundle -- -- --json", "Bug template must request the support bundle for lag/stale quota issues.");
+  assertIncludes(performanceTemplate, "npm run support:bundle -- -- --json", "Performance report must request support bundle.");
+  assertIncludes(performanceTemplate, "npm run diagnostics -- -- --json", "Performance report must still mention focused diagnostics.");
   assertIncludes(read("scripts/secret-scan.mjs"), "xiaomi-platform-cookie", "Secret scan must detect Xiaomi platform cookies.");
   assertIncludes(read("scripts/test-secret-scan.mjs"), "api-platform_serviceToken", "Secret scan test must cover Xiaomi cookie leakage.");
   assertIncludes(read("SECURITY.md"), "npm run secret:scan", "Security doc must mention secret scanning.");
@@ -368,6 +378,11 @@ function assertPrivacyEvidence() {
   assertIncludes(read("PRIVACY.md"), "prompt", "Privacy doc must mention prompt boundaries.");
   assertIncludes(read("SECURITY.md"), "secret", "Security doc must mention secrets.");
   assertIncludes(readiness, "Privacy/security", "Readiness matrix must cover privacy and security.");
+  assertIncludes(ci, "npm audit --audit-level=high --registry=https://registry.npmjs.org/", "CI audit must use a registry with advisory endpoints.");
+  assertIncludes(prTemplate, "registry/advisory outage", "PR template must distinguish audit registry failures from clean audits.");
+  assertIncludes(read("docs/license-policy.md"), "Registry failures are release evidence gaps", "License policy must distinguish registry failure from vulnerability results.");
+  assertIncludes(docsIssueTemplate, "Docs or improvement", "Docs issue template must support general docs/improvement issues.");
+  assertIncludes(docsIssueTemplate, "first-time contributor", "Docs issue template must support starter tasks.");
 }
 
 function assertOpenSourceFormEvidence() {
@@ -403,7 +418,7 @@ function assertOpenSourceFormEvidence() {
   assertIncludes(readiness, "Shareable diagnostics", "Readiness must cover diagnostics command.");
   assertIncludes(readiness, "Support bundle", "Readiness must cover support bundle command.");
   assertIncludes(read("docs/status.md"), "providerHealth", "Status doc must mention providerHealth.");
-  assertIncludes(read("docs/diagnostics.md"), "npm run diagnostics -- --json", "Diagnostics doc must document JSON output.");
+  assertIncludes(read("docs/diagnostics.md"), "npm run diagnostics -- -- --json", "Diagnostics doc must document JSON output.");
   assertIncludes(protocol, "GET /health", "Protocol must document the lightweight local health endpoint.");
   assertIncludes(adapterGuide, "GET http://127.0.0.1:17667/health", "Adapter guide must prefer lightweight health checks.");
   assertIncludes(read("docs/node-sdk.md"), "getHealth()", "Node SDK docs must document getHealth.");
@@ -417,6 +432,8 @@ function assertOpenSourceFormEvidence() {
   assertIncludes(readiness, "Lightweight ambient interaction", "Readiness must cover lightweight/fun differentiation.");
   assertIncludes(readiness, "Risk register", "Readiness must cover the risk register.");
   assertIncludes(readme, "risk-register.md", "README must link the risk register.");
+  assertIncludes(readme, "first-contribution.md", "README must link the first contribution guide.");
+  assertIncludes(read("CONTRIBUTING.md"), "first-contribution.md", "Contributing guide must link the first contribution guide.");
   assertIncludes(riskRegister, "HUD appears in the wrong app", "Risk register must cover wrong-app HUD display.");
   assertIncludes(riskRegister, "Codex and Hermes data are mixed", "Risk register must cover provider mixing.");
   assertIncludes(riskRegister, "Extra polling or DOM scanning", "Risk register must cover performance regressions.");

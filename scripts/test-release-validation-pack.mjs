@@ -13,7 +13,7 @@ assert.ok(packageJson.scripts?.["test:release-validation-pack"], "Missing test:r
 const macos = runPack(["--platform", "macos", "--json"]);
 assert.equal(macos.ok, true);
 assert.equal(macos.platform, "macos");
-assert.ok(findPhase(macos, "preflight").commands.includes("npm run manual:preflight -- --platform macos"));
+assert.ok(findPhase(macos, "preflight").commands.includes("npm run manual:preflight -- -- --platform macos"));
 assert.ok(findPhase(macos, "runtime").commands.includes("npm run smoke:packaged-mac"));
 assert.ok(findPhase(macos, "runtime").evidenceUpdates.some((command) => command.includes("macosPackagedRuntime.hudPermissionStates")));
 assert.ok(findPhase(macos, "signing").evidenceUpdates.some((command) => command.includes("signing.macosNotarization")));
@@ -28,10 +28,10 @@ assert.ok(findPhase(windows, "signing").evidenceUpdates.some((command) => comman
 
 const all = runPack(["--platform", "all", "--json"]);
 assert.equal(all.platform, "all");
-assert.ok(findPhase(all, "preflight").commands.includes("npm run manual:preflight -- --platform all"));
+assert.ok(findPhase(all, "preflight").commands.includes("npm run manual:preflight -- -- --platform all"));
 assert.ok(findPhase(all, "runtime").evidenceUpdates.some((command) => command.includes("windowsPackagedRuntime.soak")));
 assert.ok(findPhase(all, "runtime").evidenceUpdates.some((command) => command.includes("macosPackagedRuntime.soak")));
-assert.ok(findPhase(all, "final-audit").commands.includes("npm run release:gaps -- --require-public-release"));
+assert.ok(findPhase(all, "final-audit").commands.includes("npm run release:gaps -- -- --require-public-release"));
 
 const text = runText(["--platform", "macos"]);
 assert.match(text, /Who Eats Token Release Validation Pack/);

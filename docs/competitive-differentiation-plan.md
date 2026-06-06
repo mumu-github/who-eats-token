@@ -169,9 +169,9 @@ Release gate 应包含：
 
 - `npm run test:hud-stability`
 - `npm run test:performance-budget`
-- `npm run performance:summary -- --require-clean`
-- `npm run delight:contract -- --check`
-- `npm run support:bundle -- --json`
+- `npm run performance:summary -- -- --require-clean`
+- `npm run delight:contract -- -- --check`
+- `npm run support:bundle -- -- --json`
 - 10 分钟 Windows idle soak
 - 后续 macOS 真机 idle soak
 

@@ -45,9 +45,9 @@ function buildTemplate(nextActions, manual, target) {
     ],
     sections,
     commands: [
-      `npm run validation:template -- --target ${target}`,
-      `npm run validation:next -- --target ${target}`,
-      "npm run release:evidence -- --list",
+      `npm run validation:template -- -- --target ${target}`,
+      `npm run validation:next -- -- --target ${target}`,
+      "npm run release:evidence -- -- --list",
       "npm run release:summary"
     ]
   };

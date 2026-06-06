@@ -83,6 +83,7 @@
     "test:secret-scan": "node scripts/test-secret-scan.mjs",
     "test:license-check": "node scripts/test-license-check.mjs",
     "test:docs": "node scripts/test-doc-quality.mjs",
+    "test:npm-run-args": "node scripts/test-npm-run-args.mjs",
     "test:release-evidence": "node scripts/test-release-evidence.mjs",
     "test:release-evidence-cli": "node scripts/test-release-evidence-cli.mjs",
     "test:release-evidence-quality": "node scripts/test-release-evidence-quality.mjs",

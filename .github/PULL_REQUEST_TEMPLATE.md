@@ -5,15 +5,15 @@
 ## Verification
 
 - [ ] `npm run release:check`
-- [ ] For bug/performance/diagnostics changes: `npm run support:bundle -- --json`
-- [ ] `npm audit --audit-level=high`
-- [ ] For release candidates: `npm run manual:preflight -- --platform all`
-- [ ] For public binary releases: `npm run signing:readiness -- --platform all --require`
+- [ ] For bug/performance/diagnostics changes: `npm run support:bundle -- -- --json`
+- [ ] `npm audit --audit-level=high --registry=https://registry.npmjs.org/` or documented registry/advisory outage
+- [ ] For release candidates: `npm run manual:preflight -- -- --platform all`
+- [ ] For public binary releases: `npm run signing:readiness -- -- --platform all --require`
 - [ ] For release candidates: `npm run soak:packaged-win` or `npm run soak:packaged-mac`
 - [ ] Relevant packaged smoke or adapter package check
 - [ ] For adapter changes: `npm run test:adapter-catalog`
-- [ ] For adapter changes: `npm run adapter:review -- --id <adapter-id>`
-- [ ] For adapter changes: `npm run adapter:fixture -- --json`
+- [ ] For adapter changes: `npm run adapter:review -- -- --id <adapter-id>`
+- [ ] For adapter changes: `npm run adapter:fixture -- -- --json`
 - [ ] For adapter changes: `npm run test:adapter-contribution`
 
 ## Safety

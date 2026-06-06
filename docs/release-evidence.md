@@ -8,9 +8,9 @@ Validate and refresh it with:
 
 ```powershell
 npm run test:release-evidence
-npm run release:evidence-quality -- --require-clean
-npm run release:evidence-report -- --check
-npm run release:evidence-report -- --write
+npm run release:evidence-quality -- -- --require-clean
+npm run release:evidence-report -- -- --check
+npm run release:evidence-report -- -- --write
 ```
 
 ## Recorded Evidence
@@ -44,7 +44,7 @@ npm run release:evidence-report -- --write
 - Key: `browserAdapter.hostSmoke`
 - Status: `host-smoke-only`
 - Recorded at: 2026-05-25T09:28:59.636Z
-- Command: `npm run smoke:browser-hosts -- --require --test-options-health with Chrome for Testing PATH`
+- Command: `npm run smoke:browser-hosts -- -- --require --test-options-health with Chrome for Testing PATH`
 - Notes: Chrome for Testing 149.0.7827.22 and Edge 148.0.3967.83 host smoke passed with temporary profiles; extension id ndknfhgaojabhngfhalaapmgchajelck loaded in both hosts; Options /health also checked.
 - Public release note: this is partial host smoke evidence, not a full manual pass.
 
@@ -69,7 +69,7 @@ npm run release:evidence-report -- --write
 - Key: `ideAdapter.hostSmoke`
 - Status: `host-smoke-only`
 - Recorded at: 2026-05-25T09:29:01.099Z
-- Command: `npm run smoke:ide-hosts -- --require`
+- Command: `npm run smoke:ide-hosts -- -- --require`
 - Notes: Validation machine host smoke passed: VS Code 1.121.0 and Cursor 3.5.33 installed the VSIX and listed who-eats-token.who-eats-token-vscode-adapter.
 - Public release note: this is partial host smoke evidence, not a full manual pass.
 
@@ -93,9 +93,9 @@ npm run release:evidence-report -- --write
 
 - Key: `dependencyAudit`
 - Status: `passed`
-- Recorded at: 2026-05-25T10:23:50.456Z
-- Command: `npm audit --audit-level=high`
-- Notes: 2026-05-25 Windows source-beta audit completed with zero high-severity vulnerabilities.
+- Recorded at: 2026-06-06T18:08:33.460Z
+- Command: `npm audit --audit-level=high --registry=https://registry.npmjs.org/`
+- Notes: Audit completed against the public npm registry with zero high-severity vulnerabilities.
 
 ## Evidence Still Needed Before Public Binary Release
 
@@ -109,6 +109,6 @@ npm run release:evidence-report -- --write
 
 - Machine-readable record: `docs/release-evidence.json`
 - Schema: `docs/release-evidence.schema.json`
-- Recorder: `npm run release:evidence -- --list` and `npm run release:evidence -- --set ...`
-- Quality gate: `npm run release:evidence-quality -- --require-clean`
-- Gap audit: `npm run release:gaps -- --require-public-release`
+- Recorder: `npm run release:evidence -- -- --list` and `npm run release:evidence -- -- --set ...`
+- Quality gate: `npm run release:evidence-quality -- -- --require-clean`
+- Gap audit: `npm run release:gaps -- -- --require-public-release`

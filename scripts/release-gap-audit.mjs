@@ -120,7 +120,7 @@ function buildChecks() {
         : hasHostSmoke(structuredEvidence, ["browserAdapter", "hostSmoke"]) || hasAll(recordedEvidence, ["Chrome extension host smoke", "Edge extension host smoke"])
           ? "host-smoke-recorded"
           : hasAll(recordedEvidence, ["Chrome extension manual load", "Edge extension manual load"]) ? "manual-recorded" : "manual-required",
-      evidence: ["docs/manual-validation.md", "npm run package:browser-extension", "npm run smoke:browser-hosts -- --require"],
+      evidence: ["docs/manual-validation.md", "npm run package:browser-extension", "npm run smoke:browser-hosts -- -- --require"],
       next: "Load adapters/browser-extension unpacked in Chrome and Edge, run the Options /health test, and record results."
     },
     {
@@ -132,7 +132,7 @@ function buildChecks() {
         : hasHostSmoke(structuredEvidence, ["ideAdapter", "hostSmoke"]) || hasAll(recordedEvidence, ["VS Code extension host smoke", "Cursor extension host smoke"])
           ? "host-smoke-recorded"
           : hasAll(recordedEvidence, ["VS Code extension manual load", "Cursor extension manual load"]) ? "manual-recorded" : "manual-required",
-      evidence: ["docs/manual-validation.md", "npm run package:vscode-extension", "npm run smoke:ide-hosts -- --require"],
+      evidence: ["docs/manual-validation.md", "npm run package:vscode-extension", "npm run smoke:ide-hosts -- -- --require"],
       next: "Load the VSIX or extension folder in VS Code and Cursor and record results."
     },
     {
@@ -163,7 +163,7 @@ function buildChecks() {
         hasPassed(structuredEvidence, ["signing", "macosNotarization"])
         ? "manual-recorded"
         : hasAll(recordedEvidence, ["Windows Authenticode signed", "macOS notarized"]) ? "manual-recorded" : "external-required",
-      evidence: ["npm run signing:readiness -- --platform all --require", "docs/release.md"],
+      evidence: ["npm run signing:readiness -- -- --platform all --require", "docs/release.md"],
       next: "Run signing readiness with release secrets in the signing environment."
     },
     {
@@ -181,9 +181,9 @@ function buildChecks() {
     {
       id: "npm-audit",
       requirement: "Dependency audit is clean at high severity.",
-      status: hasPassed(structuredEvidence, ["dependencyAudit"]) || hasAll(recordedEvidence, ["npm audit --audit-level=high passed"]) ? "manual-recorded" : "network-required",
-      evidence: ["npm audit --audit-level=high"],
-      next: "Run npm audit with network access before publishing."
+      status: hasPassed(structuredEvidence, ["dependencyAudit"]) || hasAll(recordedEvidence, ["npm audit --audit-level=high --registry=https://registry.npmjs.org/ passed"]) ? "manual-recorded" : "network-required",
+      evidence: ["npm audit --audit-level=high --registry=https://registry.npmjs.org/"],
+      next: "Run npm audit against a registry with advisory endpoints before publishing; registry failures are not clean vulnerability results."
     },
     {
       id: "docs-quality",

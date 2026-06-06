@@ -51,9 +51,9 @@ Catalog updated: 2026-05-24
 ## Checks
 
 ```powershell
-npm run compatibility:matrix -- --check
+npm run compatibility:matrix -- -- --check
 npm run test:compatibility-matrix
 npm run adapter:review
-npm run release:gaps -- --json
+npm run release:gaps -- -- --json
 npm run release:check
 ```

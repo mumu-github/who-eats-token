@@ -8,8 +8,8 @@ The source of truth is `src/protocol/quota-delight.cjs`. Renderers may style the
 
 ```powershell
 npm run delight:contract
-npm run delight:contract -- --json
-npm run delight:contract -- --check
+npm run delight:contract -- -- --json
+npm run delight:contract -- -- --check
 npm run test:delight-contract
 ```
 

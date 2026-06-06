@@ -200,7 +200,7 @@ function detectHost(name, candidates) {
 function buildManualCommands() {
   return {
     packageAdapters: "npm run package:adapters",
-    browserReadiness: "npm run adapter:manual-readiness -- --json",
+    browserReadiness: "npm run adapter:manual-readiness -- -- --json",
     browserManual: [
       "Open chrome://extensions and edge://extensions.",
       "Enable Developer mode.",
@@ -209,7 +209,7 @@ function buildManualCommands() {
     ],
     ideManual: [
       "Run npm run package:vscode-extension.",
-      "Run npm run smoke:ide-hosts -- --require on a host validation machine.",
+      "Run npm run smoke:ide-hosts -- -- --require on a host validation machine.",
       "Install release/adapters/who-eats-token-vscode-adapter-*.vsix in VS Code.",
       "Install the same VSIX or extension folder in Cursor.",
       "Confirm status bar /health, Refresh, and Copy Snapshot."

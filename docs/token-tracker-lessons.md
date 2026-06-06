@@ -50,7 +50,7 @@ The user should feel:
 
 Make the project cute by making the data feel alive, not by adding weight.
 
-The shared `quota-delight` state machine is the source of truth for this layer. It maps provider health and remaining quota into short labels such as `放心吃`, `刚刚好`, `省着吃`, `省着点`, `慢半拍`, and `等开饭`. It also emits stable cue keys for icon choice, tiny chart behavior, and optional mascot pose. Renderers may style these states, but they should not invent separate mood logic. The enforceable contract lives in [delight-contract.md](delight-contract.md) and can be checked with `npm run delight:contract -- --check`.
+The shared `quota-delight` state machine is the source of truth for this layer. It maps provider health and remaining quota into short labels such as `放心吃`, `刚刚好`, `省着吃`, `省着点`, `慢半拍`, and `等开饭`. It also emits stable cue keys for icon choice, tiny chart behavior, and optional mascot pose. Renderers may style these states, but they should not invent separate mood logic. The enforceable contract lives in [delight-contract.md](delight-contract.md) and can be checked with `npm run delight:contract -- -- --check`.
 
 | Interaction | Good Version | Avoid |
 | --- | --- | --- |
@@ -78,9 +78,9 @@ The best long-term relationship is interop, not rivalry.
 
 | Source | Possible Adapter | Why |
 | --- | --- | --- |
-| TokenTracker status JSON | Use `npm run import:usage-report -- --source tokentracker-summary` against an exported summary or future stable JSON endpoint. | Lets TokenTracker keep parser breadth while Who Eats Token owns ambient display. |
+| TokenTracker status JSON | Use `npm run import:usage-report -- -- --source tokentracker-summary` against an exported summary or future stable JSON endpoint. | Lets TokenTracker keep parser breadth while Who Eats Token owns ambient display. |
 | TokenTracker local buckets | Optional passive reader only if the file format is stable and documented. | Good for historical trends, but should stay an adapter, not core logic. |
-| ccusage output | Use `npm run import:usage-report -- --provider claude --tool ccusage --source ccusage-json`. | Useful for users who already trust ccusage for Claude/Codex-style reporting. |
+| ccusage output | Use `npm run import:usage-report -- -- --provider claude --tool ccusage --source ccusage-json`. | Useful for users who already trust ccusage for Claude/Codex-style reporting. |
 | Direct provider APIs | Use only when official usage/billing APIs exist and can be polled slowly. | Keeps exactness high without scraping private content. |
 
 ## Next Product Slices
